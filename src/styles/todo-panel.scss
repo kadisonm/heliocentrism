@@ -5,8 +5,9 @@
 }
 
 .todo-panel {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(21, 29, 45, 0.96), rgba(17, 24, 39, 0.98));
+  color: var(--text);
   border-radius: 1rem;
   padding: 1.25rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -22,7 +23,7 @@
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .todo-panel-actions {
@@ -32,9 +33,9 @@
 }
 
 .todo-add-button {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #475569;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--text);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
   font-size: 0.72rem;
@@ -43,15 +44,15 @@
   transition: background 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: color-mix(in srgb, var(--accent-soft) 90%, white 10%);
+    border-color: var(--accent);
   }
 }
 
 .todo-show-toggle {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--text);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
   font-size: 0.72rem;
@@ -60,8 +61,8 @@
   transition: background 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: color-mix(in srgb, var(--accent-soft) 90%, white 10%);
+    border-color: var(--accent);
   }
 }
 
@@ -73,7 +74,7 @@
 }
 
 .todo-section {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border);
   padding-top: 0.75rem;
 }
 
@@ -85,7 +86,7 @@
     font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #64748b;
+    color: var(--primary);
     font-weight: 700;
   }
 }
@@ -100,8 +101,8 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
   border-radius: 0.85rem;
   padding: 0.75rem;
 }

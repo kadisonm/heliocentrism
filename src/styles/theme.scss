@@ -1,0 +1,70 @@
+@use 'sass:map';
+
+$themes: (
+  light: (
+    text: oklab(15.11% -0.006 -0.03),
+    background: oklab(93.95% -0.001 -0.02),
+    primary: oklab(33.12% -0.017 -0.11),
+    secondary: oklab(70.85% 0.189 -0.11),
+    accent: oklab(55.26% 0.210 -0.00),
+    success: oklab(67.096% -0.14077 0.09138),
+    warning: oklab(72.30% 0.112 0.18),
+  ),
+  dark: (
+    text: oklab(94.30% -0.001 -0.02),
+    background: oklab(15.28% -0.005 -0.04),
+    primary: oklab(75.34% -0.013 -0.10),
+    secondary: oklab(48.30% 0.180 -0.10),
+    accent: oklab(62.32% 0.216 -0.01),
+    success: oklab(75.396% -0.15153 0.0867),
+    warning: oklab(76.80% 0.135 0.20),
+  ),
+);
+
+@mixin theme-variables($mode: dark) {
+  $tokens: map.get($themes, $mode);
+
+  --text: #{map.get($tokens, text)};
+  --background: #{map.get($tokens, background)};
+  --primary: #{map.get($tokens, primary)};
+  --secondary: #{map.get($tokens, secondary)};
+  --accent: #{map.get($tokens, accent)};
+  --success: #{map.get($tokens, success)};
+  --warning: #{map.get($tokens, warning)};
+
+  --muted: color-mix(in srgb, var(--text) 65%, transparent);
+  --text-soft: color-mix(in srgb, var(--text) 72%, transparent);
+
+  --panel: color-mix(in srgb, var(--background) 92%, white 8%);
+  --panel-soft: color-mix(in srgb, var(--background) 88%, var(--primary) 12%);
+  --panel-strong: color-mix(in srgb, var(--background) 82%, var(--primary) 18%);
+
+  @if $mode == dark {
+    --border: color-mix(in srgb, var(--panel) 82%, white 18%);
+  } @else {
+    --border: color-mix(in srgb, var(--panel) 88%, black 12%);
+  }
+
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --accent-strong: color-mix(in srgb, var(--accent) 78%, black 22%);
+  --shadow: color-mix(in srgb, var(--background) 56%, black 44%);
+}
+
+@mixin theme($mode: dark) {
+  $tokens: if(sass($mode == light): $theme-light; else: $theme-dark);
+
+  --bg: map.get($tokens, bg);
+  --bg-elevated: map.get($tokens, bg-elevated);
+  --panel: map.get($tokens, panel);
+  --panel-soft: map.get($tokens, panel-soft);
+  --panel-strong: map.get($tokens, panel-strong);
+  --border: map.get($tokens, border);
+  --text: map.get($tokens, text);
+  --muted: map.get($tokens, muted);
+  --accent: map.get($tokens, accent);
+  --accent-strong: map.get($tokens, accent-strong);
+  --accent-soft: map.get($tokens, accent-soft);
+  --success: map.get($tokens, success);
+  --warning: map.get($tokens, warning);
+  --shadow: map.get($tokens, shadow);
+}
