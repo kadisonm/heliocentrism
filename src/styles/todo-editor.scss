@@ -1,0 +1,92 @@
+.todo-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.todo-editor-panel {
+  width: min(100%, 28rem);
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+}
+
+.todo-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #0f172a;
+  }
+}
+
+.todo-editor-close {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.todo-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.todo-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+
+  input,
+  select {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.65rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.88rem;
+    color: #0f172a;
+    background: #ffffff;
+  }
+}
+
+.todo-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.todo-editor-cancel,
+.todo-editor-save {
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.todo-editor-cancel {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+}
+
+.todo-editor-save {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+}
