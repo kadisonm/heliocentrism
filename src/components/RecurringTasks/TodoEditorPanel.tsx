@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Recurrence, Todo, TodoStage } from './TodoPanel';
+import { useState } from 'react';
+import type { Recurrence, Todo, TodoStage } from '../../lib/types';
 
 type TodoEditorPanelProps = {
   todo: Todo | null;
@@ -15,10 +15,6 @@ export default function TodoEditorPanel({
   onSave,
 }: TodoEditorPanelProps) {
   const [draft, setDraft] = useState<Todo | null>(todo);
-
-  useEffect(() => {
-    setDraft(todo);
-  }, [todo]);
 
   if (!todo || !draft) {
     return null;
@@ -76,11 +72,12 @@ export default function TodoEditorPanel({
           <label className="todo-editor-field">
             <span>Recurring</span>
             <select
-              value={draft.recurrence}
+              value={draft.recurrence || ''}
               onChange={(event) =>
-                updateDraft('recurrence', event.target.value as Recurrence)
+                updateDraft('recurrence', (event.target.value || null) as Recurrence)
               }
             >
+              <option value="">None</option>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>

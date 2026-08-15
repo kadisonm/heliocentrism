@@ -1,40 +1,51 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { DEFAULT_TASKS } from '../../lib/data';
+import {
+  writeTasksToSyncFolder,
+  readTasksFromSyncFolder,
+} from '../../lib/fileSystemSync';
+import type { Todo, TodoStage, RecurrenceValue } from '../../lib/types';
 import TodoEditorPanel from './TodoEditorPanel';
-import TodoItem from './TodoItem';
-
-export type TodoStage = 0 | 1 | 2;
-export type Recurrence = 'daily' | 'weekly' | 'monthly';
-
-export type Todo = {
-  id: string;
-  title: string;
-  due: string;
-  stage: TodoStage;
-  recurrence: Recurrence;
-};
+import Task from '../Tasks';
 
 const statusLabels = ['To do', 'In progress', 'Done'] as const;
-const recurrenceOrder: Recurrence[] = ['daily', 'weekly', 'monthly'];
-
-const initialTodos: Todo[] = [
-  { id: '1', title: 'Finalize dashboard layout', due: 'Today', stage: 0, recurrence: 'daily' },
-  { id: '2', title: 'Review onboarding checklist', due: 'Tomorrow', stage: 1, recurrence: 'weekly' },
-  { id: '3', title: 'Prepare weekly summary', due: 'Fri', stage: 2, recurrence: 'monthly' },
-  { id: '4', title: 'Inbox cleanup', due: 'Everyday', stage: 0, recurrence: 'daily' },
-  { id: '5', title: 'KPI check-in', due: 'Every week', stage: 1, recurrence: 'weekly' },
-  { id: '6', title: 'Quarter review', due: 'Every month', stage: 2, recurrence: 'monthly' },
-];
+const recurrenceOrder: RecurrenceValue[] = ['daily', 'weekly', 'monthly'];
 
 function getNextStage(stage: TodoStage): TodoStage {
   return ((stage + 1) % 3) as TodoStage;
 }
 
-export default function TodoPanel() {
-  const [todos, setTodos] = useState<Todo[]>(initialTodos);
+export default function RecurringTasks() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
+
+  // Load tasks on component mount
+  useEffect(() => {
+    const loadTasks = async () => {
+      // Try to load from sync folder first
+      const syncFolderTasks = await readTasksFromSyncFolder();
+      if (syncFolderTasks) {
+        setTodos(syncFolderTasks);
+      } else {
+        // Use default tasks
+        setTodos(DEFAULT_TASKS);
+      }
+      setIsLoading(false);
+    };
+
+    loadTasks();
+  }, []);
+
+  // Save tasks to sync folder
+  useEffect(() => {
+    if (!isLoading && todos.length > 0) {
+      writeTasksToSyncFolder(todos);
+    }
+  }, [todos, isLoading]);
 
   const visibleTodos = useMemo(
     () => (showCompleted ? todos : todos.filter((todo) => todo.stage !== 2)),
@@ -63,44 +74,44 @@ export default function TodoPanel() {
           acc[key] = visibleTodos.filter((todo) => todo.recurrence === key);
           return acc;
         },
-        { daily: [], weekly: [], monthly: [] } as Record<Recurrence, Todo[]>
+        { daily: [], weekly: [], monthly: [] } as Record<RecurrenceValue, Todo[]>
       ),
     [visibleTodos]
   );
 
   return (
     <>
-      <aside className="todo-panel-shell">
-        <div className="todo-panel">
-          <div className="todo-panel-header">
+      <aside className="recurring-panel-shell">
+        <div className="recurring-panel">
+          <div className="recurring-panel-header">
             <h2>To do</h2>
 
-            <div className="todo-panel-actions">
+            <div className="recurring-panel-actions">
               <button
                 type="button"
-                className="todo-show-toggle"
+                className="recurring-show-toggle"
                 onClick={() => setShowCompleted((current) => !current)}
               >
                 {showCompleted ? 'Hide complete' : 'Show complete'}
               </button>
 
-              <button type="button" className="todo-add-button">
+              <button type="button" className="recurring-add-button">
                 + Add
               </button>
             </div>
           </div>
 
-          <div className="todo-sections">
+          <div className="recurring-sections">
             {recurrenceOrder.map((recurrence) => (
-              <div key={recurrence} className="todo-section">
-                <div className="todo-section__header">
+              <div key={recurrence} className="recurring-section">
+                <div className="recurring-section__header">
                   <h3>{recurrence}</h3>
                 </div>
 
-                <div className="todo-list">
+                <div className="recurring-list">
                   {groupedTodos[recurrence].length > 0 ? (
                     groupedTodos[recurrence].map((todo) => (
-                      <TodoItem
+                      <Task
                         key={todo.id}
                         todo={todo}
                         onToggle={updateTodoStage}
@@ -109,7 +120,7 @@ export default function TodoPanel() {
                       />
                     ))
                   ) : (
-                    <p className="todo-empty">No {recurrence} tasks</p>
+                    <p className="recurring-empty">No {recurrence} tasks</p>
                   )}
                 </div>
               </div>
@@ -119,6 +130,7 @@ export default function TodoPanel() {
       </aside>
 
       <TodoEditorPanel
+        key={selectedTodo?.id ?? 'no-selection'}
         todo={selectedTodo}
         onClose={() => setSelectedTodo(null)}
         onSave={updateTodo}

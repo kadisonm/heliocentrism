@@ -1,13 +1,13 @@
-import type { Todo, TodoStage } from './TodoPanel';
+import type { Todo, TodoStage } from '../../lib/types';
 
-type TodoItemProps = {
+type TaskProps = {
   todo: Todo;
   onToggle: (id: string) => void;
   onEdit: (todo: Todo) => void;
   statusLabel: 'To do' | 'In progress' | 'Done';
 };
 
-export default function TodoItem({ todo, onToggle, onEdit, statusLabel }: TodoItemProps) {
+export default function Task({ todo, onToggle, onEdit, statusLabel }: TaskProps) {
   const nextStatus =
     statusLabel === 'To do'
       ? 'In progress'
