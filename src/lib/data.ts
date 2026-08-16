@@ -1,7 +1,8 @@
-import type { DashboardState, RoutineResetTimes, Todo } from './types';
+import type { DashboardState, RoutineResetTimes, RoutineTask, Todo } from './types';
 
 // User task defaults should start empty.
-export const DEFAULT_TASKS: Todo[] = [];
+export const DEFAULT_ROUTINE_TASKS: RoutineTask[] = [];
+export const DEFAULT_TODOS: Todo[] = [];
 
 export const DEFAULT_DASHBOARD: DashboardState = {
   widgets: [],
@@ -25,13 +26,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 // Shape of the synced Firebase document, nested under a `data` field.
 export type AppData = {
-  tasks: Todo[];
+  routineTasks: RoutineTask[];
+  todos: Todo[];
   dashboard: DashboardState;
   settings: AppSettings;
 };
 
 export const DEFAULT_DATA: AppData = {
-  tasks: DEFAULT_TASKS,
+  routineTasks: DEFAULT_ROUTINE_TASKS,
+  todos: DEFAULT_TODOS,
   dashboard: DEFAULT_DASHBOARD,
   settings: DEFAULT_SETTINGS,
 };

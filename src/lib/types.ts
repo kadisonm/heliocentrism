@@ -2,18 +2,29 @@ import type { ResponsiveLayouts } from 'react-grid-layout';
 
 export type TodoStage = 0 | 1 | 2;
 export type RecurrenceValue = 'daily' | 'weekly' | 'monthly';
-export type Recurrence = RecurrenceValue | null;
 
-export type Todo = {
+export type Subtask = {
   id: string;
   title: string;
-  due: string;
   stage: TodoStage;
-  recurrence: Recurrence;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  stage: TodoStage;
+  subtasks: Subtask[];
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   completedAt: string | null; // ISO 8601, null while not done
 };
+
+// A routine task always belongs to exactly one cadence.
+export type RoutineTask = Task & { recurrence: RecurrenceValue };
+
+// A todo has a due date instead of a recurrence.
+export type Todo = Task & { due: string };
 
 export type FirebaseConfig = {
   apiKey: string;

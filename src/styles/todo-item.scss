@@ -117,6 +117,45 @@
   color: var(--success);
 }
 
+.todo-item__description {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.todo-item__subtasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+}
+
+.todo-subtask {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.todo-toggle--small {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0;
+}
+
+.todo-subtask__title {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text);
+
+  &.is-done {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+}
+
 .todo-item__meta {
   display: flex;
   align-items: center;

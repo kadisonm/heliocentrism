@@ -2,36 +2,30 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { RecurrenceValue, RoutineTask } from '../../../lib/types';
-import AddRoutineTaskModal from '../../routines/AddRoutineTaskModal';
-import RoutineTaskEditorPanel from '../../routines/RoutineTaskEditorPanel';
-import RoutineTaskSection from '../../routines/RoutineTaskSection';
-import { useRoutineTasks } from '../../routines/useRoutineTasks';
+import type { RecurrenceValue, RoutineTask } from '../../lib/types';
+import AddRoutineTaskModal from './AddRoutineTaskModal';
+import RoutineTaskEditorPanel from './RoutineTaskEditorPanel';
+import RoutineTaskSection from './RoutineTaskSection';
+import { useRoutineTasks } from './useRoutineTasks';
 
-const recurrenceOrder: RecurrenceValue[] = ['daily', 'weekly', 'monthly'];
+type SingleRoutineWidgetProps = {
+  title: string;
+  recurrence: RecurrenceValue;
+};
 
-export default function RoutinesWidget() {
+export default function SingleRoutineWidget({ title, recurrence }: SingleRoutineWidgetProps) {
   const { tasks, isLoading, updateTaskStage, updateSubtaskStage, updateTask, addTask } =
     useRoutineTasks();
   const [selectedTask, setSelectedTask] = useState<RoutineTask | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
-  const visibleTasks = useMemo(
-    () => (showCompleted ? tasks : tasks.filter((task) => task.stage !== 2)),
-    [showCompleted, tasks]
-  );
-
-  const groupedTasks = useMemo(
+  const sectionTasks = useMemo(
     () =>
-      recurrenceOrder.reduce(
-        (acc, key) => {
-          acc[key] = visibleTasks.filter((task) => task.recurrence === key);
-          return acc;
-        },
-        { daily: [], weekly: [], monthly: [] } as Record<RecurrenceValue, RoutineTask[]>
+      tasks.filter(
+        (task) => task.recurrence === recurrence && (showCompleted || task.stage !== 2)
       ),
-    [visibleTasks]
+    [tasks, recurrence, showCompleted]
   );
 
   return (
@@ -39,7 +33,7 @@ export default function RoutinesWidget() {
       <aside className="routine-panel-shell">
         <div className="routine-panel">
           <div className="routine-panel-header">
-            <h2>Routines</h2>
+            <h2>{title}</h2>
 
             <div className="routine-panel-actions">
               <button
@@ -65,17 +59,15 @@ export default function RoutinesWidget() {
           </div>
 
           <div className="routine-sections">
-            {!isLoading &&
-              recurrenceOrder.map((recurrence) => (
-                <RoutineTaskSection
-                  key={recurrence}
-                  recurrence={recurrence}
-                  tasks={groupedTasks[recurrence]}
-                  onToggle={updateTaskStage}
-                  onToggleSubtask={updateSubtaskStage}
-                  onEdit={setSelectedTask}
-                />
-              ))}
+            {!isLoading && (
+              <RoutineTaskSection
+                recurrence={recurrence}
+                tasks={sectionTasks}
+                onToggle={updateTaskStage}
+                onToggleSubtask={updateSubtaskStage}
+                onEdit={setSelectedTask}
+              />
+            )}
           </div>
         </div>
       </aside>
@@ -94,6 +86,7 @@ export default function RoutinesWidget() {
         isOpen={isAddTaskOpen}
         onClose={() => setIsAddTaskOpen(false)}
         onAdd={addTask}
+        fixedRecurrence={recurrence}
       />
     </>
   );

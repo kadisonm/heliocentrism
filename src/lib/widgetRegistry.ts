@@ -3,6 +3,7 @@ import DailyRoutineWidget from '../components/widgets/daily-routine';
 import MonthlyRoutineWidget from '../components/widgets/monthly-routine';
 import OrbitWidget from '../components/widgets/orbit';
 import RoutinesWidget from '../components/widgets/routines';
+import TodoListWidget from '../components/widgets/todo-list';
 import WeeklyRoutineWidget from '../components/widgets/weekly-routine';
 
 export type WidgetType =
@@ -10,6 +11,7 @@ export type WidgetType =
   | 'daily-routine'
   | 'weekly-routine'
   | 'monthly-routine'
+  | 'todo-list'
   | 'orbit';
 
 export type WidgetDefinition = {
@@ -48,6 +50,13 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Just your monthly to-dos.',
     defaultSize: { w: 3, h: 4 },
     component: MonthlyRoutineWidget,
+  },
+  {
+    type: 'todo-list',
+    name: 'Todo List',
+    description: 'A flat list of one-off tasks with due dates.',
+    defaultSize: { w: 4, h: 6 },
+    component: TodoListWidget,
   },
   {
     type: 'orbit',

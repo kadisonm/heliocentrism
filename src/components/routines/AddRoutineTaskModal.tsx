@@ -1,39 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import type { Recurrence, Todo } from '../../lib/types';
+import type { RecurrenceValue, RoutineTask } from '../../lib/types';
 import Modal from '../common/Modal';
 import SettingsField from '../common/SettingsField';
 
-type AddTaskModalProps = {
+type AddRoutineTaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  // createdAt/updatedAt/completedAt are stamped by useTodos' addTodo, not
-  // constructed here.
-  onAdd: (todo: Omit<Todo, 'createdAt' | 'updatedAt' | 'completedAt'>) => void;
+  // createdAt/updatedAt/completedAt are stamped by useRoutineTasks' addTask.
+  onAdd: (task: Omit<RoutineTask, 'createdAt' | 'updatedAt' | 'completedAt'>) => void;
   // When set, the new task always gets this recurrence and the picker below
   // is hidden — used by the per-cadence widgets (Daily/Weekly/Monthly
   // Routine), which only ever add tasks into their own section.
-  fixedRecurrence?: Recurrence;
+  fixedRecurrence?: RecurrenceValue;
 };
 
-export default function AddTaskModal({
+export default function AddRoutineTaskModal({
   isOpen,
   onClose,
   onAdd,
   fixedRecurrence,
-}: AddTaskModalProps) {
+}: AddRoutineTaskModalProps) {
   const [title, setTitle] = useState('');
-  const [due, setDue] = useState('');
-  const [recurrence, setRecurrence] = useState<Recurrence>(fixedRecurrence ?? null);
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(fixedRecurrence ?? 'daily');
 
   const resolvedRecurrence = fixedRecurrence ?? recurrence;
-  const isRecurring = resolvedRecurrence !== null;
 
   const resetAndClose = () => {
     setTitle('');
-    setDue('');
-    setRecurrence(fixedRecurrence ?? null);
+    setRecurrence(fixedRecurrence ?? 'daily');
     onClose();
   };
 
@@ -44,8 +40,8 @@ export default function AddTaskModal({
     onAdd({
       id: crypto.randomUUID(),
       title: trimmedTitle,
-      due: isRecurring ? '' : due.trim(),
       stage: 0,
+      subtasks: [],
       recurrence: resolvedRecurrence,
     });
     resetAndClose();
@@ -66,26 +62,14 @@ export default function AddTaskModal({
             <label>Recurrence</label>
             <select
               className="settings-input"
-              value={recurrence ?? ''}
-              onChange={(event) =>
-                setRecurrence((event.target.value || null) as Recurrence)
-              }
+              value={recurrence}
+              onChange={(event) => setRecurrence(event.target.value as RecurrenceValue)}
             >
-              <option value="">None</option>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
           </div>
-        )}
-
-        {!isRecurring && (
-          <SettingsField
-            label="Due"
-            value={due}
-            onChange={setDue}
-            placeholder="e.g. Friday"
-          />
         )}
 
         <div className="settings-actions">

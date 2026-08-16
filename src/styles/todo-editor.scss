@@ -64,6 +64,59 @@
   }
 }
 
+.todo-editor-subtask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: #0f172a;
+
+  & + & {
+    margin-top: 0.4rem;
+  }
+
+  button {
+    border: none;
+    background: transparent;
+    color: #ef4444;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.todo-editor-subtask-add {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  input {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    color: #0f172a;
+    background: #ffffff;
+  }
+
+  button {
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #2563eb;
+    color: #ffffff;
+    cursor: pointer;
+  }
+}
+
 .todo-editor-actions {
   display: flex;
   justify-content: flex-end;

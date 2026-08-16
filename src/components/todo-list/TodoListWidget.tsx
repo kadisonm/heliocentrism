@@ -2,29 +2,22 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { RecurrenceValue, Todo } from '../../lib/types';
-import AddTaskModal from './AddTaskModal';
+import type { Todo } from '../../lib/types';
+import TaskItem from '../tasks/TaskItem';
+import AddTodoModal from './AddTodoModal';
 import TodoEditorPanel from './TodoEditorPanel';
-import TodoSection from './TodoSection';
 import { useTodos } from './useTodos';
 
-type SingleRoutineWidgetProps = {
-  title: string;
-  recurrence: RecurrenceValue;
-};
-
-export default function SingleRoutineWidget({ title, recurrence }: SingleRoutineWidgetProps) {
-  const { todos, isLoading, updateTodoStage, updateTodo, addTodo } = useTodos();
+export default function TodoListWidget() {
+  const { todos, isLoading, updateTodoStage, updateSubtaskStage, updateTodo, addTodo } =
+    useTodos();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
-  const sectionTodos = useMemo(
-    () =>
-      todos.filter(
-        (todo) => todo.recurrence === recurrence && (showCompleted || todo.stage !== 2)
-      ),
-    [todos, recurrence, showCompleted]
+  const visibleTodos = useMemo(
+    () => todos.filter((todo) => showCompleted || todo.stage !== 2),
+    [todos, showCompleted]
   );
 
   return (
@@ -32,7 +25,7 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
       <aside className="routine-panel-shell">
         <div className="routine-panel">
           <div className="routine-panel-header">
-            <h2>{title}</h2>
+            <h2>Todo List</h2>
 
             <div className="routine-panel-actions">
               <button
@@ -59,12 +52,24 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
 
           <div className="routine-sections">
             {!isLoading && (
-              <TodoSection
-                recurrence={recurrence}
-                todos={sectionTodos}
-                onToggle={updateTodoStage}
-                onEdit={setSelectedTodo}
-              />
+              <div className="routine-list">
+                {visibleTodos.length > 0 ? (
+                  visibleTodos.map((todo) => (
+                    <TaskItem
+                      key={todo.id}
+                      task={todo}
+                      onToggle={updateTodoStage}
+                      onToggleSubtask={updateSubtaskStage}
+                      onEdit={setSelectedTodo}
+                      extra={
+                        todo.due ? <p className="todo-item__due">Due {todo.due}</p> : undefined
+                      }
+                    />
+                  ))
+                ) : (
+                  <p className="routine-empty">No tasks</p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -80,11 +85,10 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
         }}
       />
 
-      <AddTaskModal
+      <AddTodoModal
         isOpen={isAddTaskOpen}
         onClose={() => setIsAddTaskOpen(false)}
         onAdd={addTodo}
-        fixedRecurrence={recurrence}
       />
     </>
   );

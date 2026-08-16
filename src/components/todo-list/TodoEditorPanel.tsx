@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Recurrence, Todo, TodoStage } from '../../lib/types';
+import type { Subtask, Todo, TodoStage } from '../../lib/types';
 
 type TodoEditorPanelProps = {
   todo: Todo | null;
@@ -10,11 +10,7 @@ type TodoEditorPanelProps = {
   onSave: (todo: Todo) => void;
 };
 
-export default function TodoEditorPanel({
-  todo,
-  onClose,
-  onSave,
-}: TodoEditorPanelProps) {
+export default function TodoEditorPanel({ todo, onClose, onSave }: TodoEditorPanelProps) {
   const [draft, setDraft] = useState<Todo | null>(todo);
   // Widgets are positioned by react-grid-layout via CSS `transform`, which
   // makes them a containing block for `position: fixed` descendants — this
@@ -25,9 +21,6 @@ export default function TodoEditorPanel({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Sanctioned "sync from an external system" effect pattern — client-only
-    // mount detection can't be derived during render since it would desync
-    // the server/client hydration output (document doesn't exist on the server).
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setMounted(true);
   }, []);
@@ -40,7 +33,19 @@ export default function TodoEditorPanel({
     setDraft((current) => (current ? { ...current, [field]: value } : current));
   };
 
-  const isRecurringTask = draft.recurrence === 'daily' || draft.recurrence === 'weekly' || draft.recurrence === 'monthly';
+  const addSubtask = (title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const subtask: Subtask = { id: crypto.randomUUID(), title: trimmed, stage: 0 };
+    updateDraft('subtasks', [...draft.subtasks, subtask]);
+  };
+
+  const removeSubtask = (id: string) => {
+    updateDraft(
+      'subtasks',
+      draft.subtasks.filter((subtask) => subtask.id !== id)
+    );
+  };
 
   return createPortal(
     <div className="todo-editor-overlay" onClick={onClose}>
@@ -62,16 +67,23 @@ export default function TodoEditorPanel({
             />
           </label>
 
-          {!isRecurringTask && (
-            <label className="todo-editor-field">
-              <span>Due</span>
-              <input
-                type="text"
-                value={draft.due}
-                onChange={(event) => updateDraft('due', event.target.value)}
-              />
-            </label>
-          )}
+          <label className="todo-editor-field">
+            <span>Description</span>
+            <input
+              type="text"
+              value={draft.description ?? ''}
+              onChange={(event) => updateDraft('description', event.target.value)}
+            />
+          </label>
+
+          <label className="todo-editor-field">
+            <span>Due</span>
+            <input
+              type="text"
+              value={draft.due}
+              onChange={(event) => updateDraft('due', event.target.value)}
+            />
+          </label>
 
           <label className="todo-editor-field">
             <span>Status</span>
@@ -85,20 +97,20 @@ export default function TodoEditorPanel({
             </select>
           </label>
 
-          <label className="todo-editor-field">
-            <span>Recurring</span>
-            <select
-              value={draft.recurrence || ''}
-              onChange={(event) =>
-                updateDraft('recurrence', (event.target.value || null) as Recurrence)
-              }
-            >
-              <option value="">None</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </label>
+          <div className="todo-editor-field">
+            <span>Subtasks</span>
+
+            {draft.subtasks.map((subtask) => (
+              <div key={subtask.id} className="todo-editor-subtask">
+                <span>{subtask.title}</span>
+                <button type="button" onClick={() => removeSubtask(subtask.id)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <SubtaskAdder onAdd={addSubtask} />
+          </div>
         </div>
 
         <div className="todo-editor-actions">
@@ -112,5 +124,29 @@ export default function TodoEditorPanel({
       </div>
     </div>,
     document.body
+  );
+}
+
+function SubtaskAdder({ onAdd }: { onAdd: (title: string) => void }) {
+  const [title, setTitle] = useState('');
+
+  return (
+    <div className="todo-editor-subtask-add">
+      <input
+        type="text"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder="New subtask"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          onAdd(title);
+          setTitle('');
+        }}
+      >
+        Add
+      </button>
+    </div>
   );
 }

@@ -20,7 +20,15 @@ import {
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type { DashboardState, FirebaseConfig, SyncStatus, Todo } from './types';
+import type {
+  DashboardState,
+  FirebaseConfig,
+  RecurrenceValue,
+  RoutineTask,
+  SyncStatus,
+  Todo,
+  TodoStage,
+} from './types';
 
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
@@ -284,7 +292,40 @@ export async function signOutFirebaseUser(): Promise<{
   }
 }
 
-export async function readTasksFromSyncFolder(): Promise<Todo[] | null> {
+// Pre-refactor shape: one unified Todo with a nullable recurrence, no
+// subtasks. Read once from legacy `data.tasks` and split by whether
+// `recurrence` is set, for accounts that synced before RoutineTask/Todo
+// became separate types.
+type LegacyTask = {
+  id: string;
+  title: string;
+  due?: string;
+  stage: TodoStage;
+  recurrence?: RecurrenceValue | null;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+};
+
+function splitLegacyTask(task: LegacyTask): RoutineTask | Todo {
+  const now = new Date().toISOString();
+  const base = {
+    id: task.id,
+    title: task.title,
+    stage: task.stage,
+    subtasks: [],
+    createdAt: task.createdAt ?? now,
+    updatedAt: task.updatedAt ?? now,
+    completedAt: task.completedAt ?? null,
+  };
+
+  if (task.recurrence) {
+    return { ...base, recurrence: task.recurrence };
+  }
+  return { ...base, due: task.due ?? '' };
+}
+
+export async function readRoutineTasks(): Promise<RoutineTask[] | null> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return null;
 
@@ -292,20 +333,28 @@ export async function readTasksFromSyncFolder(): Promise<Todo[] | null> {
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
 
-    const doc = snapshot.data() as { data?: Partial<AppData> };
-    return Array.isArray(doc.data?.tasks) ? doc.data.tasks : null;
+    const doc = snapshot.data() as { data?: Partial<AppData> & { tasks?: LegacyTask[] } };
+    if (Array.isArray(doc.data?.routineTasks)) return doc.data.routineTasks;
+
+    if (Array.isArray(doc.data?.tasks)) {
+      return doc.data.tasks
+        .map(splitLegacyTask)
+        .filter((task): task is RoutineTask => 'recurrence' in task);
+    }
+
+    return null;
   } catch (error) {
-    console.error('Error reading tasks from Firestore:', error);
+    console.error('Error reading routine tasks from Firestore:', error);
     return null;
   }
 }
 
-export async function writeTasksToSyncFolder(tasks: Todo[]): Promise<boolean> {
+export async function writeRoutineTasks(routineTasks: RoutineTask[]): Promise<boolean> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'tasks'> = { tasks };
+    const data: Pick<AppData, 'routineTasks'> = { routineTasks: stripUndefined(routineTasks) };
     await setDoc(
       docRef,
       {
@@ -316,7 +365,52 @@ export async function writeTasksToSyncFolder(tasks: Todo[]): Promise<boolean> {
     );
     return true;
   } catch (error) {
-    console.error('Error writing tasks to Firestore:', error);
+    console.error('Error writing routine tasks to Firestore:', error);
+    return false;
+  }
+}
+
+export async function readTodos(): Promise<Todo[] | null> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return null;
+
+  try {
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) return null;
+
+    const doc = snapshot.data() as { data?: Partial<AppData> & { tasks?: LegacyTask[] } };
+    if (Array.isArray(doc.data?.todos)) return doc.data.todos;
+
+    if (Array.isArray(doc.data?.tasks)) {
+      return doc.data.tasks
+        .map(splitLegacyTask)
+        .filter((task): task is Todo => 'due' in task);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error reading todos from Firestore:', error);
+    return null;
+  }
+}
+
+export async function writeTodos(todos: Todo[]): Promise<boolean> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return false;
+
+  try {
+    const data: Pick<AppData, 'todos'> = { todos: stripUndefined(todos) };
+    await setDoc(
+      docRef,
+      {
+        data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error writing todos to Firestore:', error);
     return false;
   }
 }

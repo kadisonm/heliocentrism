@@ -1,4 +1,4 @@
-import type { RecurrenceValue, RoutineResetTimes, Todo } from './types';
+import type { RecurrenceValue, RoutineResetTimes, RoutineTask } from './types';
 
 // The most recent past instant at which a given recurrence's configured
 // reset time occurred. Always <= now — if today's/this week's/this month's
@@ -43,17 +43,18 @@ export function getMostRecentResetBoundary(
   return boundary;
 }
 
-// A completed task is stale — and should reset back to "not done" — once
-// its recurrence's reset boundary has passed since it was completed (or if
-// we don't know when it was completed at all, e.g. pre-existing data).
-export function shouldResetTodo(todo: Todo, resetTimes: RoutineResetTimes, now: Date): boolean {
-  if (todo.stage !== 2) return false;
-  if (todo.recurrence !== 'daily' && todo.recurrence !== 'weekly' && todo.recurrence !== 'monthly') {
-    return false;
-  }
+// A completed routine task is stale — and should reset back to "not done"
+// — once its recurrence's reset boundary has passed since it was completed
+// (or if we don't know when it was completed at all, e.g. pre-existing data).
+export function shouldResetRoutineTask(
+  task: RoutineTask,
+  resetTimes: RoutineResetTimes,
+  now: Date
+): boolean {
+  if (task.stage !== 2) return false;
 
-  const boundary = getMostRecentResetBoundary(todo.recurrence, resetTimes, now);
-  if (!todo.completedAt) return true;
+  const boundary = getMostRecentResetBoundary(task.recurrence, resetTimes, now);
+  if (!task.completedAt) return true;
 
-  return new Date(todo.completedAt) < boundary;
+  return new Date(task.completedAt) < boundary;
 }
