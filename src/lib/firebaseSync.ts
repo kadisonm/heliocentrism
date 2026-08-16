@@ -18,7 +18,7 @@ import {
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
-import type { AppData } from './data';
+import type { AppData, AppSettings } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
 import type { DashboardState, FirebaseConfig, SyncStatus, Todo } from './types';
 
@@ -356,6 +356,43 @@ export async function writeDashboardState(
     return true;
   } catch (error) {
     console.error('Error writing dashboard state to Firestore:', error);
+    return false;
+  }
+}
+
+export async function readAppSettings(): Promise<AppSettings | null> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return null;
+
+  try {
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) return null;
+
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return doc.data?.settings ?? null;
+  } catch (error) {
+    console.error('Error reading app settings from Firestore:', error);
+    return null;
+  }
+}
+
+export async function writeAppSettings(settings: AppSettings): Promise<boolean> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return false;
+
+  try {
+    const data: Pick<AppData, 'settings'> = { settings: stripUndefined(settings) };
+    await setDoc(
+      docRef,
+      {
+        data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error writing app settings to Firestore:', error);
     return false;
   }
 }

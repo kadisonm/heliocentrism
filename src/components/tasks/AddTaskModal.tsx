@@ -8,7 +8,9 @@ import SettingsField from '../common/SettingsField';
 type AddTaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (todo: Todo) => void;
+  // createdAt/updatedAt/completedAt are stamped by useTodos' addTodo, not
+  // constructed here.
+  onAdd: (todo: Omit<Todo, 'createdAt' | 'updatedAt' | 'completedAt'>) => void;
   // When set, the new task always gets this recurrence and the picker below
   // is hidden — used by the per-cadence widgets (Daily/Weekly/Monthly
   // Routine), which only ever add tasks into their own section.

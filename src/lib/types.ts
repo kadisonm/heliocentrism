@@ -10,6 +10,9 @@ export type Todo = {
   due: string;
   stage: TodoStage;
   recurrence: Recurrence;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  completedAt: string | null; // ISO 8601, null while not done
 };
 
 export type FirebaseConfig = {
@@ -26,6 +29,16 @@ export type SyncStatus = {
   isConfigured: boolean;
   isAuthenticated: boolean;
   userEmail: string | null;
+};
+
+export type DailyResetTime = { hour: number; minute: number }; // 0-23, 0-59
+export type WeeklyResetTime = { dayOfWeek: number; hour: number; minute: number }; // 0=Sun..6=Sat
+export type MonthlyResetTime = { dayOfMonth: number; hour: number; minute: number }; // 1-31
+
+export type RoutineResetTimes = {
+  daily: DailyResetTime;
+  weekly: WeeklyResetTime;
+  monthly: MonthlyResetTime;
 };
 
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
