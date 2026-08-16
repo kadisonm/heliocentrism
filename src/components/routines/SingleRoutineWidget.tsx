@@ -3,8 +3,7 @@
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { RecurrenceValue, RoutineTask } from '../../lib/types';
-import AddRoutineTaskModal from './AddRoutineTaskModal';
-import RoutineTaskEditorPanel from './RoutineTaskEditorPanel';
+import RoutineTaskModal from './RoutineTaskModal';
 import RoutineTaskSection from './RoutineTaskSection';
 import { useRoutineTasks } from './useRoutineTasks';
 
@@ -13,12 +12,13 @@ type SingleRoutineWidgetProps = {
   recurrence: RecurrenceValue;
 };
 
+type RoutineModalState = { mode: 'add' } | { mode: 'edit'; task: RoutineTask };
+
 export default function SingleRoutineWidget({ title, recurrence }: SingleRoutineWidgetProps) {
   const { tasks, isLoading, updateTaskStage, updateSubtaskStage, updateTask, addTask } =
     useRoutineTasks();
-  const [selectedTask, setSelectedTask] = useState<RoutineTask | null>(null);
+  const [modalState, setModalState] = useState<RoutineModalState | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
-  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   const sectionTasks = useMemo(
     () =>
@@ -49,7 +49,7 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
               <button
                 type="button"
                 className="routine-add-button"
-                onClick={() => setIsAddTaskOpen(true)}
+                onClick={() => setModalState({ mode: 'add' })}
                 title="Add task"
                 aria-label="Add task"
               >
@@ -65,28 +65,27 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
                 tasks={sectionTasks}
                 onToggle={updateTaskStage}
                 onToggleSubtask={updateSubtaskStage}
-                onEdit={setSelectedTask}
+                onEdit={(task) => setModalState({ mode: 'edit', task })}
               />
             )}
           </div>
         </div>
       </aside>
 
-      <RoutineTaskEditorPanel
-        key={selectedTask?.id ?? 'no-selection'}
-        task={selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onSave={(task) => {
-          updateTask(task);
-          setSelectedTask(null);
-        }}
-      />
-
-      <AddRoutineTaskModal
-        isOpen={isAddTaskOpen}
-        onClose={() => setIsAddTaskOpen(false)}
-        onAdd={addTask}
+      <RoutineTaskModal
+        key={modalState ? (modalState.mode === 'edit' ? modalState.task.id : 'add') : 'idle'}
+        isOpen={modalState !== null}
+        task={modalState?.mode === 'edit' ? modalState.task : null}
         fixedRecurrence={recurrence}
+        onClose={() => setModalState(null)}
+        onSubmit={(task) => {
+          if (modalState?.mode === 'edit') {
+            updateTask(task);
+          } else {
+            addTask(task);
+          }
+          setModalState(null);
+        }}
       />
     </>
   );

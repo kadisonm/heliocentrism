@@ -76,6 +76,8 @@
 }
 
 .todo-item__title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
@@ -89,6 +91,13 @@
     color: var(--muted);
     text-decoration: line-through;
   }
+}
+
+.todo-item__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .todo-status {
@@ -139,15 +148,9 @@
   gap: 0.5rem;
 }
 
-.todo-toggle--small {
-  width: 0.95rem;
-  height: 0.95rem;
-  margin-top: 0;
-}
-
 .todo-subtask__title {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   color: var(--text);
 
   &.is-done {
@@ -165,24 +168,37 @@
 }
 
 .todo-item__due {
-  margin: 0;
+  flex-shrink: 0;
   font-size: 0.72rem;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.todo-item__due--today {
+  color: var(--warning);
+}
+
+.todo-item__due--overdue {
+  color: var(--error);
 }
 
 .todo-item__edit-button {
-  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
   border: 1px solid var(--border);
-  background: var(--accent-soft);
-  color: var(--text);
+  background: transparent;
+  color: var(--muted);
   border-radius: 0.5rem;
-  padding: 0.38rem 0.6rem;
-  font-size: 0.7rem;
-  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--accent-soft) 90%, white 10%);
+    background: var(--accent-soft);
+    color: var(--text);
     border-color: var(--accent);
   }
 }

@@ -1,20 +1,23 @@
 .todo-editor-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
 .todo-editor-panel {
   width: min(100%, 28rem);
-  background: #ffffff;
-  border-radius: 1rem;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
-  border: 1px solid #e2e8f0;
-  padding: 1rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 60px var(--shadow);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
 }
 
 .todo-editor-header {
@@ -26,17 +29,30 @@
   h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #0f172a;
+    color: var(--text);
   }
 }
 
 .todo-editor-close {
   border: none;
   background: transparent;
-  color: #475569;
+  color: var(--muted);
   font-size: 1.5rem;
   cursor: pointer;
   line-height: 1;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
 }
 
 .todo-editor-fields {
@@ -50,17 +66,34 @@
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--muted);
   font-weight: 600;
 
   input,
   select {
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border);
     border-radius: 0.65rem;
     padding: 0.65rem 0.75rem;
     font-size: 0.88rem;
-    color: #0f172a;
-    background: #ffffff;
+    font-weight: 400;
+    color: var(--text);
+    background: var(--panel-soft);
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+  }
+}
+
+.todo-editor-due-row {
+  display: flex;
+  gap: 0.5rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
   }
 }
 
@@ -70,11 +103,12 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 0.5rem;
+  background: var(--panel-soft);
   font-weight: 400;
   font-size: 0.82rem;
-  color: #0f172a;
+  color: var(--text);
 
   & + & {
     margin-top: 0.4rem;
@@ -97,12 +131,12 @@
 
   input {
     flex: 1;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border);
     border-radius: 0.65rem;
     padding: 0.5rem 0.65rem;
     font-size: 0.82rem;
-    color: #0f172a;
-    background: #ffffff;
+    color: var(--text);
+    background: var(--panel-soft);
   }
 
   button {
@@ -111,9 +145,13 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.78rem;
     font-weight: 600;
-    background: #2563eb;
-    color: #ffffff;
+    background: var(--accent-soft);
+    color: var(--text);
     cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent) 20%);
+    }
   }
 }
 
@@ -130,16 +168,25 @@
   padding: 0.65rem 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  border: 1px solid var(--border);
 }
 
 .todo-editor-cancel {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #475569;
+  background: transparent;
+  color: var(--muted);
+
+  &:hover {
+    background: var(--panel-soft);
+    color: var(--text);
+  }
 }
 
 .todo-editor-save {
-  border: none;
-  background: #2563eb;
-  color: #ffffff;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent) 20%);
+  }
 }

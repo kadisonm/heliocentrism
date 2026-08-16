@@ -2,24 +2,50 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { RecurrenceValue, RoutineTask, Subtask, TodoStage } from '../../lib/types';
+import type { RecurrenceValue, RoutineTask, Subtask } from '../../lib/types';
 
-type RoutineTaskEditorPanelProps = {
-  task: RoutineTask | null;
+type RoutineTaskModalProps = {
+  isOpen: boolean;
+  task: RoutineTask | null; // null while creating a new task
   onClose: () => void;
-  onSave: (task: RoutineTask) => void;
+  // createdAt/updatedAt/completedAt are (re)stamped by useRoutineTasks.
+  onSubmit: (task: RoutineTask) => void;
+  // When set, a newly created task always gets this recurrence and the
+  // picker below is hidden — used by the per-cadence widgets (Daily/Weekly/
+  // Monthly Routine), which only ever add tasks into their own section.
+  // Editing an existing task always allows changing its recurrence.
+  fixedRecurrence?: RecurrenceValue;
 };
 
-export default function RoutineTaskEditorPanel({
+function createDraftTask(fixedRecurrence?: RecurrenceValue): RoutineTask {
+  return {
+    id: crypto.randomUUID(),
+    title: '',
+    description: '',
+    stage: 0,
+    subtasks: [],
+    recurrence: fixedRecurrence ?? 'daily',
+    createdAt: '',
+    updatedAt: '',
+    completedAt: null,
+  };
+}
+
+export default function RoutineTaskModal({
+  isOpen,
   task,
   onClose,
-  onSave,
-}: RoutineTaskEditorPanelProps) {
-  const [draft, setDraft] = useState<RoutineTask | null>(task);
+  onSubmit,
+  fixedRecurrence,
+}: RoutineTaskModalProps) {
+  const [draft, setDraft] = useState<RoutineTask>(() => task ?? createDraftTask(fixedRecurrence));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  // See TodoEditorPanel's original comment (now in src/components/todo-list/):
-  // widgets are positioned via CSS transform, which traps position:fixed
-  // descendants inside them — portaling to document.body escapes that.
+  // Widgets are positioned by react-grid-layout via CSS `transform`, which
+  // makes them a containing block for `position: fixed` descendants — this
+  // modal would otherwise be trapped inside its widget's box instead of
+  // covering the viewport. Portaling to document.body escapes that.
+  // document doesn't exist during SSR, so the portal only renders once
+  // mounted on the client.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,12 +53,13 @@ export default function RoutineTaskEditorPanel({
     setMounted(true);
   }, []);
 
-  if (!task || !draft || !mounted) {
-    return null;
-  }
+  if (!isOpen || !mounted) return null;
+
+  const isEditing = task !== null;
+  const showRecurrencePicker = isEditing || !fixedRecurrence;
 
   const updateDraft = <K extends keyof RoutineTask>(field: K, value: RoutineTask[K]) => {
-    setDraft((current) => (current ? { ...current, [field]: value } : current));
+    setDraft((current) => ({ ...current, [field]: value }));
   };
 
   const addSubtask = () => {
@@ -50,11 +77,17 @@ export default function RoutineTaskEditorPanel({
     );
   };
 
+  const handleSubmit = () => {
+    const trimmedTitle = draft.title.trim();
+    if (!trimmedTitle) return;
+    onSubmit({ ...draft, title: trimmedTitle });
+  };
+
   return createPortal(
     <div className="todo-editor-overlay" onClick={onClose}>
       <div className="todo-editor-panel" onClick={(event) => event.stopPropagation()}>
         <div className="todo-editor-header">
-          <h3>Edit Task</h3>
+          <h3>{isEditing ? 'Edit Task' : 'Add Task'}</h3>
           <button type="button" className="todo-editor-close" onClick={onClose}>
             ×
           </button>
@@ -79,31 +112,21 @@ export default function RoutineTaskEditorPanel({
             />
           </label>
 
-          <label className="todo-editor-field">
-            <span>Status</span>
-            <select
-              value={draft.stage}
-              onChange={(event) => updateDraft('stage', Number(event.target.value) as TodoStage)}
-            >
-              <option value={0}>To do</option>
-              <option value={1}>In progress</option>
-              <option value={2}>Done</option>
-            </select>
-          </label>
-
-          <label className="todo-editor-field">
-            <span>Recurring</span>
-            <select
-              value={draft.recurrence}
-              onChange={(event) =>
-                updateDraft('recurrence', event.target.value as RecurrenceValue)
-              }
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </label>
+          {showRecurrencePicker && (
+            <label className="todo-editor-field">
+              <span>Recurring</span>
+              <select
+                value={draft.recurrence}
+                onChange={(event) =>
+                  updateDraft('recurrence', event.target.value as RecurrenceValue)
+                }
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+          )}
 
           <div className="todo-editor-field">
             <span>Subtasks</span>
@@ -135,8 +158,8 @@ export default function RoutineTaskEditorPanel({
           <button type="button" className="todo-editor-cancel" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="todo-editor-save" onClick={() => onSave(draft)}>
-            Save
+          <button type="button" className="todo-editor-save" onClick={handleSubmit}>
+            {isEditing ? 'Save' : 'Add Task'}
           </button>
         </div>
       </div>

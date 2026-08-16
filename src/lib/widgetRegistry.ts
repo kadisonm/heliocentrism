@@ -2,8 +2,11 @@ import type { ComponentType } from 'react';
 import DailyRoutineWidget from '../components/widgets/daily-routine';
 import MonthlyRoutineWidget from '../components/widgets/monthly-routine';
 import OrbitWidget from '../components/widgets/orbit';
+import PomodoroTimerWidget from '../components/widgets/pomodoro-timer';
+import PomodoroSettingsModal from '../components/widgets/pomodoro-timer/PomodoroSettingsModal';
 import RoutinesWidget from '../components/widgets/routines';
-import TodoListWidget from '../components/widgets/todo-list';
+import RoutineSettingsModal from '../components/widgets/routines/RoutineSettingsModal';
+import TodoListWidget from '../components/todo-list';
 import WeeklyRoutineWidget from '../components/widgets/weekly-routine';
 
 export type WidgetType =
@@ -12,7 +15,10 @@ export type WidgetType =
   | 'weekly-routine'
   | 'monthly-routine'
   | 'todo-list'
-  | 'orbit';
+  | 'orbit'
+  | 'pomodoro-timer';
+
+export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
 export type WidgetDefinition = {
   type: WidgetType;
@@ -20,6 +26,8 @@ export type WidgetDefinition = {
   description: string;
   defaultSize: { w: number; h: number };
   component: ComponentType;
+  // Rendered by WidgetShell's gear icon (edit mode only) when present.
+  settingsComponent?: WidgetSettingsComponent;
 };
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
@@ -29,6 +37,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Daily, weekly, and monthly to-dos, all in one widget.',
     defaultSize: { w: 4, h: 6 },
     component: RoutinesWidget,
+    settingsComponent: RoutineSettingsModal,
   },
   {
     type: 'daily-routine',
@@ -36,6 +45,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Just your daily to-dos.',
     defaultSize: { w: 3, h: 4 },
     component: DailyRoutineWidget,
+    settingsComponent: RoutineSettingsModal,
   },
   {
     type: 'weekly-routine',
@@ -43,6 +53,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Just your weekly to-dos.',
     defaultSize: { w: 3, h: 4 },
     component: WeeklyRoutineWidget,
+    settingsComponent: RoutineSettingsModal,
   },
   {
     type: 'monthly-routine',
@@ -50,6 +61,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Just your monthly to-dos.',
     defaultSize: { w: 3, h: 4 },
     component: MonthlyRoutineWidget,
+    settingsComponent: RoutineSettingsModal,
   },
   {
     type: 'todo-list',
@@ -64,6 +76,14 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'A decorative sun and orbiting planets animation.',
     defaultSize: { w: 5, h: 4 },
     component: OrbitWidget,
+  },
+  {
+    type: 'pomodoro-timer',
+    name: 'Pomodoro Timer',
+    description: 'A study/break countdown timer with optional auto-start.',
+    defaultSize: { w: 3, h: 4 },
+    component: PomodoroTimerWidget,
+    settingsComponent: PomodoroSettingsModal,
   },
 ];
 

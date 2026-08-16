@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Task } from '../../lib/types';
 
@@ -8,8 +9,8 @@ type TaskItemProps<T extends Task> = {
   onToggle: (id: string) => void;
   onEdit: (task: T) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
-  // Slot for a type-specific addition rendered below the description (e.g.
-  // a Todo's due date) — keeps this component generic across Task variants.
+  // Slot for a type-specific addition rendered next to the title (e.g. a
+  // Todo's due date) — keeps this component generic across Task variants.
   extra?: ReactNode;
 };
 
@@ -41,16 +42,28 @@ export default function TaskItem<T extends Task>({
             {task.title}
           </p>
 
-          <span
-            className={`todo-status todo-status--${statusLabel.toLowerCase().replace(/\s+/g, '-')}`}
-          >
-            {statusLabel}
-          </span>
+          {extra}
+
+          <div className="todo-item__header-actions">
+            <span
+              className={`todo-status todo-status--${statusLabel.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              {statusLabel}
+            </span>
+
+            <button
+              type="button"
+              className="todo-item__edit-button"
+              onClick={() => onEdit(task)}
+              title="Edit"
+              aria-label={`Edit ${task.title}`}
+            >
+              <Pencil size={13} />
+            </button>
+          </div>
         </div>
 
         {task.description && <p className="todo-item__description">{task.description}</p>}
-
-        {extra}
 
         {task.subtasks.length > 0 && (
           <div className="todo-item__subtasks">
@@ -60,7 +73,7 @@ export default function TaskItem<T extends Task>({
                 <div key={subtask.id} className="todo-subtask">
                   <button
                     type="button"
-                    className="todo-toggle todo-toggle--small"
+                    className="todo-toggle"
                     data-stage={subtask.stage}
                     onClick={() => onToggleSubtask?.(task.id, subtask.id)}
                     aria-label={`Set ${subtask.title} to next status`}
@@ -76,10 +89,6 @@ export default function TaskItem<T extends Task>({
             })}
           </div>
         )}
-
-        <button type="button" className="todo-item__edit-button" onClick={() => onEdit(task)}>
-          Edit
-        </button>
       </div>
     </div>
   );

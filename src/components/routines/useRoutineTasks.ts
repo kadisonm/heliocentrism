@@ -111,7 +111,7 @@ function updateTask(updatedTask: RoutineTask) {
   persist();
 }
 
-function addTask(input: Omit<RoutineTask, 'createdAt' | 'updatedAt' | 'completedAt'>) {
+function addTask(input: RoutineTask) {
   const now = new Date().toISOString();
   const task: RoutineTask = {
     ...input,

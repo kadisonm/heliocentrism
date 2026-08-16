@@ -9,6 +9,7 @@ $themes: (
     accent: oklab(72.30% 0.112 0.18),
     success: oklab(67.096% -0.14077 0.09138),
     warning: oklab(72.30% 0.112 0.18),
+    error: oklab(64.629% 0.20295 0.12981)
   ),
   dark: (
     text: oklab(94.30% -0.001 -0.02),
@@ -18,6 +19,7 @@ $themes: (
     accent: oklab(76.80% 0.135 0.20),
     success: oklab(75.396% -0.15153 0.0867),
     warning: oklab(76.80% 0.135 0.20),
+    error: oklab(64.629% 0.20295 0.12981)
   ),
 );
 
@@ -31,6 +33,7 @@ $themes: (
   --accent: #{map.get($tokens, accent)};
   --success: #{map.get($tokens, success)};
   --warning: #{map.get($tokens, warning)};
+  --error: #{map.get($tokens, error)};
 
   --muted: color-mix(in srgb, var(--text) 65%, transparent);
   --text-soft: color-mix(in srgb, var(--text) 72%, transparent);

@@ -26,6 +26,14 @@ export type RoutineTask = Task & { recurrence: RecurrenceValue };
 // A todo has a due date instead of a recurrence.
 export type Todo = Task & { due: string };
 
+// A named collection of todos — the Todo List widget can switch between
+// several of these, each with its own independent set of tasks.
+export type TodoList = {
+  id: string;
+  name: string;
+  todos: Todo[];
+};
+
 export type FirebaseConfig = {
   apiKey: string;
   authDomain: string;
@@ -50,6 +58,11 @@ export type RoutineResetTimes = {
   daily: DailyResetTime;
   weekly: WeeklyResetTime;
   monthly: MonthlyResetTime;
+};
+
+export type PomodoroSettings = {
+  studyMinutes: number;
+  breakMinutes: number;
 };
 
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';

@@ -27,6 +27,7 @@ import type {
   RoutineTask,
   SyncStatus,
   Todo,
+  TodoList,
   TodoStage,
 } from './types';
 
@@ -370,7 +371,7 @@ export async function writeRoutineTasks(routineTasks: RoutineTask[]): Promise<bo
   }
 }
 
-export async function readTodos(): Promise<Todo[] | null> {
+export async function readTodoLists(): Promise<TodoList[] | null> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return null;
 
@@ -378,28 +379,37 @@ export async function readTodos(): Promise<Todo[] | null> {
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
 
-    const doc = snapshot.data() as { data?: Partial<AppData> & { tasks?: LegacyTask[] } };
-    if (Array.isArray(doc.data?.todos)) return doc.data.todos;
+    const doc = snapshot.data() as {
+      data?: Partial<AppData> & { todos?: Todo[]; tasks?: LegacyTask[] };
+    };
+    if (Array.isArray(doc.data?.todoLists)) return doc.data.todoLists;
+
+    // Pre-TodoList shape: one flat `todos` array. Wrap it in a single
+    // default list so existing tasks aren't lost when this ships.
+    if (Array.isArray(doc.data?.todos)) {
+      return [{ id: crypto.randomUUID(), name: 'My Tasks', todos: doc.data.todos }];
+    }
 
     if (Array.isArray(doc.data?.tasks)) {
-      return doc.data.tasks
+      const todos = doc.data.tasks
         .map(splitLegacyTask)
         .filter((task): task is Todo => 'due' in task);
+      return todos.length > 0 ? [{ id: crypto.randomUUID(), name: 'My Tasks', todos }] : [];
     }
 
     return null;
   } catch (error) {
-    console.error('Error reading todos from Firestore:', error);
+    console.error('Error reading todo lists from Firestore:', error);
     return null;
   }
 }
 
-export async function writeTodos(todos: Todo[]): Promise<boolean> {
+export async function writeTodoLists(todoLists: TodoList[]): Promise<boolean> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'todos'> = { todos: stripUndefined(todos) };
+    const data: Pick<AppData, 'todoLists'> = { todoLists: stripUndefined(todoLists) };
     await setDoc(
       docRef,
       {
@@ -410,7 +420,7 @@ export async function writeTodos(todos: Todo[]): Promise<boolean> {
     );
     return true;
   } catch (error) {
-    console.error('Error writing todos to Firestore:', error);
+    console.error('Error writing todo lists to Firestore:', error);
     return false;
   }
 }

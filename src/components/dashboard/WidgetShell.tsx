@@ -1,6 +1,7 @@
 'use client';
 
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, Settings, X } from 'lucide-react';
+import { useState } from 'react';
 import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/widgetRegistry';
 import type { DashboardWidget } from '../../lib/types';
 
@@ -19,6 +20,8 @@ export default function WidgetShell({
 }: WidgetShellProps) {
   const definition = findWidgetDefinition(widget.type);
   const WidgetComponent = definition?.component;
+  const SettingsComponent = definition?.settingsComponent;
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <div className="dashboard-widget">
@@ -27,6 +30,18 @@ export default function WidgetShell({
           <span className="widget-drag-handle" title="Drag to move" aria-label="Drag to move">
             <GripVertical size={16} />
           </span>
+
+          {SettingsComponent && (
+            <button
+              type="button"
+              className="dashboard-widget-settings"
+              onClick={() => setIsSettingsOpen(true)}
+              title="Widget settings"
+              aria-label="Widget settings"
+            >
+              <Settings size={14} />
+            </button>
+          )}
 
           <select
             className="dashboard-widget-type-select"
@@ -61,6 +76,10 @@ export default function WidgetShell({
           <p className="dashboard-widget-unknown">Unknown widget type &quot;{widget.type}&quot;.</p>
         )}
       </div>
+
+      {SettingsComponent && (
+        <SettingsComponent isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      )}
     </div>
   );
 }

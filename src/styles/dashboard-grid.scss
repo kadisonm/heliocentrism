@@ -76,6 +76,23 @@
   }
 }
 
+.dashboard-widget-settings {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text);
+    background: var(--accent-soft);
+  }
+}
+
 .dashboard-widget-remove {
   background: none;
   border: none;
