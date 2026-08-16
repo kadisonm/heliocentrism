@@ -1,7 +1,8 @@
 import type { ComponentType } from 'react';
+import OrbitWidget from '../components/widgets/orbit';
 import RecurringTasks from '../components/widgets/recurring-tasks';
 
-export type WidgetType = 'recurring-tasks';
+export type WidgetType = 'recurring-tasks' | 'orbit';
 
 export type WidgetDefinition = {
   type: WidgetType;
@@ -18,6 +19,13 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'Daily, weekly, and monthly to-dos.',
     defaultSize: { w: 4, h: 6 },
     component: RecurringTasks,
+  },
+  {
+    type: 'orbit',
+    name: 'Orbit',
+    description: 'A decorative sun and orbiting planets animation.',
+    defaultSize: { w: 5, h: 4 },
+    component: OrbitWidget,
   },
 ];
 

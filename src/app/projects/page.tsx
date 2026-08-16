@@ -1,11 +1,11 @@
 'use client';
 
-export default function FamilyPage() {
+export default function ProjectsPage() {
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard-container">
         <p className="settings-help">
-          Coming soon — a shared dashboard that syncs between family members.
+          Coming soon — a Kanban project manager.
         </p>
       </div>
     </div>

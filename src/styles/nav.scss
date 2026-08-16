@@ -7,6 +7,23 @@
   background: var(--background);
 }
 
+.app-nav-start {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.app-nav-logo {
+  display: flex;
+  align-items: center;
+
+  img {
+    display: block;
+    height: 1.75rem;
+    width: auto;
+  }
+}
+
 .app-nav-links {
   display: flex;
   gap: 0.25rem;

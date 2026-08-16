@@ -1,7 +1,7 @@
 # Heliocentrism
 Heliocentrism is a vibe coded dashboard to simply organise your life, events, projects, and to-dos.
 
-No matter how stressful life becomes, the earth will continue to orbit the sun.
+Heliocentrism: the earth still orbits the sun. Every day, without fail, no matter what's happening down here. Heliocentrism helps you carry that same quiet steadiness — for the days you need reminding that this, too, keeps turning.
 
 ## Why is this vibe coded?
 I needed a dashboard personalised to **me** with the features that I need in order to organise my life better and keep on top of my study/work.

@@ -1,0 +1,176 @@
+// Keep in sync with the ORBIT_PATH_* constants in
+// src/components/orbit-animation/index.tsx — same ellipses (both centered
+// at 140,90), traced from their top point.
+$orbit-path-inner: 'M 140,30 A 100,60 0 1 1 139.99,30 Z';
+$orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
+
+.orbit-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.orbit-widget {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.orbit-sun {
+  fill: var(--accent);
+  // fill-box makes transform-origin: center resolve to this shape's own
+  // center (its cx/cy), regardless of where it sits in the wider viewBox —
+  // more reliable than px-based transform-origin values or animating the
+  // `r` attribute directly, which didn't render consistently.
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  opacity: 0;
+  animation: orbit-sun-in 0.25s ease forwards;
+}
+
+.orbit-path {
+  stroke-width: 2;
+  opacity: 0;
+  animation: orbit-path-in 0.25s ease forwards;
+}
+
+// Each orbit path shares its animation-delay with its planet below, so the
+// ring and its planet fade in together instead of the planet lagging behind.
+.orbit-path--inner {
+  stroke: var(--primary);
+  animation-delay: 0.25s;
+}
+
+.orbit-path--outer {
+  stroke: var(--secondary);
+  animation-delay: 0.4s;
+}
+
+.orbit-planet {
+  fill: var(--background);
+  stroke-width: 2;
+  opacity: 0;
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+}
+
+.orbit-planet--inner {
+  stroke: var(--primary);
+  offset-path: path('#{$orbit-path-inner}');
+  animation:
+    orbit-planet-in 0.25s ease forwards 0.25s,
+    orbit-planet-orbit 5s linear infinite 0.25s;
+}
+
+.orbit-planet--outer {
+  stroke: var(--secondary);
+  offset-path: path('#{$orbit-path-outer}');
+}
+
+.orbit-planet--outer-behind {
+  animation:
+    orbit-planet-in 0.25s ease forwards 0.4s,
+    orbit-planet-orbit 7s linear infinite 0.4s,
+    orbit-outer-visible-behind 7s linear infinite 0.4s;
+}
+
+.orbit-planet--outer-front {
+  animation:
+    orbit-planet-in 0.25s ease forwards 0.4s,
+    orbit-planet-orbit 7s linear infinite 0.4s,
+    orbit-outer-visible-front 7s linear infinite 0.4s;
+}
+
+@keyframes orbit-sun-in {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-path-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-planet-in {
+  to {
+    opacity: 1;
+  }
+}
+
+// offset-distance 0%/100% are both the ellipse's top point (start == end of
+// the closed path), so the planet is smallest there and largest at ~50%
+// (near the bottom), giving a "grows towards the bottom, shrinks towards
+// the top" pulse as it orbits.
+@keyframes orbit-planet-orbit {
+  0% {
+    offset-distance: 0%;
+    transform: scale(0.8);
+  }
+  50% {
+    offset-distance: 50%;
+    transform: scale(1.2);
+  }
+  100% {
+    offset-distance: 100%;
+    transform: scale(0.8);
+  }
+}
+
+// Run on the same timeline (duration + delay) as orbit-planet-orbit above,
+// so each copy is shown/hidden in step with the outer planet's actual
+// position: the "behind" copy (earlier in the DOM than the inner planet)
+// is visible while it's near the top of the path; the "front" copy (later
+// in the DOM) takes over near the bottom. visibility is a genuinely
+// discrete property (unlike z-index, which some browsers interpolate as a
+// number through intermediate values, and unlike opacity, which would
+// fight with the one-time fade-in animation on the same property) so the
+// swap is a clean, instant, browser-guaranteed snap.
+@keyframes orbit-outer-visible-behind {
+  0% {
+    visibility: visible;
+  }
+  24.9% {
+    visibility: visible;
+  }
+  25% {
+    visibility: hidden;
+  }
+  74.9% {
+    visibility: hidden;
+  }
+  75% {
+    visibility: visible;
+  }
+  100% {
+    visibility: visible;
+  }
+}
+
+@keyframes orbit-outer-visible-front {
+  0% {
+    visibility: hidden;
+  }
+  24.9% {
+    visibility: hidden;
+  }
+  25% {
+    visibility: visible;
+  }
+  74.9% {
+    visibility: visible;
+  }
+  75% {
+    visibility: hidden;
+  }
+  100% {
+    visibility: hidden;
+  }
+}

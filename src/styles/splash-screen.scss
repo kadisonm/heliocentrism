@@ -1,0 +1,29 @@
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  animation: splash-fade-out 0.6s ease forwards;
+  animation-delay: 3s;
+}
+
+.splash-screen--loop {
+  animation: none;
+}
+
+// OrbitAnimation itself fills whatever box it's given (width/height: 100%)
+// — this frame is what actually sizes it for the splash context specifically.
+.splash-orbit-frame {
+  width: min(60vw, 22rem);
+  aspect-ratio: 280 / 180;
+}
+
+@keyframes splash-fade-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}

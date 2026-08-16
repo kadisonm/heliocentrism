@@ -9,7 +9,10 @@ import SyncConfigPanel from '../sync-config';
 
 const NAV_LINKS = [
   { href: '/', label: 'Dashboard' },
-  { href: '/family', label: 'Family' },
+  { href: '/projects', label: 'Projects' },
+  { href: '/mail', label: 'Mail' },
+  { href: '/calendar', label: 'Calendar' },
+  { href: '/family', label: 'Family' }
 ];
 
 export default function Nav() {
@@ -19,18 +22,24 @@ export default function Nav() {
 
   return (
     <nav className="app-nav">
-      <div className="app-nav-links">
-        {NAV_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={
-              pathname === link.href ? 'app-nav-link app-nav-link--active' : 'app-nav-link'
-            }
-          >
-            {link.label}
-          </Link>
-        ))}
+      <div className="app-nav-start">
+        <Link href="/" className="app-nav-logo">
+          <img src="/logo.svg" alt="Heliocentrism" />
+        </Link>
+
+        <div className="app-nav-links">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={
+                pathname === link.href ? 'app-nav-link app-nav-link--active' : 'app-nav-link'
+              }
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="app-nav-actions">
