@@ -24,7 +24,7 @@ export default function Nav() {
     <nav className="app-nav">
       <div className="app-nav-start">
         <Link href="/" className="app-nav-logo">
-          <img src="/logo.svg" alt="Heliocentrism" />
+          <img src="/wordmark.svg" alt="Heliocentrism" />
         </Link>
 
         <div className="app-nav-links">

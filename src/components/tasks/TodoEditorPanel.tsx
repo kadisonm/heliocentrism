@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import type { Recurrence, Todo, TodoStage } from '../../../lib/types';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { Recurrence, Todo, TodoStage } from '../../lib/types';
 
 type TodoEditorPanelProps = {
   todo: Todo | null;
@@ -15,8 +16,23 @@ export default function TodoEditorPanel({
   onSave,
 }: TodoEditorPanelProps) {
   const [draft, setDraft] = useState<Todo | null>(todo);
+  // Widgets are positioned by react-grid-layout via CSS `transform`, which
+  // makes them a containing block for `position: fixed` descendants — this
+  // panel would otherwise be trapped inside its widget's box instead of
+  // covering the viewport. Portaling to document.body escapes that.
+  // document doesn't exist during SSR, so the portal only renders once
+  // mounted on the client.
+  const [mounted, setMounted] = useState(false);
 
-  if (!todo || !draft) {
+  useEffect(() => {
+    // Sanctioned "sync from an external system" effect pattern — client-only
+    // mount detection can't be derived during render since it would desync
+    // the server/client hydration output (document doesn't exist on the server).
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setMounted(true);
+  }, []);
+
+  if (!todo || !draft || !mounted) {
     return null;
   }
 
@@ -26,7 +42,7 @@ export default function TodoEditorPanel({
 
   const isRecurringTask = draft.recurrence === 'daily' || draft.recurrence === 'weekly' || draft.recurrence === 'monthly';
 
-  return (
+  return createPortal(
     <div className="todo-editor-overlay" onClick={onClose}>
       <div className="todo-editor-panel" onClick={(event) => event.stopPropagation()}>
         <div className="todo-editor-header">
@@ -94,6 +110,7 @@ export default function TodoEditorPanel({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

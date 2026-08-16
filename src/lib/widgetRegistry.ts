@@ -1,8 +1,16 @@
 import type { ComponentType } from 'react';
+import DailyRoutineWidget from '../components/widgets/daily-routine';
+import MonthlyRoutineWidget from '../components/widgets/monthly-routine';
 import OrbitWidget from '../components/widgets/orbit';
-import RecurringTasks from '../components/widgets/recurring-tasks';
+import RoutinesWidget from '../components/widgets/routines';
+import WeeklyRoutineWidget from '../components/widgets/weekly-routine';
 
-export type WidgetType = 'recurring-tasks' | 'orbit';
+export type WidgetType =
+  | 'routines'
+  | 'daily-routine'
+  | 'weekly-routine'
+  | 'monthly-routine'
+  | 'orbit';
 
 export type WidgetDefinition = {
   type: WidgetType;
@@ -14,11 +22,32 @@ export type WidgetDefinition = {
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
   {
-    type: 'recurring-tasks',
-    name: 'Recurring Tasks',
-    description: 'Daily, weekly, and monthly to-dos.',
+    type: 'routines',
+    name: 'Routines',
+    description: 'Daily, weekly, and monthly to-dos, all in one widget.',
     defaultSize: { w: 4, h: 6 },
-    component: RecurringTasks,
+    component: RoutinesWidget,
+  },
+  {
+    type: 'daily-routine',
+    name: 'Daily Routine',
+    description: 'Just your daily to-dos.',
+    defaultSize: { w: 3, h: 4 },
+    component: DailyRoutineWidget,
+  },
+  {
+    type: 'weekly-routine',
+    name: 'Weekly Routine',
+    description: 'Just your weekly to-dos.',
+    defaultSize: { w: 3, h: 4 },
+    component: WeeklyRoutineWidget,
+  },
+  {
+    type: 'monthly-routine',
+    name: 'Monthly Routine',
+    description: 'Just your monthly to-dos.',
+    defaultSize: { w: 3, h: 4 },
+    component: MonthlyRoutineWidget,
   },
   {
     type: 'orbit',
