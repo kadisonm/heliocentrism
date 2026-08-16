@@ -1,7 +1,7 @@
-.todo-editor-overlay {
+.editor-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,7 +9,7 @@
   padding: 1rem;
 }
 
-.todo-editor-panel {
+.editor-panel {
   width: min(100%, 28rem);
   max-height: 85vh;
   overflow-y: auto;
@@ -20,7 +20,7 @@
   padding: 1.25rem;
 }
 
-.todo-editor-header {
+.editor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -33,7 +33,7 @@
   }
 }
 
-.todo-editor-close {
+.editor-close {
   border: none;
   background: transparent;
   color: var(--muted);
@@ -55,13 +55,13 @@
   }
 }
 
-.todo-editor-fields {
+.editor-fields {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
 }
 
-.todo-editor-field {
+.editor-field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -87,7 +87,9 @@
   }
 }
 
-.todo-editor-due-row {
+// A row of two inputs side by side within a single field (e.g. a Todo's
+// due date + time).
+.editor-field-row {
   display: flex;
   gap: 0.5rem;
 
@@ -97,7 +99,7 @@
   }
 }
 
-.todo-editor-subtask {
+.editor-subtask {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,14 +119,14 @@
   button {
     border: none;
     background: transparent;
-    color: #ef4444;
+    color: var(--error);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
   }
 }
 
-.todo-editor-subtask-add {
+.editor-subtask-add {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
@@ -155,15 +157,15 @@
   }
 }
 
-.todo-editor-actions {
+.editor-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1rem;
 }
 
-.todo-editor-cancel,
-.todo-editor-save {
+.editor-cancel,
+.editor-save {
   border-radius: 0.65rem;
   padding: 0.65rem 0.9rem;
   font-weight: 600;
@@ -171,7 +173,7 @@
   border: 1px solid var(--border);
 }
 
-.todo-editor-cancel {
+.editor-cancel {
   background: transparent;
   color: var(--muted);
 
@@ -181,7 +183,7 @@
   }
 }
 
-.todo-editor-save {
+.editor-save {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--text);

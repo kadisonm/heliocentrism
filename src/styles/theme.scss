@@ -9,7 +9,17 @@ $themes: (
     accent: oklab(72.30% 0.112 0.18),
     success: oklab(67.096% -0.14077 0.09138),
     warning: oklab(72.30% 0.112 0.18),
-    error: oklab(64.629% 0.20295 0.12981)
+    error: oklab(64.629% 0.20295 0.12981),
+    overlay-scrim: oklab(0% 0 0 / 0.5),
+    overlay-shadow: oklab(0% 0 0 / 0.4),
+    panel-gradient: linear-gradient(180deg, oklab(100% 0 0 / 0.98), oklab(98.415% -0.00129 -0.00316 / 0.99)),
+    surface-scrim: oklab(96.826% -0.00258 -0.00635),
+    muted-slate: oklab(55.439% -0.00887 -0.03974),
+    status-caution: oklab(64.607% 0.1464 0.12779),
+    status-caution-strong: oklab(70.487% 0.1259 0.13789),
+    status-info: oklab(48.820% -0.02128 -0.21612),
+    status-info-strong: oklab(54.615% -0.02667 -0.21355),
+    status-info-bg: oklab(62.308% -0.03325 -0.18505)
   ),
   dark: (
     text: oklab(94.30% -0.001 -0.02),
@@ -19,7 +29,17 @@ $themes: (
     accent: oklab(76.80% 0.135 0.20),
     success: oklab(75.396% -0.15153 0.0867),
     warning: oklab(76.80% 0.135 0.20),
-    error: oklab(64.629% 0.20295 0.12981)
+    error: oklab(64.629% 0.20295 0.12981),
+    overlay-scrim: oklab(0% 0 0 / 0.5),
+    overlay-shadow: oklab(0% 0 0 / 0.4),
+    panel-gradient: linear-gradient(180deg, oklab(23.123% -0.00372 -0.03315 / 0.98), oklab(21.008% -0.00295 -0.03162 / 0.99)),
+    surface-scrim: oklab(20.768% -0.00295 -0.03972),
+    muted-slate: oklab(71.067% -0.00803 -0.03418),
+    status-caution: oklab(70.487% 0.1259 0.13789),
+    status-caution-strong: oklab(75.764% 0.08908 0.13175),
+    status-info: oklab(80.907% -0.02984 -0.09082),
+    status-info-strong: oklab(71.374% -0.03802 -0.13825),
+    status-info-bg: oklab(62.308% -0.03325 -0.18505)
   ),
 );
 
@@ -50,24 +70,20 @@ $themes: (
 
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
   --accent-strong: color-mix(in srgb, var(--accent) 78%, black 22%);
-  --shadow: color-mix(in srgb, var(--background) 56%, black 44%);
-}
+  --shadow: color-mix(in srgb, var(--background) 80%, black 20%);
 
-@mixin theme($mode: dark) {
-  $tokens: if(sass($mode == light): $theme-light; else: $theme-dark);
+  // Chrome/status tones for elements not yet re-themed per mode (panel
+  // gradients, status badges, etc.) — kept as their own tier so each can
+  // still vary by theme without being derived from --background/--text.
+  --overlay-scrim: #{map.get($tokens, overlay-scrim)};
+  --overlay-shadow: #{map.get($tokens, overlay-shadow)};
+  --panel-gradient: #{map.get($tokens, panel-gradient)};
+  --surface-scrim: #{map.get($tokens, surface-scrim)};
+  --muted-slate: #{map.get($tokens, muted-slate)};
 
-  --bg: map.get($tokens, bg);
-  --bg-elevated: map.get($tokens, bg-elevated);
-  --panel: map.get($tokens, panel);
-  --panel-soft: map.get($tokens, panel-soft);
-  --panel-strong: map.get($tokens, panel-strong);
-  --border: map.get($tokens, border);
-  --text: map.get($tokens, text);
-  --muted: map.get($tokens, muted);
-  --accent: map.get($tokens, accent);
-  --accent-strong: map.get($tokens, accent-strong);
-  --accent-soft: map.get($tokens, accent-soft);
-  --success: map.get($tokens, success);
-  --warning: map.get($tokens, warning);
-  --shadow: map.get($tokens, shadow);
+  --status-caution: #{map.get($tokens, status-caution)};
+  --status-caution-strong: #{map.get($tokens, status-caution-strong)};
+  --status-info: #{map.get($tokens, status-info)};
+  --status-info-strong: #{map.get($tokens, status-info-strong)};
+  --status-info-bg: #{map.get($tokens, status-info-bg)};
 }

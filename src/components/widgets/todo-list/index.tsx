@@ -2,8 +2,9 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { Todo } from '../../lib/types';
-import TaskItem from '../tasks/TaskItem';
+import type { Todo } from '../../../lib/types';
+import SortableTaskList from '../../tasks/SortableTaskList';
+import TaskItem, { TaskItemView } from '../../tasks/TaskItem';
 import AddTodoListModal from './AddTodoListModal';
 import { formatDue, getDueUrgency } from './dueDate';
 import TodoModal from './TodoModal';
@@ -13,9 +14,27 @@ const NEW_LIST_OPTION = '__new__';
 
 type TodoModalState = { mode: 'add' } | { mode: 'edit'; todo: Todo };
 
+function renderDueBadge(todo: Todo) {
+  if (!todo.due) return undefined;
+  return (
+    <span className={`todo-item__due todo-item__due--${getDueUrgency(todo.due)}`}>
+      {formatDue(todo.due)}
+    </span>
+  );
+}
+
 export default function TodoListWidget() {
-  const { todoLists, isLoading, createList, addTodo, updateTodoStage, updateSubtaskStage, updateTodo } =
-    useTodoLists();
+  const {
+    todoLists,
+    isLoading,
+    createList,
+    addTodo,
+    updateTodoStage,
+    updateSubtaskStage,
+    updateTodo,
+    reorderTodos,
+    reorderSubtasks,
+  } = useTodoLists();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<TodoModalState | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
@@ -104,26 +123,51 @@ export default function TodoListWidget() {
                     </button>
                   </div>
                 ) : visibleTodos.length > 0 ? (
-                  visibleTodos.map((todo) => (
-                    <TaskItem
-                      key={todo.id}
-                      task={todo}
-                      onToggle={(id) => updateTodoStage(activeList.id, id)}
-                      onToggleSubtask={(taskId, subtaskId) =>
-                        updateSubtaskStage(activeList.id, taskId, subtaskId)
-                      }
-                      onEdit={(todo) => setModalState({ mode: 'edit', todo })}
-                      extra={
-                        todo.due ? (
-                          <span
-                            className={`todo-item__due todo-item__due--${getDueUrgency(todo.due)}`}
-                          >
-                            {formatDue(todo.due)}
-                          </span>
-                        ) : undefined
-                      }
-                    />
-                  ))
+                  <SortableTaskList
+                    ids={visibleTodos.map((todo) => todo.id)}
+                    onReorder={(activeId, overId) =>
+                      reorderTodos(
+                        activeList.id,
+                        (todo) => showCompleted || todo.stage !== 2,
+                        activeId,
+                        overId
+                      )
+                    }
+                    renderOverlay={(activeId) => {
+                      const todo = visibleTodos.find((t) => t.id === activeId);
+                      return todo ? (
+                        <TaskItemView
+                          task={todo}
+                          onToggle={(id) => updateTodoStage(activeList.id, id)}
+                          onEdit={(todo) => setModalState({ mode: 'edit', todo })}
+                          onToggleSubtask={(taskId, subtaskId) =>
+                            updateSubtaskStage(activeList.id, taskId, subtaskId)
+                          }
+                          onReorderSubtasks={(taskId, activeId, overId) =>
+                            reorderSubtasks(activeList.id, taskId, activeId, overId)
+                          }
+                          extra={renderDueBadge(todo)}
+                          overlay
+                        />
+                      ) : null;
+                    }}
+                  >
+                    {visibleTodos.map((todo) => (
+                      <TaskItem
+                        key={todo.id}
+                        task={todo}
+                        onToggle={(id) => updateTodoStage(activeList.id, id)}
+                        onToggleSubtask={(taskId, subtaskId) =>
+                          updateSubtaskStage(activeList.id, taskId, subtaskId)
+                        }
+                        onEdit={(todo) => setModalState({ mode: 'edit', todo })}
+                        onReorderSubtasks={(taskId, activeId, overId) =>
+                          reorderSubtasks(activeList.id, taskId, activeId, overId)
+                        }
+                        extra={renderDueBadge(todo)}
+                      />
+                    ))}
+                  </SortableTaskList>
                 ) : (
                   <p className="routine-empty">No tasks</p>
                 )}

@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { RecurrenceValue, RoutineTask } from '../../lib/types';
+import type { RecurrenceValue, RoutineTask } from '../../../lib/types';
 import RoutineTaskModal from './RoutineTaskModal';
 import RoutineTaskSection from './RoutineTaskSection';
 import { useRoutineTasks } from './useRoutineTasks';
@@ -15,8 +15,16 @@ type SingleRoutineWidgetProps = {
 type RoutineModalState = { mode: 'add' } | { mode: 'edit'; task: RoutineTask };
 
 export default function SingleRoutineWidget({ title, recurrence }: SingleRoutineWidgetProps) {
-  const { tasks, isLoading, updateTaskStage, updateSubtaskStage, updateTask, addTask } =
-    useRoutineTasks();
+  const {
+    tasks,
+    isLoading,
+    updateTaskStage,
+    updateSubtaskStage,
+    updateTask,
+    addTask,
+    reorderTasks,
+    reorderSubtasks,
+  } = useRoutineTasks();
   const [modalState, setModalState] = useState<RoutineModalState | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
 
@@ -66,6 +74,14 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
                 onToggle={updateTaskStage}
                 onToggleSubtask={updateSubtaskStage}
                 onEdit={(task) => setModalState({ mode: 'edit', task })}
+                onReorder={(activeId, overId) =>
+                  reorderTasks(
+                    (task) => task.recurrence === recurrence && (showCompleted || task.stage !== 2),
+                    activeId,
+                    overId
+                  )
+                }
+                onReorderSubtasks={reorderSubtasks}
               />
             )}
           </div>

@@ -6,27 +6,6 @@
   flex-direction: column;
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(21, 29, 45, 0.96), rgba(17, 24, 39, 0.98));
-
-  h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-}
-
-.dashboard-header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
 .dashboard-container {
   flex: 1;
   display: flex;
@@ -48,7 +27,7 @@
   // content) didn't cover that full height, leaving slivers of the tab
   // buttons visible above/below it.
   height: 2.75rem;
-  background: linear-gradient(180deg, rgba(21, 29, 45, 0.98), rgba(17, 24, 39, 0.99));
+  background: var(--panel-gradient);
   border: 1px solid var(--border);
   border-radius: 1rem;
   box-shadow: 0 12px 30px var(--shadow);
@@ -129,7 +108,7 @@
   transition: background 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, white 10%, transparent);
   }
 
   &:active {

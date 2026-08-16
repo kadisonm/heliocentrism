@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '../common/Modal';
-import SettingsField from '../common/SettingsField';
+import Modal from '../../common/Modal';
+import SettingsField from '../../common/SettingsField';
 
 type AddTodoListModalProps = {
   isOpen: boolean;

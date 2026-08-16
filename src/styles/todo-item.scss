@@ -6,6 +6,32 @@
   background: var(--panel-soft);
   border-radius: 0.85rem;
   padding: 0.75rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    background: var(--panel-strong);
+  }
+
+  // The dragged item's original slot — content stays in the DOM (so the
+  // box keeps its exact original size even for multi-line tasks) but is
+  // hidden, leaving just a darker "drop here" square. The visible, carried
+  // copy is the separate DragOverlay instance (see .sortable-drag-overlay).
+  &.todo-item--placeholder {
+    background: color-mix(in srgb, var(--panel-soft) 60%, black 40%);
+    border-color: transparent;
+
+    > * {
+      visibility: hidden;
+    }
+  }
+}
+
+.sortable-drag-overlay {
+  .todo-item {
+    background: var(--panel-strong);
+    box-shadow: 0 12px 30px var(--shadow);
+    cursor: grabbing;
+  }
 }
 
 .todo-toggle {
@@ -13,7 +39,7 @@
   width: 1.25rem;
   height: 1.25rem;
   border: 1px solid var(--primary);
-  background: var(--background);
+  background: transparent;
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
@@ -41,14 +67,17 @@
     border-color: var(--success);
 
     .todo-toggle__mark {
+      inset: auto;
+      top: 46%;
+      left: 50%;
+      width: 0.28rem;
+      height: 0.5rem;
+      background: transparent;
+      border-radius: 0;
+      border: solid white;
+      border-width: 0 0.13rem 0.13rem 0;
       opacity: 1;
-      background: var(--success);
-      border-radius: 50%;
-      transform: scale(1);
-
-      &::before {
-        content: none;
-      }
+      transform: translate(-50%, -60%) rotate(45deg);
     }
   }
 }
@@ -146,6 +175,30 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.5rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    background: var(--panel-soft);
+  }
+
+  // Same original-slot placeholder treatment as .todo-item--placeholder.
+  &.todo-subtask--placeholder {
+    background: color-mix(in srgb, var(--panel-soft) 70%, black 30%);
+
+    > * {
+      visibility: hidden;
+    }
+  }
+}
+
+.sortable-drag-overlay {
+  .todo-subtask {
+    background: var(--panel-strong);
+    box-shadow: 0 8px 20px var(--shadow);
+    cursor: grabbing;
+  }
 }
 
 .todo-subtask__title {

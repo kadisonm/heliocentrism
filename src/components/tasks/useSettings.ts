@@ -9,7 +9,7 @@ import {
 } from '../../lib/data';
 import { readAppSettings, writeAppSettings } from '../../lib/firebaseSync';
 
-// Module-level singleton, mirroring src/components/routines/useRoutineTasks.ts
+// Module-level singleton, mirroring src/components/widgets/routines/useRoutineTasks.ts
 // — every component that calls useSettings() shares this same in-memory
 // copy, and getSettingsSnapshot() lets non-React code (the reset-check timer
 // in useRoutineTasks.ts) read the current value synchronously outside of a

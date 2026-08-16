@@ -69,7 +69,7 @@ export default function WidgetShell({
         </div>
       )}
 
-      <div className="dashboard-widget-body">
+      <div className={isEditMode ? 'dashboard-widget-body is-locked' : 'dashboard-widget-body'}>
         {WidgetComponent ? (
           <WidgetComponent />
         ) : (

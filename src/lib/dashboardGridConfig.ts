@@ -22,3 +22,6 @@ export const DASHBOARD_PREVIEW_WIDTHS: Record<DashboardBreakpoint, number> = {
 
 // Fallback size for a new widget if its definition has no defaultSize for some reason.
 export const DEFAULT_WIDGET_SIZE = { w: 4, h: 6 };
+
+// Fallback minimum size for a widget whose definition has no minSize for some reason.
+export const DEFAULT_WIDGET_MIN_SIZE = { w: 2, h: 3 };

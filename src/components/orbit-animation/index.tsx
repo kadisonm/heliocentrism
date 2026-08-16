@@ -19,9 +19,9 @@ export default function OrbitAnimation() {
         toggled to the opposite portion of the orbit, so only one is ever
         actually shown at a time.
       */}
-      <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-behind" r="18" />
-      <circle className="orbit-planet orbit-planet--inner" r="16" />
-      <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-front" r="18" />
+      <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-behind" r="16" />
+      <circle className="orbit-planet orbit-planet--inner" r="14" />
+      <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-front" r="16" />
 
       <circle className="orbit-sun" cx="140" cy="80" r="44" />
     </svg>

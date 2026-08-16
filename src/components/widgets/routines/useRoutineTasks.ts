@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { DEFAULT_ROUTINE_TASKS } from '../../lib/data';
-import { readRoutineTasks, writeRoutineTasks } from '../../lib/firebaseSync';
-import { shouldResetRoutineTask } from '../../lib/routineReset';
-import { cycleSubtaskStage, cycleTaskStage } from '../../lib/taskCascade';
-import type { RoutineTask, TodoStage } from '../../lib/types';
-import { getSettingsSnapshot } from '../tasks/useSettings';
+import { DEFAULT_ROUTINE_TASKS } from '../../../lib/data';
+import { readRoutineTasks, writeRoutineTasks } from '../../../lib/firebaseSync';
+import { reorderWithinGroup } from '../../../lib/reorder';
+import { shouldResetRoutineTask } from '../../../lib/routineReset';
+import { cycleSubtaskStage, cycleTaskStage } from '../../../lib/taskCascade';
+import type { RoutineTask, TodoStage } from '../../../lib/types';
+import { getSettingsSnapshot } from '../../tasks/useSettings';
 
 // Module-level singleton, not React state — every widget instance that
 // calls useRoutineTasks() below shares this same in-memory copy, so
@@ -124,6 +125,31 @@ function addTask(input: RoutineTask) {
   persist();
 }
 
+// `predicate` should match whatever the caller currently has visible (e.g.
+// one recurrence's section, filtered by the show-completed toggle) so
+// reordering only reshuffles those tasks relative to each other, leaving
+// every other task's position in the flat backing array untouched.
+function reorderTasks(predicate: (task: RoutineTask) => boolean, activeId: string, overId: string) {
+  tasks = reorderWithinGroup(tasks, predicate, activeId, overId, (task) => task.id);
+  notify();
+  persist();
+}
+
+function reorderSubtasks(taskId: string, activeId: string, overId: string) {
+  const now = new Date().toISOString();
+  tasks = tasks.map((task) =>
+    task.id === taskId
+      ? {
+          ...task,
+          subtasks: reorderWithinGroup(task.subtasks, () => true, activeId, overId, (s) => s.id),
+          updatedAt: now,
+        }
+      : task
+  );
+  notify();
+  persist();
+}
+
 // Resets completed routine tasks back to "To do" (and their subtasks along
 // with them) once their configured reset time (src/lib/routineReset.ts) has
 // passed. Not tied to exact-time triggering — see ensureResetWatcherStarted.
@@ -181,5 +207,7 @@ export function useRoutineTasks() {
     updateSubtaskStage,
     updateTask,
     addTask,
+    reorderTasks,
+    reorderSubtasks,
   };
 }

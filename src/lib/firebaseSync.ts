@@ -161,7 +161,19 @@ function stripUndefined<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+// Doc name predates this doc holding routine tasks, todos, dashboard
+// layout, and settings all together — 'userData' describes what's actually
+// in here.
 function getAppDataDocRef(uid: string) {
+  const services = getFirebaseServices();
+  if (!services) return null;
+  return doc(services.db, 'users', uid, 'appData', 'userData');
+}
+
+// Pre-rename doc name. Only used as a one-time read fallback (see
+// getAuthenticatedSnapshot) for accounts that synced before the rename, so
+// their data isn't orphaned — every write goes to the renamed doc.
+function getLegacyAppDataDocRef(uid: string) {
   const services = getFirebaseServices();
   if (!services) return null;
   return doc(services.db, 'users', uid, 'appData', 'recurringTasks');
@@ -182,6 +194,31 @@ async function getAuthenticatedDocRef() {
   if (!auth.currentUser) return null;
 
   return getAppDataDocRef(auth.currentUser.uid);
+}
+
+// Reads whichever doc actually has data: the current 'userData' doc, or —
+// for accounts that synced before the rename — the legacy 'recurringTasks'
+// doc. Every write lands on the renamed doc, so this fallback naturally
+// stops being hit once an account's data has been written back once.
+async function getAuthenticatedSnapshot() {
+  const auth = getFirebaseAuth();
+  if (!auth) return null;
+
+  await auth.authStateReady();
+  if (!auth.currentUser) return null;
+
+  const uid = auth.currentUser.uid;
+  const docRef = getAppDataDocRef(uid);
+  if (!docRef) return null;
+
+  const snapshot = await getDoc(docRef);
+  if (snapshot.exists()) return snapshot;
+
+  const legacyDocRef = getLegacyAppDataDocRef(uid);
+  if (!legacyDocRef) return snapshot;
+
+  const legacySnapshot = await getDoc(legacyDocRef);
+  return legacySnapshot.exists() ? legacySnapshot : snapshot;
 }
 
 export async function getSyncStatus(): Promise<SyncStatus> {
@@ -327,12 +364,9 @@ function splitLegacyTask(task: LegacyTask): RoutineTask | Todo {
 }
 
 export async function readRoutineTasks(): Promise<RoutineTask[] | null> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return null;
-
   try {
-    const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as { data?: Partial<AppData> & { tasks?: LegacyTask[] } };
     if (Array.isArray(doc.data?.routineTasks)) return doc.data.routineTasks;
@@ -372,12 +406,9 @@ export async function writeRoutineTasks(routineTasks: RoutineTask[]): Promise<bo
 }
 
 export async function readTodoLists(): Promise<TodoList[] | null> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return null;
-
   try {
-    const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as {
       data?: Partial<AppData> & { todos?: Todo[]; tasks?: LegacyTask[] };
@@ -426,12 +457,9 @@ export async function writeTodoLists(todoLists: TodoList[]): Promise<boolean> {
 }
 
 export async function readDashboardState(): Promise<DashboardState | null> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return null;
-
   try {
-    const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as { data?: Partial<AppData> };
     return doc.data?.dashboard ?? null;
@@ -465,12 +493,9 @@ export async function writeDashboardState(
 }
 
 export async function readAppSettings(): Promise<AppSettings | null> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return null;
-
   try {
-    const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as { data?: Partial<AppData> };
     return doc.data?.settings ?? null;

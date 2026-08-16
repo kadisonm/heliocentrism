@@ -13,7 +13,7 @@
   border: 1px dashed var(--border);
   border-radius: 1rem;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.2);
+  background: color-mix(in srgb, var(--surface-scrim) 20%, transparent);
 }
 
 .dashboard-grid {
@@ -32,6 +32,14 @@
   &.react-draggable-dragging {
     box-shadow: 0 12px 30px var(--shadow);
   }
+
+  // Dragging the resize handle sweeps the cursor across the widget's own
+  // text, which the browser reads as a text-selection drag — highlighting
+  // everything underneath instead of resizing it.
+  &.resizing,
+  &.react-draggable-dragging {
+    user-select: none;
+  }
 }
 
 .react-grid-placeholder {
@@ -49,7 +57,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(21, 29, 45, 0.98), rgba(17, 24, 39, 0.99));
+  background: var(--panel-gradient);
   border: 1px solid var(--border);
   border-radius: 1rem;
   overflow: hidden;
@@ -105,7 +113,7 @@
 
   &:hover {
     color: var(--text);
-    background: rgba(239, 68, 68, 0.15);
+    background: color-mix(in srgb, var(--error) 15%, transparent);
   }
 }
 
@@ -116,6 +124,13 @@
   display: flex;
   align-items: stretch;
   justify-content: stretch;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+
+  &.is-locked {
+    pointer-events: none;
+    opacity: 0.55;
+    filter: grayscale(0.4);
+  }
 }
 
 .dashboard-widget-type-select {
@@ -125,7 +140,7 @@
   padding: 0.2rem 0.4rem;
   border: 1px solid var(--border);
   border-radius: 0.4rem;
-  background: rgba(15, 23, 42, 0.35);
+  background: color-mix(in srgb, var(--surface-scrim) 35%, transparent);
   color: var(--text);
   font-size: 0.75rem;
   text-overflow: ellipsis;
@@ -158,14 +173,14 @@
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.35);
+  background: color-mix(in srgb, var(--surface-scrim) 35%, transparent);
   color: var(--text);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
     border-color: var(--accent);
-    background: rgba(15, 23, 42, 0.55);
+    background: color-mix(in srgb, var(--surface-scrim) 55%, transparent);
   }
 }
 
