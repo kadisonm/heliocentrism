@@ -1,3 +1,4 @@
+import { AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { type KeyboardEvent } from 'react';
 
 type SectionHeaderProps = {
@@ -39,10 +40,10 @@ export default function SectionHeader({
           }
           aria-hidden="true"
         >
-          {isHealthy ? '✓' : '⚠'}
+          {isHealthy ? <Check size={12} /> : <AlertTriangle size={12} />}
         </span>
         <span className="settings-section-header-caret" aria-hidden="true">
-          {isOpen ? '▾' : '▸'}
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </span>
     </div>

@@ -13,12 +13,14 @@ import {
   doc,
   getDoc,
   getFirestore,
+  initializeFirestore,
   serverTimestamp,
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
+import type { AppData } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type { FirebaseConfig, SyncStatus, Todo } from './types';
+import type { DashboardState, FirebaseConfig, SyncStatus, Todo } from './types';
 
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
@@ -124,7 +126,16 @@ function getFirebaseServices(): FirebaseServices | null {
   if (!config) return null;
 
   const app = getApps().length > 0 ? getApps()[0] : initializeApp(config);
-  const db = getFirestore(app);
+
+  // react-grid-layout layout items can carry undefined internal fields
+  // (e.g. `moved`), which Firestore's setDoc otherwise rejects.
+  let db: Firestore;
+  try {
+    db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+  } catch {
+    db = getFirestore(app);
+  }
+
   return { app, db };
 }
 
@@ -134,10 +145,34 @@ function getFirebaseAuth() {
   return getAuth(services.app);
 }
 
-function getTasksDocRef(uid: string) {
+// react-grid-layout layout items can carry undefined internal fields (e.g.
+// `moved`), which Firestore's setDoc rejects outright. JSON round-tripping
+// drops any key whose value is undefined.
+function stripUndefined<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getAppDataDocRef(uid: string) {
   const services = getFirebaseServices();
   if (!services) return null;
   return doc(services.db, 'users', uid, 'appData', 'recurringTasks');
+}
+
+// Firebase Auth restores a signed-in session asynchronously — reading
+// auth.currentUser immediately after page load can see `null` even when the
+// user is actually signed in, because the restore hasn't resolved yet.
+// authStateReady() waits for that restore to finish, so currentUser here can
+// be trusted. Without this, an early read would wrongly report "not signed
+// in", and a subsequent write would overwrite the real saved data with that
+// empty state.
+async function getAuthenticatedDocRef() {
+  const auth = getFirebaseAuth();
+  if (!auth) return null;
+
+  await auth.authStateReady();
+  if (!auth.currentUser) return null;
+
+  return getAppDataDocRef(auth.currentUser.uid);
 }
 
 export async function getSyncStatus(): Promise<SyncStatus> {
@@ -250,18 +285,15 @@ export async function signOutFirebaseUser(): Promise<{
 }
 
 export async function readTasksFromSyncFolder(): Promise<Todo[] | null> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) return null;
-
-  const docRef = getTasksDocRef(auth.currentUser.uid);
+  const docRef = await getAuthenticatedDocRef();
   if (!docRef) return null;
 
   try {
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
 
-    const data = snapshot.data() as { tasks?: Todo[] };
-    return Array.isArray(data.tasks) ? data.tasks : null;
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return Array.isArray(doc.data?.tasks) ? doc.data.tasks : null;
   } catch (error) {
     console.error('Error reading tasks from Firestore:', error);
     return null;
@@ -269,17 +301,15 @@ export async function readTasksFromSyncFolder(): Promise<Todo[] | null> {
 }
 
 export async function writeTasksToSyncFolder(tasks: Todo[]): Promise<boolean> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) return false;
-
-  const docRef = getTasksDocRef(auth.currentUser.uid);
+  const docRef = await getAuthenticatedDocRef();
   if (!docRef) return false;
 
   try {
+    const data: Pick<AppData, 'tasks'> = { tasks };
     await setDoc(
       docRef,
       {
-        tasks,
+        data,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
@@ -287,6 +317,45 @@ export async function writeTasksToSyncFolder(tasks: Todo[]): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error writing tasks to Firestore:', error);
+    return false;
+  }
+}
+
+export async function readDashboardState(): Promise<DashboardState | null> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return null;
+
+  try {
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) return null;
+
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return doc.data?.dashboard ?? null;
+  } catch (error) {
+    console.error('Error reading dashboard state from Firestore:', error);
+    return null;
+  }
+}
+
+export async function writeDashboardState(
+  dashboard: DashboardState
+): Promise<boolean> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return false;
+
+  try {
+    const data: Pick<AppData, 'dashboard'> = { dashboard: stripUndefined(dashboard) };
+    await setDoc(
+      docRef,
+      {
+        data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error writing dashboard state to Firestore:', error);
     return false;
   }
 }

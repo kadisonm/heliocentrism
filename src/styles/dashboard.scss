@@ -22,24 +22,92 @@
   }
 }
 
-.dashboard-settings-button {
-  background: none;
+.dashboard-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dashboard-container {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.dashboard-status-bar {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 500;
+  display: flex;
+  align-items: stretch;
+  // A fixed height (matching the toggle button below) is the single source
+  // of truth both children are pinned to — without it, the row's height
+  // followed whichever child was tallest, and the toggle (sized to its own
+  // content) didn't cover that full height, leaving slivers of the tab
+  // buttons visible above/below it.
+  height: 2.75rem;
+  background: linear-gradient(180deg, rgba(21, 29, 45, 0.98), rgba(17, 24, 39, 0.99));
   border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 1.25rem;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow);
+  // Clipping to the same radius as the border means any child (like the
+  // toggle button below) reads as part of one seamless shape instead of
+  // a bordered button floating inside a bordered bar.
+  overflow: hidden;
+}
+
+// Grid-column animation: 0fr -> 1fr smoothly animates to the content's
+// natural width with no overshoot, unlike animating to/from `auto`. The
+// minmax(0, ...) is required, not decorative — a bare `0fr` track still
+// respects its content's min-content width as an implicit floor, so
+// without it the track never actually reaches zero and a sliver of the
+// collapsed content (the tab buttons) stays visible.
+.dashboard-status-bar-expand {
+  display: grid;
+  grid-template-columns: minmax(0, 0fr);
+  // Flex items default to min-width: auto, which sets an implicit floor at
+  // this element's content min-content width — independent of, and not
+  // fixed by, the grid track's own minmax(0, ...) above. Without this, the
+  // browser still reserved room for the (collapsed) tab buttons, letting
+  // them show through behind the toggle button.
+  min-width: 0;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.dashboard-status-bar--expanded .dashboard-status-bar-expand {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-status-bar-expand-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  // Left padding only: the add-widget button sits flush against the right
+  // edge (and therefore the toggle button next to it) with no gap.
+  padding: 0 0 0 0.5rem;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.dashboard-status-bar-add {
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
   cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.5rem;
-  height: 2.5rem;
+  transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent);
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
   }
 
   &:active {
@@ -47,82 +115,33 @@
   }
 }
 
-.dashboard-container {
-  flex: 1;
+.dashboard-status-bar-toggle {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1.5rem;
-}
+  transition: background 0.2s ease, color 0.2s ease;
 
-.dashboard-shell {
-  min-height: 100vh;
-  background: var(--background);
-  color: var(--text);
-}
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 
-.dashboard-main {
-  width: min(100%, 80rem);
-  margin: 0 auto;
-  display: flex;
-  gap: 2rem;
-  padding: 2rem 1.5rem;
-}
-
-.dashboard-content {
-  flex: 1;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 12px 30px var(--shadow);
-}
-
-.dashboard-content__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.dashboard-content__eyebrow {
-  margin: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.dashboard-content h1 {
-  margin: 0.5rem 0 0;
-  font-size: clamp(2rem, 3vw, 2.4rem);
-  line-height: 1.1;
-  color: var(--text);
-}
-
-.dashboard-grid {
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.dashboard-stat {
-  background: var(--panel-soft);
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  padding: 1rem;
-
-  p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.875rem;
+  &:active {
+    transform: scale(0.95);
   }
 }
 
-.dashboard-stat__value {
-  margin-top: 0.5rem !important;
-  font-size: 2rem !important;
-  font-weight: 700;
-  color: var(--text) !important;
+.dashboard-status-bar-toggle--confirm {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--success) 28%, transparent);
+  }
 }

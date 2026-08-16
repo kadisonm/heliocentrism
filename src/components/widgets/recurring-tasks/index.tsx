@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { DEFAULT_TASKS } from '../../lib/data';
+import { DEFAULT_TASKS } from '../../../lib/data';
 import {
   writeTasksToSyncFolder,
   readTasksFromSyncFolder,
-} from '../../lib/fileSystemSync';
-import type { Todo, TodoStage, RecurrenceValue } from '../../lib/types';
+} from '../../../lib/firebaseSync';
+import type { Todo, TodoStage, RecurrenceValue } from '../../../lib/types';
 import TodoEditorPanel from './TodoEditorPanel';
-import Task from '../Tasks';
+import Task from '../../tasks';
 
 const statusLabels = ['To do', 'In progress', 'Done'] as const;
 const recurrenceOrder: RecurrenceValue[] = ['daily', 'weekly', 'monthly'];

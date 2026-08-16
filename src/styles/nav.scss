@@ -1,0 +1,62 @@
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+
+.app-nav-links {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.app-nav-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.app-nav-link {
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.app-nav-link--active {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.icon-button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Recurrence, Todo, TodoStage } from '../../lib/types';
+import type { Recurrence, Todo, TodoStage } from '../../../lib/types';
 
 type TodoEditorPanelProps = {
   todo: Todo | null;

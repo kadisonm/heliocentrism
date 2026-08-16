@@ -1,36 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import RecurringTasks from '../../components/RecurringTasks';
-import SettingsPanel from '../../components/Settings';
+import DashboardGrid from '../../components/dashboard/DashboardGrid';
+import DashboardStatusBar from '../../components/dashboard/DashboardStatusBar';
+import { useDashboardState } from '../../components/dashboard/useDashboardState';
+import type { DashboardBreakpoint } from '../../lib/types';
 
 export default function DashboardPage() {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [activeBreakpoint, setActiveBreakpoint] = useState<DashboardBreakpoint>('desktop');
+
+  const dashboard = useDashboardState();
 
   return (
     <div className="dashboard-wrapper">
-      <header className="dashboard-header">
-        <h1>Dashboard</h1>
-        <button
-          className="dashboard-settings-button"
-          onClick={() => setIsSettingsOpen(true)}
-          title="Settings"
-        >
-          ⚙️
-        </button>
-      </header>
-
       <div className="dashboard-container">
-        <RecurringTasks />
+        {!dashboard.isLoading && (
+          <DashboardGrid
+            widgets={dashboard.widgets}
+            layouts={dashboard.layouts}
+            isEditMode={isEditMode}
+            activeBreakpoint={activeBreakpoint}
+            onLayoutsChange={dashboard.setLayouts}
+            onSetWidgetType={dashboard.setWidgetType}
+            onRemoveWidget={dashboard.removeWidget}
+          />
+        )}
       </div>
 
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSyncConfigured={() => {
-          // Refresh tasks if needed
-          window.location.reload();
-        }}
+      <DashboardStatusBar
+        isEditMode={isEditMode}
+        onToggleEditMode={() => setIsEditMode((current) => !current)}
+        activeBreakpoint={activeBreakpoint}
+        onBreakpointChange={setActiveBreakpoint}
+        onAddWidget={dashboard.addWidget}
       />
     </div>
   );
