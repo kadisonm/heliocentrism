@@ -1,5 +1,5 @@
 import React from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -20,6 +20,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Heliocentrism",
   description: "Heliocentrism: the earth still orbits the sun. Every day, without fail, no matter what's happening down here. Heliocentrism helps you carry that same quiet steadiness — for the days you need reminding that this, too, keeps turning.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
