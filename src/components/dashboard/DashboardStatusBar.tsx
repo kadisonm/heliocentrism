@@ -6,10 +6,17 @@ import Tabs from '../common/Tabs';
 import type { DashboardBreakpoint } from '../../lib/types';
 import AddWidgetModal from './AddWidgetModal';
 
+const BREAKPOINT_OPTIONS: { value: DashboardBreakpoint; label: string }[] = [
+  { value: 'desktop', label: 'Desktop' },
+  { value: 'tablet', label: 'Tablet' },
+  { value: 'mobile', label: 'Mobile' },
+];
+
 type DashboardStatusBarProps = {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   activeBreakpoint: DashboardBreakpoint;
+  allowedBreakpoints: DashboardBreakpoint[];
   onBreakpointChange: (breakpoint: DashboardBreakpoint) => void;
   onAddWidget: (type: string) => void;
 };
@@ -18,10 +25,14 @@ export default function DashboardStatusBar({
   isEditMode,
   onToggleEditMode,
   activeBreakpoint,
+  allowedBreakpoints,
   onBreakpointChange,
   onAddWidget,
 }: DashboardStatusBarProps) {
   const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false);
+  const breakpointOptions = BREAKPOINT_OPTIONS.filter((option) =>
+    allowedBreakpoints.includes(option.value)
+  );
 
   return (
     <div
@@ -35,11 +46,7 @@ export default function DashboardStatusBar({
         <div className="dashboard-status-bar-expand-inner">
           <Tabs
             ariaLabel="Editing breakpoint"
-            options={[
-              { value: 'desktop', label: 'Desktop' },
-              { value: 'tablet', label: 'Tablet' },
-              { value: 'mobile', label: 'Mobile' },
-            ]}
+            options={breakpointOptions}
             value={activeBreakpoint}
             onChange={onBreakpointChange}
           />

@@ -54,13 +54,15 @@ jobs:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
       - name: Setup Pages
+        # static_site_generator: next is deliberately omitted — that option
+        # AST-injects basePath/output/images.unoptimized into a Next config
+        # file, but it only understands next.config.js/.mjs, not our
+        # next.config.ts. It was silently operating on its own blank
+        # "default configuration" instead of ours, which meant our custom
+        # env.NEXT_PUBLIC_BASE_PATH (used to prefix hardcoded asset paths
+        # like /wordmark.svg) never made it into the build. We already set
+        # output/basePath/assetPrefix ourselves in next.config.ts.
         uses: actions/configure-pages@v5
-        with:
-          # Automatically inject basePath in your Next.js configuration file and disable
-          # server side image optimization (https://nextjs.org/docs/api-reference/next/image#unoptimized).
-          #
-          # You may remove this line if you want to manage the configuration yourself.
-          static_site_generator: next
       - name: Restore cache
         uses: actions/cache@v4
         with:

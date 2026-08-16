@@ -52,23 +52,34 @@ export default function DashboardGrid({
   // stays correct after switching a widget's type via the chrome dropdown.
   // Also floors w/h themselves, bumping up anything resized below the
   // minimum before this constraint existed.
+  //
+  // Also CAPS w (and re-clamps x) to the breakpoint's own column count. A
+  // layout item's w/x are set relative to whichever breakpoint it was last
+  // edited under (desktop's 12 cols, say) — without capping, that same w
+  // gets reused verbatim on mobile's 4-col grid, rendering the widget wider
+  // than the viewport instead of reflowing to fit it.
   const constrainedLayouts = useMemo(() => {
     const widgetTypeById = new Map(widgets.map((widget) => [widget.id, widget.type]));
 
     const next: ResponsiveLayouts<DashboardBreakpoint> = { ...layouts };
     ALL_BREAKPOINTS.forEach((breakpoint) => {
+      const cols = DASHBOARD_COLS[breakpoint];
       next[breakpoint] = (layouts[breakpoint] ?? []).map((item) => {
         const type = widgetTypeById.get(item.i);
         const minSize =
           (type ? findWidgetDefinition(type)?.minSize : undefined) ?? DEFAULT_WIDGET_MIN_SIZE;
-        const minW = Math.min(minSize.w, DASHBOARD_COLS[breakpoint]);
+        const minW = Math.min(minSize.w, cols);
         const minH = minSize.h;
+
+        const w = Math.min(Math.max(item.w, minW), cols);
+        const x = Math.min(Math.max(item.x, 0), cols - w);
 
         return {
           ...item,
           minW,
           minH,
-          w: Math.max(item.w, minW),
+          w,
+          x,
           h: Math.max(item.h, minH),
         };
       });
