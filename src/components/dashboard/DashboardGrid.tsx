@@ -6,6 +6,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import {
   DASHBOARD_BREAKPOINTS,
   DASHBOARD_COLS,
+  DASHBOARD_PREVIEW_FRAME_CHROME,
   DASHBOARD_PREVIEW_WIDTHS,
   DEFAULT_WIDGET_MIN_SIZE,
 } from '../../lib/dashboardGridConfig';
@@ -44,7 +45,13 @@ export default function DashboardGrid({
     onLayoutsChange(nextLayouts);
   };
 
-  const gridWidth = isEditMode ? DASHBOARD_PREVIEW_WIDTHS[activeBreakpoint] : width;
+  // The preview frame's own padding/border add to this width rather than
+  // being included in it (see DASHBOARD_PREVIEW_FRAME_CHROME) — subtract
+  // them so the frame's total footprint matches the breakpoint it's meant
+  // to simulate instead of overflowing past it.
+  const gridWidth = isEditMode
+    ? DASHBOARD_PREVIEW_WIDTHS[activeBreakpoint] - DASHBOARD_PREVIEW_FRAME_CHROME
+    : width;
 
   // Each widget type declares its own minSize — inject it (and the current
   // breakpoint's column cap) into every layout item here rather than
