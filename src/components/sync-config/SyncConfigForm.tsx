@@ -89,6 +89,11 @@ export default function SyncConfigForm({
   const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(true);
   const [activeAuthTab, setActiveAuthTab] = useState<AuthTab>('google');
   const hasInitializedAuthOpen = useRef(false);
+  // subscribeToAuthState() no-ops if Firebase isn't configured yet at the
+  // moment it's called — which is the normal case the first time this form
+  // mounts during onboarding. Bumping this after a save/clear re-runs the
+  // subscription effect below so it can attach for real once config exists.
+  const [configVersion, setConfigVersion] = useState(0);
 
   const isConfigured =
     !!config.apiKey && !!config.authDomain && !!config.projectId && !!config.appId;
@@ -136,7 +141,7 @@ export default function SyncConfigForm({
     return () => {
       unsubscribe?.();
     };
-  }, [isOpen]);
+  }, [isOpen, configVersion]);
 
   const updateConfigField = (field: keyof FirebaseConfig, value: string) => {
     setConfig((current) => ({
@@ -155,6 +160,7 @@ export default function SyncConfigForm({
       if (savedConfig) {
         setConfig(savedConfig);
       }
+      setConfigVersion((current) => current + 1);
       onSyncConfigured?.();
     }
     setIsLoading(false);
@@ -168,6 +174,7 @@ export default function SyncConfigForm({
     setIsAuthenticated(false);
     setIsGoogleAuthenticated(false);
     setUserEmail(null);
+    setConfigVersion((current) => current + 1);
     setStatusMessage('Firebase config removed.');
     setStatusTone('info');
     onSyncConfigured?.();

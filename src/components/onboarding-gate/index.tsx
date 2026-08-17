@@ -13,6 +13,12 @@ type GateStatus = 'checking' | 'blocked' | 'allowed';
 // than duplicating the config/sign-in UI.
 export default function OnboardingGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<GateStatus>('checking');
+  // subscribeToAuthState() no-ops if Firebase isn't configured yet at the
+  // moment it's called — true on first mount during onboarding, since
+  // there's no config at all yet. Bumping this (via SyncConfigForm's
+  // onSyncConfigured below) re-runs the effect so it can attach for real
+  // once config exists, instead of staying stuck on that first dead call.
+  const [configVersion, setConfigVersion] = useState(0);
 
   useEffect(() => {
     // isFirebaseConfigured() reads localStorage, which doesn't exist during
@@ -36,7 +42,7 @@ export default function OnboardingGate({ children }: { children: ReactNode }) {
     return () => {
       unsubscribe?.();
     };
-  }, []);
+  }, [configVersion]);
 
   if (status === 'checking') return null;
 
@@ -53,7 +59,9 @@ export default function OnboardingGate({ children }: { children: ReactNode }) {
                 This app stores everything in Firestore — connect a Firebase project
                 and sign in to continue.
               </p>
-              <SyncConfigForm />
+              <SyncConfigForm
+                onSyncConfigured={() => setConfigVersion((current) => current + 1)}
+              />
             </div>
           </div>
         </div>
