@@ -3,6 +3,7 @@ import type {
   PomodoroSettings,
   RoutineResetTimes,
   RoutineTask,
+  ThemeSettings,
   TodoList,
 } from './types';
 
@@ -26,15 +27,22 @@ export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
   breakMinutes: 5,
 };
 
-// General app settings (theme, etc.) — fields land here as they're built.
+export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
+  palette: 'default',
+  mode: 'system',
+};
+
+// General app settings — fields land here as they're built.
 export type AppSettings = {
   routineResetTimes: RoutineResetTimes;
   pomodoro: PomodoroSettings;
+  theme: ThemeSettings;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   routineResetTimes: DEFAULT_ROUTINE_RESET_TIMES,
   pomodoro: DEFAULT_POMODORO_SETTINGS,
+  theme: DEFAULT_THEME_SETTINGS,
 };
 
 // Shape of the synced Firebase document, nested under a `data` field.

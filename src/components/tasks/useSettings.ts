@@ -5,6 +5,7 @@ import {
   DEFAULT_POMODORO_SETTINGS,
   DEFAULT_ROUTINE_RESET_TIMES,
   DEFAULT_SETTINGS,
+  DEFAULT_THEME_SETTINGS,
   type AppSettings,
 } from '../../lib/data';
 import { readAppSettings, writeAppSettings } from '../../lib/firebaseSync';
@@ -54,6 +55,7 @@ function ensureLoaded() {
             ...syncedSettings.routineResetTimes,
           },
           pomodoro: { ...DEFAULT_POMODORO_SETTINGS, ...syncedSettings.pomodoro },
+          theme: { ...DEFAULT_THEME_SETTINGS, ...syncedSettings.theme },
         }
       : DEFAULT_SETTINGS;
     isLoading = false;

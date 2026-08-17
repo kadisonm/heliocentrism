@@ -1,50 +1,105 @@
 @use 'sass:map';
 
 $themes: (
-  light: (
-    text: oklab(15.11% -0.006 -0.03),
-    background: oklab(93.95% -0.001 -0.02),
-    primary: oklab(33.12% -0.017 -0.11),
-    secondary: oklab(70.85% 0.189 -0.11),
-    accent: oklab(72.30% 0.112 0.18),
-    success: oklab(67.096% -0.14077 0.09138),
-    warning: oklab(72.30% 0.112 0.18),
-    error: oklab(64.629% 0.20295 0.12981),
-    overlay-scrim: oklab(0% 0 0 / 0.5),
-    overlay-shadow: oklab(0% 0 0 / 0.4),
-    panel-gradient: linear-gradient(180deg, oklab(100% 0 0 / 0.98), oklab(98.415% -0.00129 -0.00316 / 0.99)),
-    surface-scrim: oklab(96.826% -0.00258 -0.00635),
-    muted-slate: oklab(55.439% -0.00887 -0.03974),
-    status-caution: oklab(64.607% 0.1464 0.12779),
-    status-caution-strong: oklab(70.487% 0.1259 0.13789),
-    status-info: oklab(48.820% -0.02128 -0.21612),
-    status-info-strong: oklab(54.615% -0.02667 -0.21355),
-    status-info-bg: oklab(62.308% -0.03325 -0.18505)
+  default: (
+    light: (
+      text: oklch(15.11% 0.0306 258.69),
+      background: oklch(93.95% 0.02 267.14),
+      primary: oklch(33.12% 0.1113 261.21),
+      secondary: oklch(70.85% 0.2187 329.8),
+      accent: oklch(72.3% 0.212 58.11),
+      success: oklch(67.096% 0.1678 147.01),
+      warning: oklch(72.3% 0.212 58.11),
+      error: oklch(64.629% 0.2409 32.6),
+      overlay-scrim: oklch(0% 0 0 / 0.5),
+      overlay-shadow: oklch(0% 0 0 / 0.4),
+      panel-gradient: linear-gradient(180deg, oklch(100% 0 0 / 0.98), oklch(98.415% 0.0034 247.79 / 0.99)),
+      surface-scrim: oklch(96.826% 0.0069 247.89),
+      muted-slate: oklch(55.439% 0.0407 257.42),
+      status-caution: oklch(64.607% 0.1943 41.12),
+      status-caution-strong: oklch(70.487% 0.1867 47.6),
+      status-info: oklch(48.82% 0.2172 264.38),
+      status-info-strong: oklch(54.615% 0.2152 262.88),
+      status-info-bg: oklch(62.308% 0.188 259.81)
+    ),
+    dark: (
+      text: oklch(94.3% 0.02 267.14),
+      background: oklch(15.28% 0.0403 262.87),
+      primary: oklch(75.34% 0.1008 262.59),
+      secondary: oklch(48.3% 0.2059 330.95),
+      accent: oklch(76.8% 0.2413 55.98),
+      success: oklch(75.396% 0.1746 150.22),
+      warning: oklch(76.8% 0.2413 55.98),
+      error: oklch(64.629% 0.2409 32.6),
+      overlay-scrim: oklch(0% 0 0 / 0.5),
+      overlay-shadow: oklch(0% 0 0 / 0.4),
+      panel-gradient: linear-gradient(180deg, oklch(23.123% 0.0334 263.6 / 0.98), oklch(21.008% 0.0318 264.67 / 0.99)),
+      surface-scrim: oklch(20.768% 0.0398 265.75),
+      muted-slate: oklch(71.067% 0.0351 256.78),
+      status-caution: oklch(70.487% 0.1867 47.6),
+      status-caution-strong: oklch(75.764% 0.159 55.94),
+      status-info: oklch(80.907% 0.0956 251.81),
+      status-info-strong: oklch(71.374% 0.1434 254.62),
+      status-info-bg: oklch(62.308% 0.188 259.81)
+    ),
   ),
-  dark: (
-    text: oklab(94.30% -0.001 -0.02),
-    background: oklab(15.28% -0.005 -0.04),
-    primary: oklab(75.34% -0.013 -0.10),
-    secondary: oklab(48.30% 0.180 -0.10),
-    accent: oklab(76.80% 0.135 0.20),
-    success: oklab(75.396% -0.15153 0.0867),
-    warning: oklab(76.80% 0.135 0.20),
-    error: oklab(64.629% 0.20295 0.12981),
-    overlay-scrim: oklab(0% 0 0 / 0.5),
-    overlay-shadow: oklab(0% 0 0 / 0.4),
-    panel-gradient: linear-gradient(180deg, oklab(23.123% -0.00372 -0.03315 / 0.98), oklab(21.008% -0.00295 -0.03162 / 0.99)),
-    surface-scrim: oklab(20.768% -0.00295 -0.03972),
-    muted-slate: oklab(71.067% -0.00803 -0.03418),
-    status-caution: oklab(70.487% 0.1259 0.13789),
-    status-caution-strong: oklab(75.764% 0.08908 0.13175),
-    status-info: oklab(80.907% -0.02984 -0.09082),
-    status-info-strong: oklab(71.374% -0.03802 -0.13825),
-    status-info-bg: oklab(62.308% -0.03325 -0.18505)
+  // Official palette: https://catppuccin.com/palette/ — light is Latte,
+  // dark is Mocha. Role mapping follows the style guide at
+  // https://github.com/catppuccin/catppuccin/blob/main/docs/style-guide.md
+  // (Base = main pane, Mantle = secondary/panel pane, Surface0 = raised
+  // surface, Blue = links/highlights, Green/Yellow/Red/Teal = success/
+  // warning/error/info); primary/secondary/status-*-strong beyond that
+  // guidance use Mauve/Pink/Peach/Sapphire/Sky for a consistent identity.
+  catppuccin: (
+    light: (
+      // Latte — oklch values converted from the hex codes at
+      // https://catppuccin.com/palette/
+      text: oklch(43.547% 0.043 279.33), // #4c4f69
+      background: oklch(95.776% 0.0058 264.53), // #eff1f5
+      primary: oklch(55.467% 0.2503 297.02), // Mauve #8839ef
+      secondary: oklch(72.556% 0.1739 338.43), // Pink #ea76cb
+      accent: oklch(55.862% 0.2255 262.09), // Blue #1e66f5
+      success: oklch(62.504% 0.1772 140.44), // Green #40a02b
+      warning: oklch(71.399% 0.1494 67.78), // Yellow #df8e1d
+      error: oklch(55.047% 0.2155 19.81), // Red #d20f39
+      overlay-scrim: oklch(0% 0 0 / 0.5),
+      overlay-shadow: oklch(0% 0 0 / 0.4),
+      panel-gradient: linear-gradient(180deg, oklch(100% 0 0 / 0.98), oklch(93.346% 0.0087 264.52 / 0.99)), // white -> Mantle #e6e9ef
+      surface-scrim: oklch(85.748% 0.0145 268.48), // Surface0 #ccd0da
+      muted-slate: oklch(70.767% 0.0237 274.6), // Overlay0 #9ca0b0
+      status-caution: oklch(71.399% 0.1494 67.78), // Yellow #df8e1d
+      status-caution-strong: oklch(69.198% 0.2041 42.43), // Peach #fe640b
+      status-info: oklch(60.227% 0.0981 201.1), // Teal #179299
+      status-info-strong: oklch(64.774% 0.1068 212.89), // Sapphire #209fb5
+      status-info-bg: oklch(68.202% 0.1448 235.38) // Sky #04a5e5
+    ),
+    dark: (
+      // Mocha — oklch values converted from the hex codes at
+      // https://catppuccin.com/palette/
+      text: oklch(87.866% 0.0426 272.28), // #cdd6f4
+      background: oklch(24.287% 0.0304 283.91), // #1e1e2e
+      primary: oklch(78.715% 0.1187 304.77), // Mauve #cba6f7
+      secondary: oklch(87.003% 0.0752 336.3), // Pink #f5c2e7
+      accent: oklch(76.642% 0.1113 259.88), // Blue #89b4fa
+      success: oklch(85.77% 0.1092 142.72), // Green #a6e3a1
+      warning: oklch(91.93% 0.0704 86.53), // Yellow #f9e2af
+      error: oklch(75.559% 0.1297 2.76), // Red #f38ba8
+      overlay-scrim: oklch(0% 0 0 / 0.5),
+      overlay-shadow: oklch(0% 0 0 / 0.4),
+      panel-gradient: linear-gradient(180deg, oklch(32.402% 0.0319 281.98 / 0.98), oklch(21.552% 0.0254 284.06 / 0.99)), // Surface0 -> Mantle #181825
+      surface-scrim: oklch(32.402% 0.0319 281.98), // Surface0 #313244
+      muted-slate: oklch(54.969% 0.0345 277.1), // Overlay0 #6c7086
+      status-caution: oklch(91.93% 0.0704 86.53), // Yellow #f9e2af
+      status-caution-strong: oklch(82.368% 0.1015 52.63), // Peach #fab387
+      status-info: oklch(85.849% 0.0792 182.75), // Teal #94e2d5
+      status-info-strong: oklch(79.065% 0.0965 228.65), // Sapphire #74c7ec
+      status-info-bg: oklch(84.671% 0.0833 210.25) // Sky #89dceb
+    ),
   ),
 );
 
-@mixin theme-variables($mode: dark) {
-  $tokens: map.get($themes, $mode);
+@mixin theme-variables($palette: default, $mode: dark) {
+  $tokens: map.get($themes, $palette, $mode);
 
   --text: #{map.get($tokens, text)};
   --background: #{map.get($tokens, background)};
@@ -55,22 +110,24 @@ $themes: (
   --warning: #{map.get($tokens, warning)};
   --error: #{map.get($tokens, error)};
 
-  --muted: color-mix(in srgb, var(--text) 65%, transparent);
-  --text-soft: color-mix(in srgb, var(--text) 72%, transparent);
+  --muted: color-mix(in oklch, var(--text) 65%, transparent);
+  --text-soft: color-mix(in oklch, var(--text) 72%, transparent);
 
-  --panel: color-mix(in srgb, var(--background) 92%, white 8%);
-  --panel-soft: color-mix(in srgb, var(--background) 88%, var(--primary) 12%);
-  --panel-strong: color-mix(in srgb, var(--background) 82%, var(--primary) 18%);
+  --panel: color-mix(in oklch, var(--background) 92%, white 8%);
+  --panel-soft: color-mix(in oklch, var(--background) 88%, var(--primary) 12%);
+  --panel-strong: color-mix(in oklch, var(--background) 82%, var(--primary) 18%);
 
   @if $mode == dark {
-    --border: color-mix(in srgb, var(--panel) 82%, white 18%);
+    --border: color-mix(in oklch, var(--panel) 82%, white 18%);
+    --color-scheme: dark;
   } @else {
-    --border: color-mix(in srgb, var(--panel) 88%, black 12%);
+    --border: color-mix(in oklch, var(--panel) 88%, black 12%);
+    --color-scheme: light;
   }
 
-  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
-  --accent-strong: color-mix(in srgb, var(--accent) 78%, black 22%);
-  --shadow: color-mix(in srgb, var(--background) 80%, black 20%);
+  --accent-soft: color-mix(in oklch, var(--accent) 18%, transparent);
+  --accent-strong: color-mix(in oklch, var(--accent) 78%, black 22%);
+  --shadow: color-mix(in oklch, var(--background) 80%, black 20%);
 
   // Chrome/status tones for elements not yet re-themed per mode (panel
   // gradients, status badges, etc.) — kept as their own tier so each can

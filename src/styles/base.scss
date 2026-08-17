@@ -1,20 +1,27 @@
+@use 'sass:map';
 @use 'theme' as *;
 
+// Fallback for the moment before the pre-paint script (see layout.tsx) sets
+// data-palette/data-theme — mirrors today's default-palette, OS-preference
+// behavior so there's nothing to see before JS runs.
 :root {
-  @include theme-variables(dark);
-}
-
-html[data-theme='light'] {
-  @include theme-variables(light);
-}
-
-html[data-theme='dark'] {
-  @include theme-variables(dark);
+  @include theme-variables(default, dark);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    @include theme-variables(light);
+    @include theme-variables(default, light);
+  }
+}
+
+// Concrete overrides for every palette x mode combination. JS always
+// resolves 'system' to a concrete light/dark value before writing
+// data-theme, so these selectors never need to handle 'system' themselves.
+@each $palette, $modes in $themes {
+  @each $mode, $tokens in $modes {
+    html[data-palette='#{$palette}'][data-theme='#{$mode}'] {
+      @include theme-variables($palette, $mode);
+    }
   }
 }
 
@@ -35,7 +42,7 @@ body {
   background: var(--background);
   color: var(--text);
   font-family: Arial, Helvetica, sans-serif;
-  color-scheme: dark;
+  color-scheme: var(--color-scheme, dark);
 }
 
 button,

@@ -65,6 +65,16 @@ export type PomodoroSettings = {
   breakMinutes: number;
 };
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+
+// Extend as new palettes are added to $themes in src/styles/theme.scss.
+export type ThemePalette = 'default' | 'catppuccin';
+
+export type ThemeSettings = {
+  palette: ThemePalette;
+  mode: ThemeMode;
+};
+
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
 export type DashboardWidget = {

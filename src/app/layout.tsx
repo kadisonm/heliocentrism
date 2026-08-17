@@ -6,6 +6,8 @@ import "react-resizable/css/styles.css";
 import "../styles/globals.scss";
 import Nav from "../components/nav";
 import SplashScreen from "../components/splash-screen";
+import ThemeSync from "../components/theme-sync";
+import { THEME_INIT_SCRIPT } from "../lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,8 +35,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
+        <script
+          // Sets data-palette/data-theme on <html> synchronously before
+          // first paint, from the cached choice in localStorage, so the
+          // correct theme renders immediately instead of flashing to the
+          // default while the Firestore-backed setting loads.
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+        <ThemeSync />
         <SplashScreen />
         <Nav />
         {children}
