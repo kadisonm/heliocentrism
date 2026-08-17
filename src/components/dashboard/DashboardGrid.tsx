@@ -2,7 +2,7 @@
 
 import { Responsive, useContainerWidth } from 'react-grid-layout';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   DASHBOARD_BREAKPOINTS,
   DASHBOARD_COLS,
@@ -15,6 +15,17 @@ import { findWidgetDefinition } from '../../lib/widgetRegistry';
 import WidgetShell from './WidgetShell';
 
 const ALL_BREAKPOINTS: DashboardBreakpoint[] = ['desktop', 'tablet', 'mobile'];
+
+// Static across every render — module-level constants so <Responsive> gets
+// the same array reference every time instead of a fresh one, which would
+// otherwise defeat its own internal useMemos (they key off these props) on
+// every drag/resize frame.
+const GRID_MARGIN: [number, number] = [16, 16];
+// Zero: the horizontal/vertical inset comes entirely from .dashboard-container's
+// own padding, so the grid's edge lines up exactly with the nav's padding
+// instead of stacking an extra inset on top of it.
+const GRID_CONTAINER_PADDING: [number, number] = [0, 0];
+const RESIZE_HANDLES: Array<'se' | 'sw'> = ['se', 'sw'];
 
 type DashboardGridProps = {
   widgets: DashboardWidget[];
@@ -44,12 +55,25 @@ export default function DashboardGrid({
   const { width, containerRef, mounted } = useContainerWidth();
   const gridElRef = useRef<HTMLDivElement>(null);
 
-  const handleLayoutChange = (
-    _layout: Layout,
-    nextLayouts: ResponsiveLayouts<DashboardBreakpoint>
-  ) => {
-    onLayoutsChange(nextLayouts);
-  };
+  const handleLayoutChange = useCallback(
+    (_layout: Layout, nextLayouts: ResponsiveLayouts<DashboardBreakpoint>) => {
+      onLayoutsChange(nextLayouts);
+    },
+    [onLayoutsChange]
+  );
+
+  // Stabilized so <Responsive>'s own internal useMemos (keyed off these
+  // props) actually hit instead of recomputing every render — otherwise a
+  // fresh object/array here every render, even with identical values,
+  // cascades into rebuilding derived grid state on every drag/resize frame.
+  const dragConfig = useMemo(
+    () => ({ enabled: isEditMode, handle: '.widget-drag-handle' }),
+    [isEditMode]
+  );
+  const resizeConfig = useMemo(
+    () => ({ enabled: isEditMode, handles: RESIZE_HANDLES }),
+    [isEditMode]
+  );
 
   // DASHBOARD_PREVIEW_WIDTHS is a fixed number meant to simulate a device
   // other than the one actually in front of you (e.g. a desktop user
@@ -149,14 +173,10 @@ export default function DashboardGrid({
             breakpoint={isEditMode ? activeBreakpoint : undefined}
             width={gridWidth}
             rowHeight={40}
-            margin={[16, 16]}
-            // Zero: the horizontal/vertical inset comes entirely from
-            // .dashboard-container's own padding, so the grid's edge lines
-            // up exactly with the nav's padding instead of stacking an
-            // extra inset on top of it.
-            containerPadding={[0, 0]}
-            dragConfig={{ enabled: isEditMode, handle: '.widget-drag-handle' }}
-            resizeConfig={{ enabled: isEditMode, handles: ['se', 'sw'] }}
+            margin={GRID_MARGIN}
+            containerPadding={GRID_CONTAINER_PADDING}
+            dragConfig={dragConfig}
+            resizeConfig={resizeConfig}
             onLayoutChange={handleLayoutChange}
           >
             {widgets.map((widget) => (

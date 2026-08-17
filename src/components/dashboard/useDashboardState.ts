@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ResponsiveLayouts } from 'react-grid-layout';
 import { DEFAULT_DASHBOARD } from '../../lib/data';
 import { DASHBOARD_COLS, DEFAULT_WIDGET_SIZE } from '../../lib/dashboardGridConfig';
@@ -33,14 +33,50 @@ export function useDashboardState() {
     loadDashboard();
   }, []);
 
-  // Save dashboard state on change
+  // react-grid-layout calls onLayoutChange on every drag/resize *frame*,
+  // not just once at the end — without debouncing, a single drag fires
+  // dozens of Firestore writes back to back. Debounce the write itself
+  // (not the local state, which needs to stay instant for smooth dragging).
+  const pendingWriteRef = useRef<{
+    widgets: DashboardWidget[];
+    layouts: ResponsiveLayouts<DashboardBreakpoint>;
+  } | null>(null);
+  const writeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (!isLoading && widgets.length > 0) {
-      writeDashboardState({ widgets, layouts });
-    }
+    if (isLoading || widgets.length === 0) return;
+
+    pendingWriteRef.current = { widgets, layouts };
+    if (writeTimeoutRef.current) clearTimeout(writeTimeoutRef.current);
+    writeTimeoutRef.current = setTimeout(() => {
+      if (pendingWriteRef.current) {
+        writeDashboardState(pendingWriteRef.current);
+        pendingWriteRef.current = null;
+      }
+    }, 500);
   }, [widgets, layouts, isLoading]);
 
-  const addWidget = (type: string) => {
+  // Flush any still-pending write immediately on unmount, so navigating
+  // away right after a drag/resize doesn't silently drop the final
+  // position under the debounce above.
+  useEffect(() => {
+    return () => {
+      if (writeTimeoutRef.current) {
+        clearTimeout(writeTimeoutRef.current);
+        if (pendingWriteRef.current) {
+          writeDashboardState(pendingWriteRef.current);
+        }
+      }
+    };
+  }, []);
+
+  // useCallback with an empty dep array is safe here — each only touches
+  // state via the setState updater form (reading `current` as an argument,
+  // never closing over the outer `widgets`/`layouts`), so there's nothing
+  // reactive to depend on. Stable identity matters: these get passed down
+  // to every WidgetShell (React.memo'd), and a fresh function reference
+  // every render would defeat that memoization on every drag/resize frame.
+  const addWidget = useCallback((type: string) => {
     const id = crypto.randomUUID();
     const size = findWidgetDefinition(type)?.defaultSize ?? DEFAULT_WIDGET_SIZE;
 
@@ -56,9 +92,9 @@ export function useDashboardState() {
       });
       return next;
     });
-  };
+  }, []);
 
-  const removeWidget = (id: string) => {
+  const removeWidget = useCallback((id: string) => {
     setWidgets((current) => current.filter((widget) => widget.id !== id));
     setLayouts((current) => {
       const next: ResponsiveLayouts<DashboardBreakpoint> = { ...current };
@@ -67,13 +103,13 @@ export function useDashboardState() {
       });
       return next;
     });
-  };
+  }, []);
 
-  const setWidgetType = (id: string, type: string) => {
+  const setWidgetType = useCallback((id: string, type: string) => {
     setWidgets((current) =>
       current.map((widget) => (widget.id === id ? { ...widget, type } : widget))
     );
-  };
+  }, []);
 
   return {
     widgets,

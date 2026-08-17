@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { applyTheme, cacheTheme } from '../../lib/theme';
 import { useSettings } from '../tasks/useSettings';
 
@@ -11,6 +11,16 @@ import { useSettings } from '../tasks/useSettings';
 // 'system'.
 export default function ThemeSync() {
   const { settings, isLoading } = useSettings();
+
+  // Lets the OS-preference listener below read the current theme without
+  // depending on the whole `settings.theme` object — depending on it
+  // directly would tear down and recreate the matchMedia subscription on
+  // every theme edit (e.g. a palette change), not just mode entering/
+  // leaving 'system'.
+  const themeRef = useRef(settings.theme);
+  useEffect(() => {
+    themeRef.current = settings.theme;
+  }, [settings.theme]);
 
   useEffect(() => {
     // Firestore hasn't resolved yet — leave the localStorage-restored
@@ -26,10 +36,10 @@ export default function ThemeSync() {
     if (isLoading || settings.theme.mode !== 'system') return;
 
     const query = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => applyTheme(settings.theme);
+    const handleChange = () => applyTheme(themeRef.current);
     query.addEventListener('change', handleChange);
     return () => query.removeEventListener('change', handleChange);
-  }, [isLoading, settings.theme]);
+  }, [isLoading, settings.theme.mode]);
 
   return null;
 }

@@ -124,13 +124,29 @@ export function loadFirebaseConfig(): FirebaseConfig | null {
 
 export function clearFirebaseConfig(): void {
   clearSetting(FIREBASE_CONFIG_KEY);
+  // Otherwise getFirebaseServices() below would keep serving the stale
+  // cached instance and never notice config is gone — breaking the
+  // onboarding gate's "clear config re-blocks the app" behavior.
+  cachedServices = undefined;
 }
 
 export function isFirebaseConfigured(): boolean {
   return !!loadFirebaseConfig();
 }
 
+// Once a config is loaded, the app/db pairing can't actually change within
+// the session anyway — getApps()[0] below always wins over whatever config
+// is currently in storage, so re-deriving from scratch on every call bought
+// nothing but a localStorage read + JSON.parse + an initializeFirestore()
+// throw/catch (Firestore rejects re-initializing an already-initialized
+// app) on every single read/write across the whole app. Cache the success
+// case; leave the "not configured yet" case uncached so a config saved
+// mid-session (e.g. during onboarding) is picked up on the next call.
+let cachedServices: FirebaseServices | null | undefined;
+
 function getFirebaseServices(): FirebaseServices | null {
+  if (cachedServices !== undefined) return cachedServices;
+
   const config = loadFirebaseConfig();
   if (!config) return null;
 
@@ -145,20 +161,14 @@ function getFirebaseServices(): FirebaseServices | null {
     db = getFirestore(app);
   }
 
-  return { app, db };
+  cachedServices = { app, db };
+  return cachedServices;
 }
 
 function getFirebaseAuth() {
   const services = getFirebaseServices();
   if (!services) return null;
   return getAuth(services.app);
-}
-
-// react-grid-layout layout items can carry undefined internal fields (e.g.
-// `moved`), which Firestore's setDoc rejects outright. JSON round-tripping
-// drops any key whose value is undefined.
-function stripUndefined<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
 }
 
 // Doc name predates this doc holding routine tasks, todos, dashboard
@@ -389,7 +399,7 @@ export async function writeRoutineTasks(routineTasks: RoutineTask[]): Promise<bo
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'routineTasks'> = { routineTasks: stripUndefined(routineTasks) };
+    const data: Pick<AppData, 'routineTasks'> = { routineTasks };
     await setDoc(
       docRef,
       {
@@ -440,7 +450,7 @@ export async function writeTodoLists(todoLists: TodoList[]): Promise<boolean> {
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'todoLists'> = { todoLists: stripUndefined(todoLists) };
+    const data: Pick<AppData, 'todoLists'> = { todoLists };
     await setDoc(
       docRef,
       {
@@ -476,7 +486,7 @@ export async function writeDashboardState(
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'dashboard'> = { dashboard: stripUndefined(dashboard) };
+    const data: Pick<AppData, 'dashboard'> = { dashboard };
     await setDoc(
       docRef,
       {
@@ -510,7 +520,7 @@ export async function writeAppSettings(settings: AppSettings): Promise<boolean> 
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'settings'> = { settings: stripUndefined(settings) };
+    const data: Pick<AppData, 'settings'> = { settings };
     await setDoc(
       docRef,
       {

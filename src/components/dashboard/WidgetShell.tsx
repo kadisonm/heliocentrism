@@ -1,7 +1,7 @@
 'use client';
 
 import { GripVertical, Settings, X } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/widgetRegistry';
 import type { DashboardWidget } from '../../lib/types';
 
@@ -12,7 +12,15 @@ type WidgetShellProps = {
   onRemove: (id: string) => void;
 };
 
-export default function WidgetShell({
+// DashboardGrid re-renders on every drag/resize frame (layouts changes
+// continuously while dragging) — without memoizing here, every widget's
+// full subtree would re-render on every frame even though only the one
+// being dragged actually changed. Relies on the parent's `widgets` array
+// preserving object identity for unrelated widgets (see useDashboardState's
+// setWidgetType/removeWidget, which use .map()/.filter() so untouched
+// items keep their reference) and on onSetType/onRemove being stable
+// (useCallback in useDashboardState).
+function WidgetShell({
   widget,
   isEditMode,
   onSetType,
@@ -83,3 +91,5 @@ export default function WidgetShell({
     </div>
   );
 }
+
+export default memo(WidgetShell);

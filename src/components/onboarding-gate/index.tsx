@@ -35,7 +35,6 @@ export default function OnboardingGate({ children }: { children: ReactNode }) {
     // e.g. via the Nav "Sync Configuration" modal — re-blocks live instead
     // of requiring a reload.
     const unsubscribe = subscribeToAuthState((user) => {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
       setStatus(user ? 'allowed' : 'blocked');
     });
 
