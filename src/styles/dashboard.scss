@@ -12,6 +12,14 @@
   align-items: flex-start;
   justify-content: center;
   padding: 2rem 1.5rem;
+  // .dashboard-status-bar is `position: fixed; right/bottom: 1.5rem` with a
+  // 2.75rem height — at any breakpoint it can sit directly over the grid's
+  // bottom-right corner (and the widget resize handle there) since there's
+  // no room below the grid to scroll it out of the way. This clears the
+  // status bar's full footprint (offset + height) plus some gap, so
+  // scrolling to the bottom lets the bar end up below the grid instead of
+  // on top of it.
+  padding-bottom: 6rem;
 }
 
 .dashboard-status-bar {
