@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "../styles/globals.scss";
+import ClientRoot from "./ClientRoot";
 import Nav from "../components/nav";
 import SplashScreen from "../components/splash-screen";
 import ThemeSync from "../components/theme-sync";
@@ -46,8 +47,10 @@ export default function RootLayout({
         />
         <ThemeSync />
         <SplashScreen />
-        <Nav />
-        {children}
+        <ClientRoot>
+          <Nav />
+          {children}
+        </ClientRoot>
       </body>
     </html>
   );
