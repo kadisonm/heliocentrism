@@ -42,6 +42,7 @@ export default function DashboardPage() {
             layouts={dashboard.layouts}
             isEditMode={isEditMode}
             activeBreakpoint={activeBreakpoint}
+            deviceTier={deviceTier}
             onLayoutsChange={dashboard.setLayouts}
             onSetWidgetType={dashboard.setWidgetType}
             onRemoveWidget={dashboard.removeWidget}

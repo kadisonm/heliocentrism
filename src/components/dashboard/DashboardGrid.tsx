@@ -21,6 +21,11 @@ type DashboardGridProps = {
   layouts: ResponsiveLayouts<DashboardBreakpoint>;
   isEditMode: boolean;
   activeBreakpoint: DashboardBreakpoint;
+  // The device's own real tier (from useDeviceTier), distinct from
+  // activeBreakpoint (which in edit mode can be switched to preview a
+  // *different* tier). Used to tell "genuinely simulating another device"
+  // apart from "editing the tier you're actually on" — see isSimulating below.
+  deviceTier: DashboardBreakpoint;
   onLayoutsChange: (layouts: ResponsiveLayouts<DashboardBreakpoint>) => void;
   onSetWidgetType: (id: string, type: string) => void;
   onRemoveWidget: (id: string) => void;
@@ -31,6 +36,7 @@ export default function DashboardGrid({
   layouts,
   isEditMode,
   activeBreakpoint,
+  deviceTier,
   onLayoutsChange,
   onSetWidgetType,
   onRemoveWidget,
@@ -45,11 +51,22 @@ export default function DashboardGrid({
     onLayoutsChange(nextLayouts);
   };
 
+  // DASHBOARD_PREVIEW_WIDTHS is a fixed number meant to simulate a device
+  // other than the one actually in front of you (e.g. a desktop user
+  // previewing mobile) — it has no reason to match your real viewport, and
+  // on a phone (deviceTier === activeBreakpoint here, since a phone can only
+  // ever edit its own tier) it often doesn't: plenty of real phones are
+  // narrower than the 375px "mobile" simulation width, so the fixed-width
+  // frame would overflow the actual screen. When you're editing the tier
+  // you're really on, skip the simulation and use the real measured width
+  // instead, same as the non-edit view already does.
+  const isSimulating = isEditMode && activeBreakpoint !== deviceTier;
+
   // The preview frame's own padding/border add to this width rather than
   // being included in it (see DASHBOARD_PREVIEW_FRAME_CHROME) — subtract
   // them so the frame's total footprint matches the breakpoint it's meant
   // to simulate instead of overflowing past it.
-  const gridWidth = isEditMode
+  const gridWidth = isSimulating
     ? DASHBOARD_PREVIEW_WIDTHS[activeBreakpoint] - DASHBOARD_PREVIEW_FRAME_CHROME
     : width;
 
@@ -120,8 +137,8 @@ export default function DashboardGrid({
     <div className="dashboard-grid-canvas" ref={containerRef}>
       {mounted && (
         <div
-          className={isEditMode ? 'dashboard-grid-preview-frame' : undefined}
-          style={isEditMode ? { width: gridWidth } : undefined}
+          className={isSimulating ? 'dashboard-grid-preview-frame' : undefined}
+          style={isSimulating ? { width: gridWidth } : undefined}
         >
           <Responsive<DashboardBreakpoint>
             className="dashboard-grid"
