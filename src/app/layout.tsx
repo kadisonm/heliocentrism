@@ -5,8 +5,8 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "../styles/globals.scss";
 import ClientRoot from "./ClientRoot";
-import Nav from "../components/nav";
-import SplashScreen from "../components/splash-screen";
+import Nav from "../components/shared/nav";
+import SplashScreen from "../components/pages/splash-screen";
 import ThemeSync from "../components/theme-sync";
 import { THEME_INIT_SCRIPT } from "../lib/theme";
 

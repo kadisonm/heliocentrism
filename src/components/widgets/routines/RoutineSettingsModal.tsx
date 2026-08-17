@@ -2,7 +2,7 @@
 
 import type { RoutineResetTimes } from '../../../lib/types';
 import Modal from '../../common/Modal';
-import { useSettings } from '../../tasks/useSettings';
+import { useSettings } from '../../shared/tasks/useSettings';
 
 type RoutineSettingsModalProps = {
   isOpen: boolean;

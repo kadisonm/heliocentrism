@@ -1,9 +1,13 @@
-.routine-panel-shell {
+// Shared "widget content" shell + header controls, reused by the widgets
+// that render a scrollable list inside their body (Routines, Todo List,
+// Pomodoro Timer) — not routine-specific, despite the historical class
+// names this replaced.
+.widget-content-shell {
   width: 100%;
   height: 100%;
 }
 
-.routine-panel {
+.widget-content {
   color: var(--text);
   width: 100%;
   height: 100%;
@@ -11,52 +15,27 @@
   overflow: auto;
 }
 
-.routine-panel-header {
+.widget-content-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
 
-.routine-panel-header h2 {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.todo-list-select {
-  border: none;
-  background: transparent;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  padding: 0.15rem 0.3rem;
-  margin-left: -0.3rem;
-  border-radius: 0.4rem;
-  max-width: 60%;
-
-  &:hover,
-  &:focus-visible {
-    background: var(--accent-soft);
+  h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
   }
 }
 
-.todo-list-empty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.routine-panel-actions {
+.widget-content-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.routine-show-toggle,
-.routine-add-button {
+.widget-show-toggle,
+.widget-add-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,7 +49,7 @@
   }
 }
 
-.routine-show-toggle {
+.widget-show-toggle {
   border: 1px solid var(--border);
   background: var(--accent-soft);
   color: var(--text);
@@ -82,7 +61,7 @@
   }
 }
 
-.routine-add-button {
+.widget-add-button {
   border: 1px solid var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
@@ -93,38 +72,20 @@
   }
 }
 
-.routine-sections {
+.widget-sections {
   margin-top: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.routine-section {
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
-}
-
-.routine-section__header {
-  margin-bottom: 0.5rem;
-
-  h3 {
-    margin: 0;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--primary);
-    font-weight: 700;
-  }
-}
-
-.routine-list {
+.widget-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.routine-empty {
+.widget-empty {
   margin: 0;
   padding: 0.5rem 0;
   font-size: 0.72rem;

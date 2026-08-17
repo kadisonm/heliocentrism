@@ -1,10 +1,10 @@
 'use client';
 
-import type { ThemeMode } from '../../lib/types';
-import { THEME_PALETTES } from '../../lib/theme';
-import Modal from '../common/Modal';
-import SettingsField from '../common/SettingsField';
-import { useSettings } from '../tasks/useSettings';
+import type { ThemeMode } from '../../../lib/types';
+import { THEME_PALETTES } from '../../../lib/theme';
+import Modal from '../../common/Modal';
+import SettingsField from '../../common/SettingsField';
+import { useSettings } from '../../shared/tasks/useSettings';
 
 type GeneralSettingsPanelProps = {
   isOpen: boolean;

@@ -7,7 +7,7 @@ import { reorderWithinGroup } from '../../../lib/reorder';
 import { shouldResetRoutineTask } from '../../../lib/routineReset';
 import { cycleSubtaskStage, cycleTaskStage } from '../../../lib/taskCascade';
 import type { RoutineTask, TodoStage } from '../../../lib/types';
-import { getSettingsSnapshot } from '../../tasks/useSettings';
+import { getSettingsSnapshot } from '../../shared/tasks/useSettings';
 
 // Module-level singleton, not React state — every widget instance that
 // calls useRoutineTasks() below shares this same in-memory copy, so

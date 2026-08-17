@@ -10,12 +10,12 @@ import {
   signInWithGoogle,
   signOutFirebaseUser,
   subscribeToAuthState,
-} from '../../lib/firebaseSync';
-import type { FirebaseConfig } from '../../lib/types';
-import SectionHeader from '../common/SectionHeader';
-import SettingsField from '../common/SettingsField';
-import StatusAlert, { type StatusTone } from '../common/StatusAlert';
-import Tabs from '../common/Tabs';
+} from '../../../lib/firebaseSync';
+import type { FirebaseConfig } from '../../../lib/types';
+import SectionHeader from '../../common/SectionHeader';
+import SettingsField from '../../common/SettingsField';
+import StatusAlert, { type StatusTone } from '../../common/StatusAlert';
+import Tabs from '../../common/Tabs';
 import ConnectionStatus from './ConnectionStatus';
 
 type SyncConfigFormProps = {

@@ -7,8 +7,8 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
   type AppSettings,
-} from '../../lib/data';
-import { readAppSettings, writeAppSettings } from '../../lib/firebaseSync';
+} from '../../../lib/data';
+import { readAppSettings, writeAppSettings } from '../../../lib/firebaseSync';
 
 // Module-level singleton, mirroring src/components/widgets/routines/useRoutineTasks.ts
 // — every component that calls useSettings() shares this same in-memory

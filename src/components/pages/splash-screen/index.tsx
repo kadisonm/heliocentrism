@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import OrbitAnimation from '../orbit-animation';
+import OrbitAnimation from '../../shared/orbit-animation';
 
 // Total time one play is on screen: reveal (sun -> orbit paths -> planets),
 // a bit of visible orbiting, then the fade-out below finishes.

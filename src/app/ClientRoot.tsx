@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import OnboardingGate from '../components/onboarding-gate';
+import OnboardingGate from '../components/pages/onboarding-gate';
 
 export default function ClientRoot({ children }: { children: React.ReactNode }) {
   // Place any client-only providers/hooks here to avoid marking layout as a client component.

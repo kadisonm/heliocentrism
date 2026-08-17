@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { isFirebaseConfigured, subscribeToAuthState } from '../../lib/firebaseSync';
+import { isFirebaseConfigured, subscribeToAuthState } from '../../../lib/firebaseSync';
 import SyncConfigForm from '../sync-config/SyncConfigForm';
 
 type GateStatus = 'checking' | 'blocked' | 'allowed';

@@ -3,8 +3,8 @@
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Todo } from '../../../lib/types';
-import SortableTaskList from '../../tasks/SortableTaskList';
-import TaskItem, { TaskItemView } from '../../tasks/TaskItem';
+import SortableTaskList from '../../shared/tasks/SortableTaskList';
+import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTodoListModal from './AddTodoListModal';
 import { formatDue, getDueUrgency } from './dueDate';
 import TodoModal from './TodoModal';
@@ -17,7 +17,7 @@ type TodoModalState = { mode: 'add' } | { mode: 'edit'; todo: Todo };
 function renderDueBadge(todo: Todo) {
   if (!todo.due) return undefined;
   return (
-    <span className={`todo-item__due todo-item__due--${getDueUrgency(todo.due)}`}>
+    <span className={`task-item__due task-item__due--${getDueUrgency(todo.due)}`}>
       {formatDue(todo.due)}
     </span>
   );
@@ -52,9 +52,9 @@ export default function TodoListWidget() {
 
   return (
     <>
-      <aside className="routine-panel-shell">
-        <div className="routine-panel">
-          <div className="routine-panel-header">
+      <aside className="widget-content-shell">
+        <div className="widget-content">
+          <div className="widget-content-header">
             {todoLists.length > 0 ? (
               <select
                 className="todo-list-select"
@@ -79,12 +79,12 @@ export default function TodoListWidget() {
               <h2>Todo List</h2>
             )}
 
-            <div className="routine-panel-actions">
+            <div className="widget-content-actions">
               {activeList && (
                 <>
                   <button
                     type="button"
-                    className="routine-show-toggle"
+                    className="widget-show-toggle"
                     onClick={() => setShowCompleted((current) => !current)}
                     title={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
                     aria-label={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
@@ -94,7 +94,7 @@ export default function TodoListWidget() {
 
                   <button
                     type="button"
-                    className="routine-add-button"
+                    className="widget-add-button"
                     onClick={() => setModalState({ mode: 'add' })}
                     title="Add task"
                     aria-label="Add task"
@@ -106,15 +106,15 @@ export default function TodoListWidget() {
             </div>
           </div>
 
-          <div className="routine-sections">
+          <div className="widget-sections">
             {!isLoading && (
-              <div className="routine-list">
+              <div className="widget-list">
                 {!activeList ? (
                   <div className="todo-list-empty">
-                    <p className="routine-empty">No lists yet</p>
+                    <p className="widget-empty">No lists yet</p>
                     <button
                       type="button"
-                      className="routine-add-button"
+                      className="widget-add-button"
                       onClick={() => setIsAddListOpen(true)}
                       title="Create list"
                       aria-label="Create list"
@@ -169,7 +169,7 @@ export default function TodoListWidget() {
                     ))}
                   </SortableTaskList>
                 ) : (
-                  <p className="routine-empty">No tasks</p>
+                  <p className="widget-empty">No tasks</p>
                 )}
               </div>
             )}

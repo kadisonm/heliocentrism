@@ -1,4 +1,4 @@
-import OrbitAnimation from '../../orbit-animation';
+import OrbitAnimation from '../../shared/orbit-animation';
 
 export default function OrbitWidget() {
   return (

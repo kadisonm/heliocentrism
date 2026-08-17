@@ -4,8 +4,8 @@ import { Menu, RefreshCw, Settings, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import GeneralSettingsPanel from '../general-settings';
-import SyncConfigPanel from '../sync-config';
+import GeneralSettingsPanel from '../../pages/general-settings';
+import SyncConfigPanel from '../../pages/sync-config';
 
 const NAV_LINKS = [
   { href: '/', label: 'Dashboard' },

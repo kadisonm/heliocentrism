@@ -1,5 +1,5 @@
-import SortableTaskList from '../../tasks/SortableTaskList';
-import TaskItem, { TaskItemView } from '../../tasks/TaskItem';
+import SortableTaskList from '../../shared/tasks/SortableTaskList';
+import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import type { RecurrenceValue, RoutineTask } from '../../../lib/types';
 
 type RoutineTaskSectionProps = {
@@ -22,8 +22,8 @@ export default function RoutineTaskSection({
   onReorderSubtasks,
 }: RoutineTaskSectionProps) {
   return (
-    <div className="routine-section">
-      <div className="routine-section__header">
+    <div className="routine-todo-section">
+      <div className="routine-todo-section__header">
         <h3>{recurrence}</h3>
       </div>
 
@@ -45,7 +45,7 @@ export default function RoutineTaskSection({
             ) : null;
           }}
         >
-          <div className="routine-list">
+          <div className="widget-list">
             {tasks.map((task) => (
               <TaskItem
                 key={task.id}
@@ -59,8 +59,8 @@ export default function RoutineTaskSection({
           </div>
         </SortableTaskList>
       ) : (
-        <div className="routine-list">
-          <p className="routine-empty">No {recurrence} tasks</p>
+        <div className="widget-list">
+          <p className="widget-empty">No {recurrence} tasks</p>
         </div>
       )}
     </div>

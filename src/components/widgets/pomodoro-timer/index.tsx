@@ -14,9 +14,9 @@ export default function PomodoroTimerWidget() {
     usePomodoroTimer();
 
   return (
-    <aside className="routine-panel-shell">
-      <div className="routine-panel pomodoro-panel">
-        <div className="routine-panel-header">
+    <aside className="widget-content-shell">
+      <div className="widget-content pomodoro-widget">
+        <div className="widget-content-header">
           <h2>Pomodoro Timer</h2>
         </div>
 

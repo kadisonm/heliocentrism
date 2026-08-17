@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Pencil } from 'lucide-react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
-import type { Subtask, Task } from '../../lib/types';
+import type { Subtask, Task } from '../../../lib/types';
 import SortableTaskList from './SortableTaskList';
 
 const statusLabels = ['To do', 'In progress', 'Done'] as const;
@@ -84,38 +84,38 @@ export function TaskItemView<T extends Task>({
     <div
       ref={dragRef}
       style={dragStyle}
-      className={`todo-item ${isPlaceholder ? 'todo-item--placeholder' : ''}`}
+      className={`task-item ${isPlaceholder ? 'task-item--placeholder' : ''}`}
       {...dragAttributes}
       {...dragListeners}
     >
       <button
         type="button"
-        className="todo-toggle"
+        className="task-toggle"
         data-stage={task.stage}
         onClick={() => onToggle(task.id)}
         aria-label={`Set ${task.title} to ${nextStatus}`}
       >
-        <span className="todo-toggle__mark" />
+        <span className="task-toggle__mark" />
       </button>
 
-      <div className="todo-item__content">
-        <div className="todo-item__header">
-          <p className={`todo-item__title ${task.stage === 2 ? 'is-done' : ''}`}>
+      <div className="task-item__content">
+        <div className="task-item__header">
+          <p className={`task-item__title ${task.stage === 2 ? 'is-done' : ''}`}>
             {task.title}
           </p>
 
           {extra}
 
-          <div className="todo-item__header-actions">
+          <div className="task-item__header-actions">
             <span
-              className={`todo-status todo-status--${statusLabel.toLowerCase().replace(/\s+/g, '-')}`}
+              className={`task-status task-status--${statusLabel.toLowerCase().replace(/\s+/g, '-')}`}
             >
               {statusLabel}
             </span>
 
             <button
               type="button"
-              className="todo-item__edit-button"
+              className="task-item__edit-button"
               onClick={() => onEdit(task)}
               title="Edit"
               aria-label={`Edit ${task.title}`}
@@ -125,11 +125,11 @@ export function TaskItemView<T extends Task>({
           </div>
         </div>
 
-        {task.description && <p className="todo-item__description">{task.description}</p>}
+        {task.description && <p className="task-item__description">{task.description}</p>}
 
         {task.subtasks.length > 0 &&
           (overlay ? (
-            <div className="todo-item__subtasks">
+            <div className="task-item__subtasks">
               {task.subtasks.map((subtask) => (
                 <SubtaskRowView key={subtask.id} subtask={subtask} onToggle={() => {}} />
               ))}
@@ -145,7 +145,7 @@ export function TaskItemView<T extends Task>({
                 ) : null;
               }}
             >
-              <div className="todo-item__subtasks">
+              <div className="task-item__subtasks">
                 {task.subtasks.map((subtask) => (
                   <SubtaskRow
                     key={subtask.id}
@@ -201,21 +201,21 @@ function SubtaskRowView({
     <div
       ref={dragRef}
       style={dragStyle}
-      className={`todo-subtask ${isPlaceholder ? 'todo-subtask--placeholder' : ''}`}
+      className={`subtask ${isPlaceholder ? 'subtask--placeholder' : ''}`}
       {...dragAttributes}
       {...dragListeners}
     >
       <button
         type="button"
-        className="todo-toggle"
+        className="task-toggle"
         data-stage={subtask.stage}
         onClick={onToggle}
         aria-label={`Set ${subtask.title} to next status`}
         title={subtaskStatusLabel}
       >
-        <span className="todo-toggle__mark" />
+        <span className="task-toggle__mark" />
       </button>
-      <p className={`todo-subtask__title ${subtask.stage === 2 ? 'is-done' : ''}`}>
+      <p className={`subtask__title ${subtask.stage === 2 ? 'is-done' : ''}`}>
         {subtask.title}
       </p>
     </div>

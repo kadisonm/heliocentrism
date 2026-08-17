@@ -1,6 +1,6 @@
 'use client';
 
-import Modal from '../common/Modal';
+import Modal from '../../common/Modal';
 import SyncConfigForm from './SyncConfigForm';
 
 type SyncConfigPanelProps = {

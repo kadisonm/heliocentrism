@@ -44,15 +44,15 @@ export default function RoutinesWidget() {
 
   return (
     <>
-      <aside className="routine-panel-shell">
-        <div className="routine-panel">
-          <div className="routine-panel-header">
+      <aside className="widget-content-shell">
+        <div className="widget-content">
+          <div className="widget-content-header">
             <h2>Routines</h2>
 
-            <div className="routine-panel-actions">
+            <div className="widget-content-actions">
               <button
                 type="button"
-                className="routine-show-toggle"
+                className="widget-show-toggle"
                 onClick={() => setShowCompleted((current) => !current)}
                 title={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
                 aria-label={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
@@ -62,7 +62,7 @@ export default function RoutinesWidget() {
 
               <button
                 type="button"
-                className="routine-add-button"
+                className="widget-add-button"
                 onClick={() => setModalState({ mode: 'add' })}
                 title="Add task"
                 aria-label="Add task"
@@ -72,7 +72,7 @@ export default function RoutinesWidget() {
             </div>
           </div>
 
-          <div className="routine-sections">
+          <div className="widget-sections">
             {!isLoading &&
               recurrenceOrder.map((recurrence) => (
                 <RoutineTaskSection

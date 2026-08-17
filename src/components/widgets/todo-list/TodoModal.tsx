@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import type { Subtask, Todo } from '../../../lib/types';
-import EditorActions from '../../common/editor/EditorActions';
-import EditorField from '../../common/editor/EditorField';
-import EditorModal from '../../common/editor/EditorModal';
-import EditorSubtaskList from '../../common/editor/EditorSubtaskList';
+import EditorActions from '../../shared/editor/EditorActions';
+import EditorField from '../../shared/editor/EditorField';
+import EditorModal from '../../shared/editor/EditorModal';
+import EditorSubtaskList from '../../shared/editor/EditorSubtaskList';
 
 type TodoModalProps = {
   isOpen: boolean;
