@@ -63,6 +63,15 @@
   overflow: hidden;
 }
 
+// For widgets flagged transparentInViewMode (e.g. Spacer) — WidgetShell
+// only applies this outside edit mode, so the widget looks completely like
+// empty space in view mode but still shows its normal chrome/background
+// while editing (positioning/resizing an invisible box would be unusable).
+.grid-widget--transparent {
+  background: none;
+  border-color: transparent;
+}
+
 .grid-widget-chrome {
   display: flex;
   align-items: center;
@@ -131,6 +140,33 @@
     opacity: 0.55;
     filter: grayscale(0.4);
   }
+}
+
+// The Spacer widget (components/widgets/spacer) — its own content is just
+// a label identifying it while editing (see .grid-widget--transparent
+// above for the part that actually makes it invisible in view mode: this
+// content sits inside .grid-widget-body, which still dims to 55% opacity
+// like every other widget's body while editing — expected, matches how
+// every other widget looks mid-edit).
+.spacer-widget {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spacer-widget-label {
+  display: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.grid-widget-body.is-locked .spacer-widget-label {
+  display: block;
 }
 
 .grid-widget-type-select {

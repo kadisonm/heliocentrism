@@ -6,6 +6,7 @@ import PomodoroTimerWidget from '../components/widgets/pomodoro-timer';
 import PomodoroSettingsModal from '../components/widgets/pomodoro-timer/PomodoroSettingsModal';
 import RoutinesWidget from '../components/widgets/routines';
 import RoutineSettingsModal from '../components/widgets/routines/RoutineSettingsModal';
+import SpacerWidget from '../components/widgets/spacer';
 import TodoListWidget from '../components/widgets/todo-list';
 import WeeklyRoutineWidget from '../components/widgets/weekly-routine';
 
@@ -16,7 +17,8 @@ export type WidgetType =
   | 'monthly-routine'
   | 'todo-list'
   | 'orbit'
-  | 'pomodoro-timer';
+  | 'pomodoro-timer'
+  | 'spacer';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
@@ -32,6 +34,10 @@ export type WidgetDefinition = {
   component: ComponentType;
   // Rendered by WidgetShell's gear icon (edit mode only) when present.
   settingsComponent?: WidgetSettingsComponent;
+  // When true, WidgetShell's own chrome (background/border, not just this
+  // widget's content) is only shown while editing — for widgets like Spacer
+  // that should be fully invisible once you're done editing, not just empty.
+  transparentInViewMode?: boolean;
 };
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
@@ -95,6 +101,15 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: PomodoroTimerWidget,
     settingsComponent: PomodoroSettingsModal,
+  },
+  {
+    type: 'spacer',
+    name: 'Spacer',
+    description: 'Empty space for shaping the layout — visible only while editing.',
+    defaultSize: { w: 2, h: 2 },
+    minSize: { w: 1, h: 1 },
+    component: SpacerWidget,
+    transparentInViewMode: true,
   },
 ];
 

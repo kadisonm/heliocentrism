@@ -31,8 +31,10 @@ function WidgetShell({
   const SettingsComponent = definition?.settingsComponent;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const isTransparent = definition?.transparentInViewMode && !isEditMode;
+
   return (
-    <div className="grid-widget">
+    <div className={isTransparent ? 'grid-widget grid-widget--transparent' : 'grid-widget'}>
       {isEditMode && (
         <div className="grid-widget-chrome">
           <span className="widget-drag-handle" title="Drag to move" aria-label="Drag to move">
