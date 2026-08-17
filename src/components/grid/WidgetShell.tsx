@@ -12,14 +12,14 @@ type WidgetShellProps = {
   onRemove: (id: string) => void;
 };
 
-// DashboardGrid re-renders on every drag/resize frame (layouts changes
-// continuously while dragging) — without memoizing here, every widget's
-// full subtree would re-render on every frame even though only the one
-// being dragged actually changed. Relies on the parent's `widgets` array
-// preserving object identity for unrelated widgets (see useDashboardState's
+// Grid re-renders on every drag/resize frame (layout changes continuously
+// while dragging) — without memoizing here, every widget's full subtree
+// would re-render on every frame even though only the one being dragged
+// actually changed. Relies on the parent's `widgets` array preserving
+// object identity for unrelated widgets (see useGridState's
 // setWidgetType/removeWidget, which use .map()/.filter() so untouched
 // items keep their reference) and on onSetType/onRemove being stable
-// (useCallback in useDashboardState).
+// (useCallback in useGridState).
 function WidgetShell({
   widget,
   isEditMode,
@@ -32,9 +32,9 @@ function WidgetShell({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
-    <div className="dashboard-widget">
+    <div className="grid-widget">
       {isEditMode && (
-        <div className="dashboard-widget-chrome">
+        <div className="grid-widget-chrome">
           <span className="widget-drag-handle" title="Drag to move" aria-label="Drag to move">
             <GripVertical size={16} />
           </span>
@@ -42,7 +42,7 @@ function WidgetShell({
           {SettingsComponent && (
             <button
               type="button"
-              className="dashboard-widget-settings"
+              className="grid-widget-settings"
               onClick={() => setIsSettingsOpen(true)}
               title="Widget settings"
               aria-label="Widget settings"
@@ -52,7 +52,7 @@ function WidgetShell({
           )}
 
           <select
-            className="dashboard-widget-type-select"
+            className="grid-widget-type-select"
             value={widget.type}
             onChange={(event) => onSetType(widget.id, event.target.value)}
             title="Change widget"
@@ -67,7 +67,7 @@ function WidgetShell({
 
           <button
             type="button"
-            className="dashboard-widget-remove"
+            className="grid-widget-remove"
             onClick={() => onRemove(widget.id)}
             title="Remove widget"
             aria-label="Remove widget"
@@ -77,11 +77,11 @@ function WidgetShell({
         </div>
       )}
 
-      <div className={isEditMode ? 'dashboard-widget-body is-locked' : 'dashboard-widget-body'}>
+      <div className={isEditMode ? 'grid-widget-body is-locked' : 'grid-widget-body'}>
         {WidgetComponent ? (
           <WidgetComponent />
         ) : (
-          <p className="dashboard-widget-unknown">Unknown widget type &quot;{widget.type}&quot;.</p>
+          <p className="grid-widget-unknown">Unknown widget type &quot;{widget.type}&quot;.</p>
         )}
       </div>
 

@@ -29,17 +29,17 @@ export default function AddWidgetModal({ isOpen, onClose, onSelect }: AddWidgetM
           autoFocus
         />
 
-        <div className="dashboard-widget-results">
+        <div className="grid-widget-results">
           {results.length > 0 ? (
             results.map((widget) => (
               <button
                 key={widget.type}
                 type="button"
-                className="dashboard-widget-result"
+                className="grid-widget-result"
                 onClick={() => onSelect(widget.type)}
               >
-                <span className="dashboard-widget-result-name">{widget.name}</span>
-                <span className="dashboard-widget-result-description">
+                <span className="grid-widget-result-name">{widget.name}</span>
+                <span className="grid-widget-result-description">
                   {widget.description}
                 </span>
               </button>

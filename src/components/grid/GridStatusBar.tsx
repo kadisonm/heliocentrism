@@ -12,7 +12,7 @@ const BREAKPOINT_OPTIONS: { value: DashboardBreakpoint; label: string }[] = [
   { value: 'mobile', label: 'Mobile' },
 ];
 
-type DashboardStatusBarProps = {
+type GridStatusBarProps = {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   activeBreakpoint: DashboardBreakpoint;
@@ -21,14 +21,14 @@ type DashboardStatusBarProps = {
   onAddWidget: (type: string) => void;
 };
 
-export default function DashboardStatusBar({
+export default function GridStatusBar({
   isEditMode,
   onToggleEditMode,
   activeBreakpoint,
   allowedBreakpoints,
   onBreakpointChange,
   onAddWidget,
-}: DashboardStatusBarProps) {
+}: GridStatusBarProps) {
   const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false);
   const breakpointOptions = BREAKPOINT_OPTIONS.filter((option) =>
     allowedBreakpoints.includes(option.value)
@@ -37,13 +37,11 @@ export default function DashboardStatusBar({
   return (
     <div
       className={
-        isEditMode
-          ? 'dashboard-status-bar dashboard-status-bar--expanded'
-          : 'dashboard-status-bar'
+        isEditMode ? 'grid-status-bar grid-status-bar--expanded' : 'grid-status-bar'
       }
     >
-      <div className="dashboard-status-bar-expand" inert={!isEditMode}>
-        <div className="dashboard-status-bar-expand-inner">
+      <div className="grid-status-bar-expand" inert={!isEditMode}>
+        <div className="grid-status-bar-expand-inner">
           <Tabs
             ariaLabel="Editing breakpoint"
             options={breakpointOptions}
@@ -53,7 +51,7 @@ export default function DashboardStatusBar({
 
           <button
             type="button"
-            className="dashboard-status-bar-add"
+            className="grid-status-bar-add"
             onClick={() => setIsAddWidgetOpen(true)}
             title="Add Widget"
             aria-label="Add Widget"
@@ -67,12 +65,12 @@ export default function DashboardStatusBar({
         type="button"
         className={
           isEditMode
-            ? 'dashboard-status-bar-toggle dashboard-status-bar-toggle--confirm'
-            : 'dashboard-status-bar-toggle'
+            ? 'grid-status-bar-toggle grid-status-bar-toggle--confirm'
+            : 'grid-status-bar-toggle'
         }
         onClick={onToggleEditMode}
-        title={isEditMode ? 'Done editing' : 'Edit dashboard'}
-        aria-label={isEditMode ? 'Done editing' : 'Edit dashboard'}
+        title={isEditMode ? 'Done editing' : 'Edit grid'}
+        aria-label={isEditMode ? 'Done editing' : 'Edit grid'}
       >
         {isEditMode ? <Check size={18} /> : <Pencil size={18} />}
       </button>

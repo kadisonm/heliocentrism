@@ -1,8 +1,8 @@
-.dashboard-grid-canvas {
+.grid-canvas {
   width: 100%;
 }
 
-.dashboard-grid-preview-frame {
+.grid-preview-frame {
   // The inline `width` set on this element is the exact pixel width react-grid-layout
   // was told to use for its column math. Keep box-sizing content-box (overriding the
   // app-wide border-box reset) so this frame's padding/border don't eat into that width
@@ -16,7 +16,7 @@
   background: color-mix(in srgb, var(--surface-scrim) 20%, transparent);
 }
 
-.dashboard-grid {
+.grid {
   width: 100%;
 }
 
@@ -24,7 +24,7 @@
 // breakpoint) changes, so every widget jumps to its new layout instantly
 // instead of animating — the settle-after-drag/resize animation on
 // .react-grid-item below is left untouched for the normal case.
-.dashboard-grid--no-transition .react-grid-item {
+.grid--no-transition .react-grid-item {
   transition: none !important;
 }
 
@@ -52,7 +52,7 @@
   border-bottom-color: var(--accent) !important;
 }
 
-.dashboard-widget {
+.grid-widget {
   width: 100%;
   height: 100%;
   display: flex;
@@ -63,7 +63,7 @@
   overflow: hidden;
 }
 
-.dashboard-widget-chrome {
+.grid-widget-chrome {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -84,7 +84,7 @@
   }
 }
 
-.dashboard-widget-settings {
+.grid-widget-settings {
   background: none;
   border: none;
   color: var(--muted);
@@ -101,7 +101,7 @@
   }
 }
 
-.dashboard-widget-remove {
+.grid-widget-remove {
   background: none;
   border: none;
   color: var(--muted);
@@ -117,7 +117,7 @@
   }
 }
 
-.dashboard-widget-body {
+.grid-widget-body {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -133,7 +133,7 @@
   }
 }
 
-.dashboard-widget-type-select {
+.grid-widget-type-select {
   flex: 1;
   min-width: 0;
   margin: 0 0.5rem;
@@ -151,7 +151,7 @@
   }
 }
 
-.dashboard-widget-unknown {
+.grid-widget-unknown {
   margin: auto;
   padding: 1rem;
   color: var(--muted);
@@ -159,13 +159,13 @@
   text-align: center;
 }
 
-.dashboard-widget-results {
+.grid-widget-results {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.dashboard-widget-result {
+.grid-widget-result {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -184,12 +184,127 @@
   }
 }
 
-.dashboard-widget-result-name {
+.grid-widget-result-name {
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.dashboard-widget-result-description {
+.grid-widget-result-description {
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+// Floating edit-mode toggle + breakpoint-tab bar for a Grid instance.
+// Positioned fixed within whichever page hosts the grid — that page's own
+// wrapper needs bottom padding clearing this bar's footprint (see
+// .dashboard-container's padding-bottom).
+.grid-status-bar {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 500;
+  display: flex;
+  align-items: stretch;
+  // A fixed height (matching the toggle button below) is the single source
+  // of truth both children are pinned to — without it, the row's height
+  // followed whichever child was tallest, and the toggle (sized to its own
+  // content) didn't cover that full height, leaving slivers of the tab
+  // buttons visible above/below it.
+  height: 2.75rem;
+  background: var(--panel-gradient);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow);
+  // Clipping to the same radius as the border means any child (like the
+  // toggle button below) reads as part of one seamless shape instead of
+  // a bordered button floating inside a bordered bar.
+  overflow: hidden;
+}
+
+// Grid-column animation: 0fr -> 1fr smoothly animates to the content's
+// natural width with no overshoot, unlike animating to/from `auto`. The
+// minmax(0, ...) is required, not decorative — a bare `0fr` track still
+// respects its content's min-content width as an implicit floor, so
+// without it the track never actually reaches zero and a sliver of the
+// collapsed content (the tab buttons) stays visible.
+.grid-status-bar-expand {
+  display: grid;
+  grid-template-columns: minmax(0, 0fr);
+  // Flex items default to min-width: auto, which sets an implicit floor at
+  // this element's content min-content width — independent of, and not
+  // fixed by, the grid track's own minmax(0, ...) above. Without this, the
+  // browser still reserved room for the (collapsed) tab buttons, letting
+  // them show through behind the toggle button.
+  min-width: 0;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.grid-status-bar--expanded .grid-status-bar-expand {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.grid-status-bar-expand-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  // Left padding only: the add-widget button sits flush against the right
+  // edge (and therefore the toggle button next to it) with no gap.
+  padding: 0 0 0 0.5rem;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.grid-status-bar-add {
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.grid-status-bar-toggle {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: color-mix(in srgb, white 10%, transparent);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.grid-status-bar-toggle--confirm {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--success) 28%, transparent);
+  }
 }

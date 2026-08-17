@@ -4,11 +4,11 @@ import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
-  DASHBOARD_COLS,
-  DASHBOARD_PREVIEW_FRAME_CHROME,
-  DASHBOARD_PREVIEW_WIDTHS,
+  GRID_COLS,
+  GRID_PREVIEW_FRAME_CHROME,
+  GRID_PREVIEW_WIDTHS,
   DEFAULT_WIDGET_MIN_SIZE,
-} from '../../lib/dashboardGridConfig';
+} from '../../lib/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState } from '../../lib/types';
 import { findWidgetDefinition } from '../../lib/widgetRegistry';
 import WidgetShell from './WidgetShell';
@@ -17,14 +17,14 @@ import WidgetShell from './WidgetShell';
 // the same array/object reference every time instead of a fresh one, which
 // would otherwise defeat its own internal useMemos (they key off these
 // props) on every drag/resize frame.
-const GRID_MARGIN: [number, number] = [16, 16];
-// Zero: the horizontal/vertical inset comes entirely from .dashboard-container's
-// own padding, so the grid's edge lines up exactly with the nav's padding
-// instead of stacking an extra inset on top of it.
-const GRID_CONTAINER_PADDING: [number, number] = [0, 0];
+const ITEM_MARGIN: [number, number] = [16, 16];
+// Zero: the horizontal/vertical inset comes entirely from the page's own
+// container padding, so the grid's edge lines up with it exactly instead of
+// stacking an extra inset on top.
+const ITEM_CONTAINER_PADDING: [number, number] = [0, 0];
 const RESIZE_HANDLES: Array<'se' | 'sw'> = ['se', 'sw'];
 
-type DashboardGridProps = {
+type GridProps = {
   breakpoints: Record<DashboardBreakpoint, DashboardBreakpointState>;
   isEditMode: boolean;
   activeBreakpoint: DashboardBreakpoint;
@@ -38,7 +38,7 @@ type DashboardGridProps = {
   onRemoveWidget: (id: string, breakpoint: DashboardBreakpoint) => void;
 };
 
-export default function DashboardGrid({
+export default function Grid({
   breakpoints,
   isEditMode,
   activeBreakpoint,
@@ -46,19 +46,19 @@ export default function DashboardGrid({
   onLayoutChange,
   onSetWidgetType,
   onRemoveWidget,
-}: DashboardGridProps) {
+}: GridProps) {
   const { width, containerRef, mounted } = useContainerWidth();
   const gridElRef = useRef<HTMLDivElement>(null);
 
-  // DASHBOARD_PREVIEW_WIDTHS is a fixed number meant to simulate a device
-  // other than the one actually in front of you (e.g. a desktop user
-  // previewing mobile) — it has no reason to match your real viewport, and
-  // on a phone (deviceTier === activeBreakpoint here, since a phone can only
-  // ever edit its own tier) it often doesn't: plenty of real phones are
-  // narrower than the 375px "mobile" simulation width, so the fixed-width
-  // frame would overflow the actual screen. When you're editing the tier
-  // you're really on, skip the simulation and use the real measured width
-  // instead, same as the non-edit view already does.
+  // GRID_PREVIEW_WIDTHS is a fixed number meant to simulate a device other
+  // than the one actually in front of you (e.g. a desktop user previewing
+  // mobile) — it has no reason to match your real viewport, and on a phone
+  // (deviceTier === activeBreakpoint here, since a phone can only ever edit
+  // its own tier) it often doesn't: plenty of real phones are narrower than
+  // the 375px "mobile" simulation width, so the fixed-width frame would
+  // overflow the actual screen. When you're editing the tier you're really
+  // on, skip the simulation and use the real measured width instead, same
+  // as the non-edit view already does.
   const isSimulating = isEditMode && activeBreakpoint !== deviceTier;
 
   // Each breakpoint owns its own widgets+layout as one unit (see
@@ -103,19 +103,19 @@ export default function DashboardGrid({
   );
 
   // The preview frame's own padding/border add to this width rather than
-  // being included in it (see DASHBOARD_PREVIEW_FRAME_CHROME) — subtract
-  // them so the frame's total footprint matches the breakpoint it's meant
-  // to simulate instead of overflowing past it.
+  // being included in it (see GRID_PREVIEW_FRAME_CHROME) — subtract them so
+  // the frame's total footprint matches the breakpoint it's meant to
+  // simulate instead of overflowing past it.
   const gridWidth = isSimulating
-    ? DASHBOARD_PREVIEW_WIDTHS[activeBreakpoint] - DASHBOARD_PREVIEW_FRAME_CHROME
+    ? GRID_PREVIEW_WIDTHS[activeBreakpoint] - GRID_PREVIEW_FRAME_CHROME
     : width;
 
   const gridConfig = useMemo(
     () => ({
-      cols: DASHBOARD_COLS[effectiveBreakpoint],
+      cols: GRID_COLS[effectiveBreakpoint],
       rowHeight: 40,
-      margin: GRID_MARGIN,
-      containerPadding: GRID_CONTAINER_PADDING,
+      margin: ITEM_MARGIN,
+      containerPadding: ITEM_CONTAINER_PADDING,
     }),
     [effectiveBreakpoint]
   );
@@ -128,7 +128,7 @@ export default function DashboardGrid({
   // are dropped. w/x capping to the column count is left to react-grid-
   // layout's own bounds correction rather than duplicated here.
   const layout = useMemo(() => {
-    const cols = DASHBOARD_COLS[effectiveBreakpoint];
+    const cols = GRID_COLS[effectiveBreakpoint];
     const widgetTypeById = new Map(tier.widgets.map((widget) => [widget.id, widget.type]));
 
     return tier.layout
@@ -156,25 +156,25 @@ export default function DashboardGrid({
     const el = gridElRef.current;
     if (!el) return;
 
-    el.classList.add('dashboard-grid--no-transition');
+    el.classList.add('grid--no-transition');
     void el.offsetHeight; // force a reflow so the disable actually takes effect
 
     const raf = requestAnimationFrame(() => {
-      el.classList.remove('dashboard-grid--no-transition');
+      el.classList.remove('grid--no-transition');
     });
 
     return () => cancelAnimationFrame(raf);
   }, [isEditMode, effectiveBreakpoint]);
 
   return (
-    <div className="dashboard-grid-canvas" ref={containerRef}>
+    <div className="grid-canvas" ref={containerRef}>
       {mounted && (
         <div
-          className={isSimulating ? 'dashboard-grid-preview-frame' : undefined}
+          className={isSimulating ? 'grid-preview-frame' : undefined}
           style={isSimulating ? { width: gridWidth } : undefined}
         >
           <GridLayout
-            className="dashboard-grid"
+            className="grid"
             innerRef={gridElRef}
             layout={layout}
             gridConfig={gridConfig}

@@ -1,17 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import DashboardGrid from '../../components/dashboard/DashboardGrid';
-import DashboardStatusBar from '../../components/dashboard/DashboardStatusBar';
-import { useDashboardState } from '../../components/dashboard/useDashboardState';
-import { useDeviceTier } from '../../components/dashboard/useDeviceTier';
+import Grid from '../../components/grid/Grid';
+import GridStatusBar from '../../components/grid/GridStatusBar';
+import { useGridState } from '../../components/grid/useGridState';
+import { useDeviceTier } from '../../components/grid/useDeviceTier';
 import type { DashboardBreakpoint } from '../../lib/types';
 
 export default function DashboardPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeBreakpoint, setActiveBreakpoint] = useState<DashboardBreakpoint>('desktop');
 
-  const dashboard = useDashboardState();
+  const dashboard = useGridState();
   const deviceTier = useDeviceTier();
 
   // A phone can't usefully preview or edit the desktop layout it can't see,
@@ -37,7 +37,7 @@ export default function DashboardPage() {
     <div className="dashboard-wrapper">
       <div className="dashboard-container">
         {!dashboard.isLoading && (
-          <DashboardGrid
+          <Grid
             breakpoints={dashboard.breakpoints}
             isEditMode={isEditMode}
             activeBreakpoint={activeBreakpoint}
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <DashboardStatusBar
+      <GridStatusBar
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode((current) => !current)}
         activeBreakpoint={activeBreakpoint}

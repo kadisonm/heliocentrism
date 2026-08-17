@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Layout } from 'react-grid-layout';
 import { DEFAULT_DASHBOARD } from '../../lib/data';
-import { DASHBOARD_COLS, DEFAULT_WIDGET_SIZE } from '../../lib/dashboardGridConfig';
+import { GRID_COLS, DEFAULT_WIDGET_SIZE } from '../../lib/gridConfig';
 import { readDashboardState, writeDashboardState } from '../../lib/firebaseSync';
 import type {
   DashboardBreakpoint,
@@ -55,7 +55,7 @@ function migrateDashboardState(synced: unknown): Record<DashboardBreakpoint, Das
   };
 }
 
-export function useDashboardState() {
+export function useGridState() {
   const [breakpoints, setBreakpoints] = useState<
     Record<DashboardBreakpoint, DashboardBreakpointState>
   >(DEFAULT_DASHBOARD.breakpoints);
@@ -121,7 +121,7 @@ export function useDashboardState() {
   const addWidget = useCallback((type: string, breakpoint: DashboardBreakpoint) => {
     const id = crypto.randomUUID();
     const size = findWidgetDefinition(type)?.defaultSize ?? DEFAULT_WIDGET_SIZE;
-    const w = Math.min(size.w, DASHBOARD_COLS[breakpoint]);
+    const w = Math.min(size.w, GRID_COLS[breakpoint]);
 
     setBreakpoints((current) => {
       const tier = current[breakpoint];
