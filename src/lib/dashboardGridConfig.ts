@@ -12,6 +12,15 @@ export const DASHBOARD_COLS: Record<DashboardBreakpoint, number> = {
   mobile: 4,
 };
 
+// Shared with useDeviceTier (the real device/window) and DashboardGrid's
+// view-mode selection (the grid's own measured container width) — same
+// thresholds, applied to whichever width is the relevant one for the caller.
+export function getBreakpointForWidth(width: number): DashboardBreakpoint {
+  if (width >= DASHBOARD_BREAKPOINTS.desktop) return 'desktop';
+  if (width >= DASHBOARD_BREAKPOINTS.tablet) return 'tablet';
+  return 'mobile';
+}
+
 // Fixed pixel widths used to simulate each device tier while editing, so the
 // grid locks onto that breakpoint's layout regardless of the real browser width.
 // This is the frame's total on-screen footprint (chrome included) — see

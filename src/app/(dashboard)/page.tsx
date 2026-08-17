@@ -38,12 +38,11 @@ export default function DashboardPage() {
       <div className="dashboard-container">
         {!dashboard.isLoading && (
           <DashboardGrid
-            widgets={dashboard.widgets}
-            layouts={dashboard.layouts}
+            breakpoints={dashboard.breakpoints}
             isEditMode={isEditMode}
             activeBreakpoint={activeBreakpoint}
             deviceTier={deviceTier}
-            onLayoutsChange={dashboard.setLayouts}
+            onLayoutChange={dashboard.setLayout}
             onSetWidgetType={dashboard.setWidgetType}
             onRemoveWidget={dashboard.removeWidget}
           />
@@ -56,7 +55,7 @@ export default function DashboardPage() {
         activeBreakpoint={activeBreakpoint}
         allowedBreakpoints={allowedBreakpoints}
         onBreakpointChange={setActiveBreakpoint}
-        onAddWidget={dashboard.addWidget}
+        onAddWidget={(type) => dashboard.addWidget(type, activeBreakpoint)}
       />
     </div>
   );

@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DASHBOARD_BREAKPOINTS } from '../../lib/dashboardGridConfig';
+import { getBreakpointForWidth } from '../../lib/dashboardGridConfig';
 import type { DashboardBreakpoint } from '../../lib/types';
-
-function getDeviceTier(width: number): DashboardBreakpoint {
-  if (width >= DASHBOARD_BREAKPOINTS.desktop) return 'desktop';
-  if (width >= DASHBOARD_BREAKPOINTS.tablet) return 'tablet';
-  return 'mobile';
-}
 
 // Tracks which breakpoint tier the browser's actual viewport currently
 // falls into — distinct from the dashboard grid's `activeBreakpoint`, which
@@ -22,7 +16,7 @@ export function useDeviceTier(): DashboardBreakpoint {
 
   useEffect(() => {
     const updateTier = () => {
-      setTier(getDeviceTier(window.innerWidth));
+      setTier(getBreakpointForWidth(window.innerWidth));
     };
 
     updateTier();

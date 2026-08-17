@@ -12,8 +12,11 @@ export const DEFAULT_ROUTINE_TASKS: RoutineTask[] = [];
 export const DEFAULT_TODO_LISTS: TodoList[] = [];
 
 export const DEFAULT_DASHBOARD: DashboardState = {
-  widgets: [],
-  layouts: { desktop: [], tablet: [], mobile: [] },
+  breakpoints: {
+    desktop: { widgets: [], layout: [] },
+    tablet: { widgets: [], layout: [] },
+    mobile: { widgets: [], layout: [] },
+  },
 };
 
 export const DEFAULT_ROUTINE_RESET_TIMES: RoutineResetTimes = {

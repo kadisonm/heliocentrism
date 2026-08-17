@@ -1,4 +1,4 @@
-import type { ResponsiveLayouts } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
 
 export type TodoStage = 0 | 1 | 2;
 export type RecurrenceValue = 'daily' | 'weekly' | 'monthly';
@@ -82,7 +82,15 @@ export type DashboardWidget = {
   type: string;
 };
 
-export type DashboardState = {
+// Each breakpoint owns its widgets and their layout together, as one unit
+// — not two parallel structures kept in sync by matching ids. Switching
+// breakpoints means loading a different tier's widgets+layout wholesale,
+// not repositioning a shared set of widgets.
+export type DashboardBreakpointState = {
   widgets: DashboardWidget[];
-  layouts: ResponsiveLayouts<DashboardBreakpoint>;
+  layout: Layout;
+};
+
+export type DashboardState = {
+  breakpoints: Record<DashboardBreakpoint, DashboardBreakpointState>;
 };
