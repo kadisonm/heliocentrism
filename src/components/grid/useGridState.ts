@@ -148,8 +148,12 @@ export function useGridState() {
     });
   }, []);
 
-  const setWidgetType = useCallback(
-    (id: string, breakpoint: DashboardBreakpoint, type: string) => {
+  // Generic per-instance field patch — covers type (the chrome dropdown),
+  // autoExpand (the auto-expand toggle), and any widget-specific config
+  // (e.g. Photo's url/alt/fit, applied together as one `photo` patch via
+  // WidgetContext's onUpdate) through the same path.
+  const updateWidget = useCallback(
+    (id: string, breakpoint: DashboardBreakpoint, patch: Partial<Omit<DashboardWidget, 'id'>>) => {
       setBreakpoints((current) => {
         const tier = current[breakpoint];
         return {
@@ -157,7 +161,7 @@ export function useGridState() {
           [breakpoint]: {
             ...tier,
             widgets: tier.widgets.map((widget) =>
-              widget.id === id ? { ...widget, type } : widget
+              widget.id === id ? { ...widget, ...patch } : widget
             ),
           },
         };
@@ -172,24 +176,6 @@ export function useGridState() {
       [breakpoint]: { ...current[breakpoint], layout },
     }));
   }, []);
-
-  const setWidgetAutoExpand = useCallback(
-    (id: string, breakpoint: DashboardBreakpoint, autoExpand: boolean) => {
-      setBreakpoints((current) => {
-        const tier = current[breakpoint];
-        return {
-          ...current,
-          [breakpoint]: {
-            ...tier,
-            widgets: tier.widgets.map((widget) =>
-              widget.id === id ? { ...widget, autoExpand } : widget
-            ),
-          },
-        };
-      });
-    },
-    []
-  );
 
   // Called continuously by WidgetShell's ResizeObserver while a widget's
   // auto-expand is on — patches just that one layout item's height and
@@ -232,9 +218,8 @@ export function useGridState() {
     isLoading,
     addWidget,
     removeWidget,
-    setWidgetType,
+    updateWidget,
     setLayout,
-    setWidgetAutoExpand,
     setWidgetHeight,
   };
 }

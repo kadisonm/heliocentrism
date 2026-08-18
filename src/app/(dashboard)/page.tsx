@@ -43,9 +43,8 @@ export default function DashboardPage() {
             activeBreakpoint={activeBreakpoint}
             deviceTier={deviceTier}
             onLayoutChange={dashboard.setLayout}
-            onSetWidgetType={dashboard.setWidgetType}
+            onUpdateWidget={dashboard.updateWidget}
             onRemoveWidget={dashboard.removeWidget}
-            onSetAutoExpand={dashboard.setWidgetAutoExpand}
             onWidgetHeightChange={dashboard.setWidgetHeight}
           />
         )}

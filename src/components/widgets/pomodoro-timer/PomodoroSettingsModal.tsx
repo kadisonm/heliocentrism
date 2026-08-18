@@ -20,7 +20,13 @@ export default function PomodoroSettingsModal({ isOpen, onClose }: PomodoroSetti
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Pomodoro Settings">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Pomodoro Settings"
+      scope="shared"
+      scopeLabel="Applies to every Pomodoro Timer widget on your dashboard"
+    >
       <div className="settings-section">
         <h3>Pomodoro Timer</h3>
 

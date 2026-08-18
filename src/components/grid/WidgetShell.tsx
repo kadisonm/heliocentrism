@@ -1,17 +1,17 @@
 'use client';
 
 import { GripVertical, Settings, UnfoldVertical, X } from 'lucide-react';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pxToGridRows } from '../../lib/gridConfig';
 import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/widgetRegistry';
 import type { DashboardWidget } from '../../lib/types';
+import { WidgetContext } from './widgetContext';
 
 type WidgetShellProps = {
   widget: DashboardWidget;
   isEditMode: boolean;
-  onSetType: (id: string, type: string) => void;
+  onUpdateWidget: (id: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => void;
   onRemove: (id: string) => void;
-  onSetAutoExpand: (id: string, autoExpand: boolean) => void;
   onHeightChange: (id: string, h: number) => void;
 };
 
@@ -19,16 +19,15 @@ type WidgetShellProps = {
 // while dragging) — without memoizing here, every widget's full subtree
 // would re-render on every frame even though only the one being dragged
 // actually changed. Relies on the parent's `widgets` array preserving
-// object identity for unrelated widgets (see useGridState's
-// setWidgetType/removeWidget, which use .map()/.filter() so untouched
-// items keep their reference) and on onSetType/onRemove being stable
-// (useCallback in useGridState).
+// object identity for unrelated widgets (see useGridState's updateWidget/
+// removeWidget, which use .map()/.filter() so untouched items keep their
+// reference) and on onUpdateWidget/onRemove being stable (useCallback in
+// useGridState).
 function WidgetShell({
   widget,
   isEditMode,
-  onSetType,
+  onUpdateWidget,
   onRemove,
-  onSetAutoExpand,
   onHeightChange,
 }: WidgetShellProps) {
   const definition = findWidgetDefinition(widget.type);
@@ -36,6 +35,17 @@ function WidgetShell({
   const SettingsComponent = definition?.settingsComponent;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  const handleUpdate = useCallback(
+    (patch: Partial<Omit<DashboardWidget, 'id'>>) => onUpdateWidget(widget.id, patch),
+    [onUpdateWidget, widget.id]
+  );
+  // Stable per-widget so context consumers (the widget's own component and
+  // settings modal) don't re-render just because WidgetShell did.
+  const widgetContextValue = useMemo(
+    () => ({ widget, onUpdate: handleUpdate }),
+    [widget, handleUpdate]
+  );
 
   const isTransparent = definition?.transparentInViewMode && !isEditMode;
   const isAutoExpand = !!(widget.autoExpand && definition?.supportsAutoExpand);
@@ -113,7 +123,7 @@ function WidgetShell({
           <select
             className="grid-widget-type-select"
             value={widget.type}
-            onChange={(event) => onSetType(widget.id, event.target.value)}
+            onChange={(event) => onUpdateWidget(widget.id, { type: event.target.value })}
             title="Change widget"
             aria-label="Change widget"
           >
@@ -136,13 +146,19 @@ function WidgetShell({
         </div>
       )}
 
-      <div className={bodyClassName} ref={bodyRef}>
-        {WidgetComponent ? (
-          <WidgetComponent />
-        ) : (
-          <p className="grid-widget-unknown">Unknown widget type &quot;{widget.type}&quot;.</p>
+      <WidgetContext.Provider value={widgetContextValue}>
+        <div className={bodyClassName} ref={bodyRef}>
+          {WidgetComponent ? (
+            <WidgetComponent />
+          ) : (
+            <p className="grid-widget-unknown">Unknown widget type &quot;{widget.type}&quot;.</p>
+          )}
+        </div>
+
+        {SettingsComponent && (
+          <SettingsComponent isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         )}
-      </div>
+      </WidgetContext.Provider>
 
       {isEditMode && definition?.supportsAutoExpand && (
         <button
@@ -152,17 +168,13 @@ function WidgetShell({
               ? 'grid-widget-auto-expand grid-widget-auto-expand--active'
               : 'grid-widget-auto-expand'
           }
-          onClick={() => onSetAutoExpand(widget.id, !widget.autoExpand)}
+          onClick={() => onUpdateWidget(widget.id, { autoExpand: !widget.autoExpand })}
           title={isAutoExpand ? 'Disable auto-expand' : 'Enable auto-expand'}
           aria-label={isAutoExpand ? 'Disable auto-expand' : 'Enable auto-expand'}
           aria-pressed={isAutoExpand}
         >
           <UnfoldVertical size={13} />
         </button>
-      )}
-
-      {SettingsComponent && (
-        <SettingsComponent isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       )}
     </div>
   );

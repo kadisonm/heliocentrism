@@ -11,7 +11,7 @@ import {
   GRID_ROW_HEIGHT,
   DEFAULT_WIDGET_MIN_SIZE,
 } from '../../lib/gridConfig';
-import type { DashboardBreakpoint, DashboardBreakpointState } from '../../lib/types';
+import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
 import { findWidgetDefinition } from '../../lib/widgetRegistry';
 import WidgetShell from './WidgetShell';
 
@@ -35,9 +35,12 @@ type GridProps = {
   // apart from "editing the tier you're actually on" — see isSimulating below.
   deviceTier: DashboardBreakpoint;
   onLayoutChange: (breakpoint: DashboardBreakpoint, layout: Layout) => void;
-  onSetWidgetType: (id: string, breakpoint: DashboardBreakpoint, type: string) => void;
+  onUpdateWidget: (
+    id: string,
+    breakpoint: DashboardBreakpoint,
+    patch: Partial<Omit<DashboardWidget, 'id'>>
+  ) => void;
   onRemoveWidget: (id: string, breakpoint: DashboardBreakpoint) => void;
-  onSetAutoExpand: (id: string, breakpoint: DashboardBreakpoint, autoExpand: boolean) => void;
   onWidgetHeightChange: (id: string, breakpoint: DashboardBreakpoint, h: number) => void;
 };
 
@@ -47,9 +50,8 @@ export default function Grid({
   activeBreakpoint,
   deviceTier,
   onLayoutChange,
-  onSetWidgetType,
+  onUpdateWidget,
   onRemoveWidget,
-  onSetAutoExpand,
   onWidgetHeightChange,
 }: GridProps) {
   const { width, containerRef, mounted } = useContainerWidth();
@@ -84,19 +86,15 @@ export default function Grid({
     [onLayoutChange, effectiveBreakpoint]
   );
 
-  const handleSetType = useCallback(
-    (id: string, type: string) => onSetWidgetType(id, effectiveBreakpoint, type),
-    [onSetWidgetType, effectiveBreakpoint]
+  const handleUpdateWidget = useCallback(
+    (id: string, patch: Partial<Omit<DashboardWidget, 'id'>>) =>
+      onUpdateWidget(id, effectiveBreakpoint, patch),
+    [onUpdateWidget, effectiveBreakpoint]
   );
 
   const handleRemove = useCallback(
     (id: string) => onRemoveWidget(id, effectiveBreakpoint),
     [onRemoveWidget, effectiveBreakpoint]
-  );
-
-  const handleSetAutoExpand = useCallback(
-    (id: string, autoExpand: boolean) => onSetAutoExpand(id, effectiveBreakpoint, autoExpand),
-    [onSetAutoExpand, effectiveBreakpoint]
   );
 
   const handleWidgetHeightChange = useCallback(
@@ -223,9 +221,8 @@ export default function Grid({
                 <WidgetShell
                   widget={widget}
                   isEditMode={isEditMode}
-                  onSetType={handleSetType}
+                  onUpdateWidget={handleUpdateWidget}
                   onRemove={handleRemove}
-                  onSetAutoExpand={handleSetAutoExpand}
                   onHeightChange={handleWidgetHeightChange}
                 />
               </div>

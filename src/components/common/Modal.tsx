@@ -1,17 +1,31 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { Layers, Square, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+
+type ModalScope = 'instance' | 'shared';
 
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  // Clarifies whether this modal's settings affect just the one widget it
+  // was opened from ('instance', e.g. Photo's own image URL) or every
+  // instance of that widget type at once ('shared', e.g. Pomodoro's
+  // study/break minutes). Omit for modals that aren't per-widget settings
+  // at all (general app settings, sync config).
+  scope?: ModalScope;
+  scopeLabel?: string;
   children: ReactNode;
 };
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+const SCOPE_ICONS: Record<ModalScope, typeof Square> = {
+  instance: Square,
+  shared: Layers,
+};
+
+export default function Modal({ isOpen, onClose, title, scope, scopeLabel, children }: ModalProps) {
   // Widgets are positioned by react-grid-layout via CSS `transform`, which
   // makes them a containing block for `position: fixed` descendants — a
   // modal rendered directly in the tree would get trapped inside its
@@ -30,11 +44,21 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
 
   if (!isOpen || !mounted) return null;
 
+  const ScopeIcon = scope ? SCOPE_ICONS[scope] : null;
+
   return createPortal(
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(event) => event.stopPropagation()}>
         <div className="settings-header">
-          <h2>{title}</h2>
+          <div className="settings-header-titles">
+            <h2>{title}</h2>
+            {ScopeIcon && scopeLabel && (
+              <span className={`settings-scope-badge settings-scope-badge--${scope}`}>
+                <ScopeIcon size={12} />
+                {scopeLabel}
+              </span>
+            )}
+          </div>
           <button className="settings-close" onClick={onClose} title="Close" aria-label="Close">
             <X size={20} />
           </button>

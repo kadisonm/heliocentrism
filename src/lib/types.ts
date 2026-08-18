@@ -77,6 +77,12 @@ export type ThemeSettings = {
 
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
+export type PhotoWidgetConfig = {
+  url: string;
+  alt?: string;
+  fit?: 'cover' | 'contain';
+};
+
 export type DashboardWidget = {
   id: string;
   type: string;
@@ -84,6 +90,8 @@ export type DashboardWidget = {
   // size instead of being manually resizable — see WidgetShell's
   // ResizeObserver-based measurement.
   autoExpand?: boolean;
+  // Photo widget only, set via PhotoSettingsModal.
+  photo?: PhotoWidgetConfig;
 };
 
 // Each breakpoint owns its widgets and their layout together, as one unit

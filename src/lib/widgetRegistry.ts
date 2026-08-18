@@ -2,6 +2,8 @@ import type { ComponentType } from 'react';
 import DailyRoutineWidget from '../components/widgets/daily-routine';
 import MonthlyRoutineWidget from '../components/widgets/monthly-routine';
 import OrbitWidget from '../components/widgets/orbit';
+import PhotoWidget from '../components/widgets/photo';
+import PhotoSettingsModal from '../components/widgets/photo/PhotoSettingsModal';
 import PomodoroTimerWidget from '../components/widgets/pomodoro-timer';
 import PomodoroSettingsModal from '../components/widgets/pomodoro-timer/PomodoroSettingsModal';
 import RoutinesWidget from '../components/widgets/routines';
@@ -18,6 +20,7 @@ export type WidgetType =
   | 'todo-list'
   | 'orbit'
   | 'pomodoro-timer'
+  | 'photo'
   | 'spacer';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
@@ -112,6 +115,15 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     component: PomodoroTimerWidget,
     settingsComponent: PomodoroSettingsModal,
     supportsAutoExpand: true,
+  },
+  {
+    type: 'photo',
+    name: 'Photo',
+    description: 'A photo or GIF from a URL.',
+    defaultSize: { w: 3, h: 3 },
+    minSize: { w: 1, h: 1 },
+    component: PhotoWidget,
+    settingsComponent: PhotoSettingsModal,
   },
   {
     type: 'spacer',

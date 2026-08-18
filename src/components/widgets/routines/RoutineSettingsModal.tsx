@@ -48,7 +48,13 @@ export default function RoutineSettingsModal({ isOpen, onClose }: RoutineSetting
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Routine Settings">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Routine Settings"
+      scope="shared"
+      scopeLabel="Applies to every Routine widget — Routines, Daily, Weekly, and Monthly all share these reset times"
+    >
       <div className="settings-section">
         <h3>Routine Reset Times</h3>
 
