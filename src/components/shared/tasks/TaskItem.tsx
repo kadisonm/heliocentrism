@@ -115,13 +115,13 @@ export function TaskItemView<T extends Task>({
     >
       <button
         type="button"
-        className="task-toggle"
+        className={`task-toggle task-toggle--${activeStage.color}`}
         data-stage={task.stage}
         data-position={getStagePosition(task.stage, task.stages.length)}
         onClick={() => onToggle(task.id)}
         aria-label={`Set ${task.title} to ${stageAriaLabel(nextStage, nextIndex)}`}
       >
-        <span className="task-toggle__mark" />
+        {StageIcon && createElement(StageIcon, { size: 12 })}
       </button>
 
       <div className="task-item__content">
@@ -256,7 +256,9 @@ function SubtaskRowView({
   dragListeners,
   isPlaceholder,
 }: SubtaskRowViewProps) {
-  const subtaskStageLabel = stageAriaLabel(stages[subtask.stage], subtask.stage);
+  const subtaskStage = stages[subtask.stage];
+  const subtaskStageLabel = stageAriaLabel(subtaskStage, subtask.stage);
+  const SubtaskStageIcon = getTaskStageIcon(subtaskStage.icon);
 
   return (
     <div
@@ -268,14 +270,14 @@ function SubtaskRowView({
     >
       <button
         type="button"
-        className="task-toggle"
+        className={`task-toggle task-toggle--${subtaskStage.color}`}
         data-stage={subtask.stage}
         data-position={getStagePosition(subtask.stage, stages.length)}
         onClick={onToggle}
         aria-label={`Set ${subtask.title} to next status`}
         title={subtaskStageLabel}
       >
-        <span className="task-toggle__mark" />
+        {SubtaskStageIcon && createElement(SubtaskStageIcon, { size: 12 })}
       </button>
       <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
         {subtask.title}

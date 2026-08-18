@@ -47,11 +47,15 @@
 
 .task-toggle {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.25rem;
   height: 1.25rem;
   border: 1px solid var(--primary);
   background: transparent;
   border-radius: 50%;
+  color: var(--text);
   cursor: pointer;
   flex-shrink: 0;
   margin-top: 0.15rem;
@@ -60,47 +64,42 @@
   &:hover {
     border-color: var(--accent);
   }
-
-  &[data-position='middle'] {
-    background: var(--warning);
-    border-color: var(--warning);
-
-    .task-toggle__mark {
-      opacity: 1;
-      background: var(--warning);
-      border-radius: 50%;
-      transform: scale(0.9);
-    }
-  }
-
-  &[data-position='done'] {
-    background: var(--success);
-    border-color: var(--success);
-
-    .task-toggle__mark {
-      inset: auto;
-      top: 46%;
-      left: 50%;
-      width: 0.28rem;
-      height: 0.5rem;
-      background: transparent;
-      border-radius: 0;
-      border: solid white;
-      border-width: 0 0.13rem 0.13rem 0;
-      opacity: 1;
-      transform: translate(-50%, -60%) rotate(45deg);
-    }
-  }
 }
 
-.task-toggle__mark {
-  position: absolute;
-  inset: 0;
-  display: block;
-  opacity: 0;
-  border-radius: 50%;
-  transform: scale(0.7);
-  transition: all 0.2s ease;
+.task-toggle--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--background);
+}
+
+.task-toggle--success {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--background);
+}
+
+.task-toggle--warning {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--background);
+}
+
+.task-toggle--error {
+  background: var(--error);
+  border-color: var(--error);
+  color: var(--background);
+}
+
+.task-toggle--secondary {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: var(--background);
+}
+
+.task-toggle--muted {
+  background: var(--muted);
+  border-color: var(--muted);
+  color: var(--background);
 }
 
 .task-item__content {
