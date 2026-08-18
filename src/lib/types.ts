@@ -20,7 +20,7 @@ export type Task = {
   completedAt: string | null; // ISO 8601, null while not done
 };
 
-// A named collection of tasks — the Todo List widget can switch between
+// A named collection of tasks — the Task List widget can switch between
 // several of these, each with its own independent set of tasks.
 export type TaskList = {
   id: string;
@@ -80,7 +80,7 @@ export type DashboardWidget = {
   autoExpand?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
-  // Todo List widget only — whether completed tasks are shown.
+  // Task List widget only — whether completed tasks are shown.
   // Not surfaced in any settings modal; toggled via the widget's own
   // show/hide button. Defaults to false (hidden) when unset.
   showCompleted?: boolean;

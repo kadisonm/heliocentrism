@@ -8,7 +8,7 @@ import SpacerWidget from '../components/widgets/spacer';
 import TaskListWidget from '../components/widgets/task-list';
 
 export type WidgetType =
-  | 'todo-list'
+  | 'task-list'
   | 'orbit'
   | 'pomodoro-timer'
   | 'photo'
@@ -41,9 +41,9 @@ export type WidgetDefinition = {
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
   {
-    type: 'todo-list',
-    name: 'Todo List',
-    description: 'A flat list of one-off tasks with due dates.',
+    type: 'task-list',
+    name: 'Task List',
+    description: 'One or more named lists of tasks with due dates.',
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 2, h: 3 },
     component: TaskListWidget,

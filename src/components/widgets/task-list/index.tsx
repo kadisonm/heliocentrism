@@ -60,7 +60,7 @@ export default function TaskListWidget() {
           <div className="widget-content-header">
             {taskLists.length > 0 ? (
               <select
-                className="todo-list-select"
+                className="task-list-select"
                 value={activeList?.id ?? ''}
                 onChange={(event) => {
                   if (event.target.value === NEW_LIST_OPTION) {
@@ -69,7 +69,7 @@ export default function TaskListWidget() {
                   }
                   setSelectedListId(event.target.value);
                 }}
-                aria-label="Select todo list"
+                aria-label="Select task list"
               >
                 {taskLists.map((list) => (
                   <option key={list.id} value={list.id}>
@@ -79,7 +79,7 @@ export default function TaskListWidget() {
                 <option value={NEW_LIST_OPTION}>+ New list</option>
               </select>
             ) : (
-              <h2>Todo List</h2>
+              <h2>Task List</h2>
             )}
 
             <div className="widget-content-actions">
@@ -113,7 +113,7 @@ export default function TaskListWidget() {
             {!isLoading && (
               <div className="widget-list">
                 {!activeList ? (
-                  <div className="todo-list-empty">
+                  <div className="task-list-empty">
                     <p className="widget-empty">No lists yet</p>
                     <button
                       type="button"

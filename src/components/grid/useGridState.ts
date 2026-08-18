@@ -15,6 +15,23 @@ import { findWidgetDefinition } from '../../lib/widgetRegistry';
 
 const ALL_BREAKPOINTS: DashboardBreakpoint[] = ['desktop', 'tablet', 'mobile'];
 
+// Widget type strings renamed since they were placed on someone's dashboard
+// — keeps a pre-existing widget slot showing up in its saved position/size
+// instead of degrading to WidgetShell's "Unknown widget type" placeholder.
+// Purely a widget-layout rename, not a data migration: the Task List widget
+// it resolves to starts empty, same as if it'd been re-added from scratch.
+const LEGACY_WIDGET_TYPE_RENAMES: Record<string, string> = {
+  'todo-list': 'task-list',
+};
+
+function renameLegacyWidgetTypes(widgets: DashboardWidget[]): DashboardWidget[] {
+  return widgets.map((widget) =>
+    widget.type in LEGACY_WIDGET_TYPE_RENAMES
+      ? { ...widget, type: LEGACY_WIDGET_TYPE_RENAMES[widget.type] }
+      : widget
+  );
+}
+
 // Handles both shapes this predates:
 //  - the original: one flat widget list shared across every breakpoint,
 //    with only the per-breakpoint layout differing.
@@ -32,26 +49,32 @@ function migrateDashboardState(synced: unknown): Record<DashboardBreakpoint, Das
     layouts?: Partial<Record<DashboardBreakpoint, Layout>>;
   };
 
-  if (data.breakpoints) {
-    return {
-      desktop: data.breakpoints.desktop ?? DEFAULT_DASHBOARD.breakpoints.desktop,
-      tablet: data.breakpoints.tablet ?? DEFAULT_DASHBOARD.breakpoints.tablet,
-      mobile: data.breakpoints.mobile ?? DEFAULT_DASHBOARD.breakpoints.mobile,
-    };
-  }
+  const breakpoints = data.breakpoints
+    ? {
+        desktop: data.breakpoints.desktop ?? DEFAULT_DASHBOARD.breakpoints.desktop,
+        tablet: data.breakpoints.tablet ?? DEFAULT_DASHBOARD.breakpoints.tablet,
+        mobile: data.breakpoints.mobile ?? DEFAULT_DASHBOARD.breakpoints.mobile,
+      }
+    : (() => {
+        const widgetsByBreakpoint = Array.isArray(data.widgets)
+          ? { desktop: data.widgets, tablet: data.widgets, mobile: data.widgets }
+          : {
+              desktop: data.widgets?.desktop ?? [],
+              tablet: data.widgets?.tablet ?? [],
+              mobile: data.widgets?.mobile ?? [],
+            };
 
-  const widgetsByBreakpoint = Array.isArray(data.widgets)
-    ? { desktop: data.widgets, tablet: data.widgets, mobile: data.widgets }
-    : {
-        desktop: data.widgets?.desktop ?? [],
-        tablet: data.widgets?.tablet ?? [],
-        mobile: data.widgets?.mobile ?? [],
-      };
+        return {
+          desktop: { widgets: widgetsByBreakpoint.desktop, layout: data.layouts?.desktop ?? [] },
+          tablet: { widgets: widgetsByBreakpoint.tablet, layout: data.layouts?.tablet ?? [] },
+          mobile: { widgets: widgetsByBreakpoint.mobile, layout: data.layouts?.mobile ?? [] },
+        };
+      })();
 
   return {
-    desktop: { widgets: widgetsByBreakpoint.desktop, layout: data.layouts?.desktop ?? [] },
-    tablet: { widgets: widgetsByBreakpoint.tablet, layout: data.layouts?.tablet ?? [] },
-    mobile: { widgets: widgetsByBreakpoint.mobile, layout: data.layouts?.mobile ?? [] },
+    desktop: { ...breakpoints.desktop, widgets: renameLegacyWidgetTypes(breakpoints.desktop.widgets) },
+    tablet: { ...breakpoints.tablet, widgets: renameLegacyWidgetTypes(breakpoints.tablet.widgets) },
+    mobile: { ...breakpoints.mobile, widgets: renameLegacyWidgetTypes(breakpoints.mobile.widgets) },
   };
 }
 
