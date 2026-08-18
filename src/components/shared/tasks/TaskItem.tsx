@@ -2,13 +2,13 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
-import type { Subtask, Task } from '../../../lib/types';
+import type { Subtask, Todo } from '../../../lib/types';
 import SortableTaskList from './SortableTaskList';
 import { useSettings } from './useSettings';
 
 const statusLabels = ['To do', 'In progress', 'Done'] as const;
 
-type TaskItemHandlers<T extends Task> = {
+type TaskItemHandlers<T extends Todo> = {
   onToggle: (id: string) => void;
   onEdit: (task: T) => void;
   onDelete: (id: string) => void;
@@ -19,9 +19,9 @@ type TaskItemHandlers<T extends Task> = {
   extra?: ReactNode;
 };
 
-type TaskItemProps<T extends Task> = TaskItemHandlers<T> & { task: T };
+type TaskItemProps<T extends Todo> = TaskItemHandlers<T> & { task: T };
 
-export default function TaskItem<T extends Task>({ task, ...handlers }: TaskItemProps<T>) {
+export default function TaskItem<T extends Todo>({ task, ...handlers }: TaskItemProps<T>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -56,7 +56,7 @@ type DragBindings = {
   isPlaceholder?: boolean;
 };
 
-type TaskItemViewProps<T extends Task> = TaskItemHandlers<T> &
+type TaskItemViewProps<T extends Todo> = TaskItemHandlers<T> &
   DragBindings & {
     task: T;
     // True only for the floating DragOverlay copy — renders subtasks as
@@ -65,7 +65,7 @@ type TaskItemViewProps<T extends Task> = TaskItemHandlers<T> &
     overlay?: boolean;
   };
 
-export function TaskItemView<T extends Task>({
+export function TaskItemView<T extends Todo>({
   task,
   onToggle,
   onEdit,

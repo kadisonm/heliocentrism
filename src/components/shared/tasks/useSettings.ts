@@ -3,18 +3,16 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import {
   DEFAULT_POMODORO_SETTINGS,
-  DEFAULT_ROUTINE_RESET_TIMES,
   DEFAULT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
   type AppSettings,
 } from '../../../lib/data';
 import { readAppSettings, writeAppSettings } from '../../../lib/firebaseSync';
 
-// Module-level singleton, mirroring src/components/widgets/routines/useRoutineTasks.ts
-// — every component that calls useSettings() shares this same in-memory
-// copy, and getSettingsSnapshot() lets non-React code (the reset-check timer
-// in useRoutineTasks.ts) read the current value synchronously outside of a
-// hook.
+// Module-level singleton — every component that calls useSettings() shares
+// this same in-memory copy, and getSettingsSnapshot() lets non-React code
+// (e.g. the Pomodoro timer's countdown logic) read the current value
+// synchronously outside of a hook.
 let settings: AppSettings = DEFAULT_SETTINGS;
 let isLoading = true;
 let hasStartedLoad = false;
@@ -43,17 +41,13 @@ function ensureLoaded() {
 
   (async () => {
     const syncedSettings = await readAppSettings();
-    // Pre-existing accounts synced before pomodoro settings (or routine
-    // reset times) existed won't have those fields — fill in defaults
-    // rather than crash or silently drop the rest of the settings.
+    // Pre-existing accounts synced before pomodoro settings existed won't
+    // have that field — fill in defaults rather than crash or silently drop
+    // the rest of the settings.
     settings = syncedSettings
       ? {
           ...DEFAULT_SETTINGS,
           ...syncedSettings,
-          routineResetTimes: {
-            ...DEFAULT_ROUTINE_RESET_TIMES,
-            ...syncedSettings.routineResetTimes,
-          },
           pomodoro: { ...DEFAULT_POMODORO_SETTINGS, ...syncedSettings.pomodoro },
           theme: { ...DEFAULT_THEME_SETTINGS, ...syncedSettings.theme },
         }

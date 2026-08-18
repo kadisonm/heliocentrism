@@ -1,7 +1,6 @@
 import type { Layout } from 'react-grid-layout';
 
 export type TodoStage = 0 | 1 | 2;
-export type RecurrenceValue = 'daily' | 'weekly' | 'monthly';
 
 export type Subtask = {
   id: string;
@@ -9,22 +8,17 @@ export type Subtask = {
   stage: TodoStage;
 };
 
-export type Task = {
+export type Todo = {
   id: string;
   title: string;
   description?: string;
   stage: TodoStage;
   subtasks: Subtask[];
+  due: string;
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   completedAt: string | null; // ISO 8601, null while not done
 };
-
-// A routine task always belongs to exactly one cadence.
-export type RoutineTask = Task & { recurrence: RecurrenceValue };
-
-// A todo has a due date instead of a recurrence.
-export type Todo = Task & { due: string };
 
 // A named collection of todos — the Todo List widget can switch between
 // several of these, each with its own independent set of tasks.
@@ -48,16 +42,6 @@ export type SyncStatus = {
   isConfigured: boolean;
   isAuthenticated: boolean;
   userEmail: string | null;
-};
-
-export type DailyResetTime = { hour: number; minute: number }; // 0-23, 0-59
-export type WeeklyResetTime = { dayOfWeek: number; hour: number; minute: number }; // 0=Sun..6=Sat
-export type MonthlyResetTime = { dayOfMonth: number; hour: number; minute: number }; // 1-31
-
-export type RoutineResetTimes = {
-  daily: DailyResetTime;
-  weekly: WeeklyResetTime;
-  monthly: MonthlyResetTime;
 };
 
 export type PomodoroSettings = {
@@ -96,7 +80,7 @@ export type DashboardWidget = {
   autoExpand?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
-  // Routines/Todo List widgets only — whether completed tasks are shown.
+  // Todo List widget only — whether completed tasks are shown.
   // Not surfaced in any settings modal; toggled via the widget's own
   // show/hide button. Defaults to false (hidden) when unset.
   showCompleted?: boolean;

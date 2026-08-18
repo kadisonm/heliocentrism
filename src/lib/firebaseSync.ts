@@ -20,16 +20,7 @@ import {
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type {
-  DashboardState,
-  FirebaseConfig,
-  RecurrenceValue,
-  RoutineTask,
-  SyncStatus,
-  Todo,
-  TodoList,
-  TodoStage,
-} from './types';
+import type { DashboardState, FirebaseConfig, SyncStatus, TodoList } from './types';
 
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
@@ -171,22 +162,12 @@ function getFirebaseAuth() {
   return getAuth(services.app);
 }
 
-// Doc name predates this doc holding routine tasks, todos, dashboard
-// layout, and settings all together — 'userData' describes what's actually
-// in here.
+// Doc name predates this doc holding todos, dashboard layout, and settings
+// all together — 'userData' describes what's actually in here.
 function getAppDataDocRef(uid: string) {
   const services = getFirebaseServices();
   if (!services) return null;
   return doc(services.db, 'users', uid, 'appData', 'userData');
-}
-
-// Pre-rename doc name. Only used as a one-time read fallback (see
-// getAuthenticatedSnapshot) for accounts that synced before the rename, so
-// their data isn't orphaned — every write goes to the renamed doc.
-function getLegacyAppDataDocRef(uid: string) {
-  const services = getFirebaseServices();
-  if (!services) return null;
-  return doc(services.db, 'users', uid, 'appData', 'recurringTasks');
 }
 
 // Firebase Auth restores a signed-in session asynchronously — reading
@@ -206,10 +187,6 @@ async function getAuthenticatedDocRef() {
   return getAppDataDocRef(auth.currentUser.uid);
 }
 
-// Reads whichever doc actually has data: the current 'userData' doc, or —
-// for accounts that synced before the rename — the legacy 'recurringTasks'
-// doc. Every write lands on the renamed doc, so this fallback naturally
-// stops being hit once an account's data has been written back once.
 async function getAuthenticatedSnapshot() {
   const auth = getFirebaseAuth();
   if (!auth) return null;
@@ -217,18 +194,10 @@ async function getAuthenticatedSnapshot() {
   await auth.authStateReady();
   if (!auth.currentUser) return null;
 
-  const uid = auth.currentUser.uid;
-  const docRef = getAppDataDocRef(uid);
+  const docRef = getAppDataDocRef(auth.currentUser.uid);
   if (!docRef) return null;
 
-  const snapshot = await getDoc(docRef);
-  if (snapshot.exists()) return snapshot;
-
-  const legacyDocRef = getLegacyAppDataDocRef(uid);
-  if (!legacyDocRef) return snapshot;
-
-  const legacySnapshot = await getDoc(legacyDocRef);
-  return legacySnapshot.exists() ? legacySnapshot : snapshot;
+  return getDoc(docRef);
 }
 
 export async function getSyncStatus(): Promise<SyncStatus> {
@@ -340,105 +309,13 @@ export async function signOutFirebaseUser(): Promise<{
   }
 }
 
-// Pre-refactor shape: one unified Todo with a nullable recurrence, no
-// subtasks. Read once from legacy `data.tasks` and split by whether
-// `recurrence` is set, for accounts that synced before RoutineTask/Todo
-// became separate types.
-type LegacyTask = {
-  id: string;
-  title: string;
-  due?: string;
-  stage: TodoStage;
-  recurrence?: RecurrenceValue | null;
-  createdAt?: string;
-  updatedAt?: string;
-  completedAt?: string | null;
-};
-
-function splitLegacyTask(task: LegacyTask): RoutineTask | Todo {
-  const now = new Date().toISOString();
-  const base = {
-    id: task.id,
-    title: task.title,
-    stage: task.stage,
-    subtasks: [],
-    createdAt: task.createdAt ?? now,
-    updatedAt: task.updatedAt ?? now,
-    completedAt: task.completedAt ?? null,
-  };
-
-  if (task.recurrence) {
-    return { ...base, recurrence: task.recurrence };
-  }
-  return { ...base, due: task.due ?? '' };
-}
-
-export async function readRoutineTasks(): Promise<RoutineTask[] | null> {
-  try {
-    const snapshot = await getAuthenticatedSnapshot();
-    if (!snapshot || !snapshot.exists()) return null;
-
-    const doc = snapshot.data() as { data?: Partial<AppData> & { tasks?: LegacyTask[] } };
-    if (Array.isArray(doc.data?.routineTasks)) return doc.data.routineTasks;
-
-    if (Array.isArray(doc.data?.tasks)) {
-      return doc.data.tasks
-        .map(splitLegacyTask)
-        .filter((task): task is RoutineTask => 'recurrence' in task);
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error reading routine tasks from Firestore:', error);
-    return null;
-  }
-}
-
-export async function writeRoutineTasks(routineTasks: RoutineTask[]): Promise<boolean> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return false;
-
-  try {
-    const data: Pick<AppData, 'routineTasks'> = { routineTasks };
-    await setDoc(
-      docRef,
-      {
-        data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return true;
-  } catch (error) {
-    console.error('Error writing routine tasks to Firestore:', error);
-    return false;
-  }
-}
-
 export async function readTodoLists(): Promise<TodoList[] | null> {
   try {
     const snapshot = await getAuthenticatedSnapshot();
     if (!snapshot || !snapshot.exists()) return null;
 
-    const doc = snapshot.data() as {
-      data?: Partial<AppData> & { todos?: Todo[]; tasks?: LegacyTask[] };
-    };
-    if (Array.isArray(doc.data?.todoLists)) return doc.data.todoLists;
-
-    // Pre-TodoList shape: one flat `todos` array. Wrap it in a single
-    // default list so existing tasks aren't lost when this ships.
-    if (Array.isArray(doc.data?.todos)) {
-      return [{ id: crypto.randomUUID(), name: 'My Tasks', todos: doc.data.todos }];
-    }
-
-    if (Array.isArray(doc.data?.tasks)) {
-      const todos = doc.data.tasks
-        .map(splitLegacyTask)
-        .filter((task): task is Todo => 'due' in task);
-      return todos.length > 0 ? [{ id: crypto.randomUUID(), name: 'My Tasks', todos }] : [];
-    }
-
-    return null;
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return Array.isArray(doc.data?.todoLists) ? doc.data.todoLists : null;
   } catch (error) {
     console.error('Error reading todo lists from Firestore:', error);
     return null;
