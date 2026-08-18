@@ -8,6 +8,7 @@ type RoutineTaskSectionProps = {
   onToggle: (id: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onEdit: (task: RoutineTask) => void;
+  onDelete: (id: string) => void;
   onReorder: (activeId: string, overId: string) => void;
   onReorderSubtasks: (taskId: string, activeId: string, overId: string) => void;
 };
@@ -18,6 +19,7 @@ export default function RoutineTaskSection({
   onToggle,
   onToggleSubtask,
   onEdit,
+  onDelete,
   onReorder,
   onReorderSubtasks,
 }: RoutineTaskSectionProps) {
@@ -38,6 +40,7 @@ export default function RoutineTaskSection({
                 task={task}
                 onToggle={onToggle}
                 onEdit={onEdit}
+                onDelete={onDelete}
                 onToggleSubtask={onToggleSubtask}
                 onReorderSubtasks={onReorderSubtasks}
                 overlay
@@ -53,6 +56,7 @@ export default function RoutineTaskSection({
                 onToggle={onToggle}
                 onToggleSubtask={onToggleSubtask}
                 onEdit={onEdit}
+                onDelete={onDelete}
                 onReorderSubtasks={onReorderSubtasks}
               />
             ))}

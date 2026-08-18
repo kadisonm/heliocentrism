@@ -1,4 +1,5 @@
 .task-item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
@@ -10,6 +11,16 @@
 
   &:hover {
     background: var(--panel-strong);
+
+    .task-item__toolbar {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(-50%);
+    }
+
+    .task-status {
+      opacity: 0;
+    }
   }
 
   // The dragged item's original slot — content stays in the DOM (so the
@@ -102,6 +113,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+
+  // Wrap mode can grow the title to multiple lines — top-align the row
+  // instead of vertically centering the due/status badges against it.
+  &.task-item__header--wrap {
+    align-items: flex-start;
+  }
 }
 
 .task-item__title {
@@ -119,6 +136,12 @@
   &.is-done {
     color: var(--muted);
     text-decoration: line-through;
+  }
+
+  &.task-item__title--wrap {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
   }
 }
 
@@ -138,6 +161,7 @@
   font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
+  transition: opacity 0.15s ease;
 }
 
 .task-status--to-do {
@@ -229,23 +253,52 @@
   color: var(--error);
 }
 
-.task-item__edit-button {
+// Floating edit/delete controls, revealed on hover, flush with the card's
+// right edge and centered on its top border (translateY(-50%) off a top: 0
+// anchor keeps the center line pinned to the border regardless of the
+// toolbar's own rendered height) — like a tab sitting on top of the card.
+// The status badge fades out in tandem (see .task-item:hover) so it isn't
+// hidden underneath.
+.task-item__toolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 12px var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-50% + 0.2rem));
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 1;
+}
+
+.task-item__toolbar-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
-  border: 1px solid var(--border);
+  border: none;
   background: transparent;
   color: var(--muted);
-  border-radius: 0.5rem;
+  border-radius: 0.4rem;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
     background: var(--accent-soft);
     color: var(--text);
-    border-color: var(--accent);
+  }
+
+  &.task-item__toolbar-button--danger:hover {
+    background: color-mix(in srgb, var(--error) 16%, transparent);
+    color: var(--error);
   }
 }

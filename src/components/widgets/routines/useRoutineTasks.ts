@@ -63,8 +63,12 @@ function ensureLoaded() {
   })();
 }
 
+// Gated on isLoading rather than tasks.length so that deleting the last
+// remaining task still persists — an empty array is only ever a stand-in
+// for "not loaded yet" before ensureLoaded resolves, never a real state to
+// protect once loading has finished.
 function persist() {
-  if (tasks.length > 0) {
+  if (!isLoading) {
     writeRoutineTasks(tasks);
   }
 }
@@ -108,6 +112,12 @@ function updateTask(updatedTask: RoutineTask) {
     if (task.id !== updatedTask.id) return task;
     return { ...withStageTimestamps(task.stage, updatedTask, now), updatedAt: now };
   });
+  notify();
+  persist();
+}
+
+function deleteTask(id: string) {
+  tasks = tasks.filter((task) => task.id !== id);
   notify();
   persist();
 }
@@ -207,6 +217,7 @@ export function useRoutineTasks() {
     updateSubtaskStage,
     updateTask,
     addTask,
+    deleteTask,
     reorderTasks,
     reorderSubtasks,
   };

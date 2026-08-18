@@ -23,6 +23,7 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
     updateSubtaskStage,
     updateTask,
     addTask,
+    deleteTask,
     reorderTasks,
     reorderSubtasks,
   } = useRoutineTasks();
@@ -76,6 +77,7 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
                 onToggle={updateTaskStage}
                 onToggleSubtask={updateSubtaskStage}
                 onEdit={(task) => setModalState({ mode: 'edit', task })}
+                onDelete={deleteTask}
                 onReorder={(activeId, overId) =>
                   reorderTasks(
                     (task) => task.recurrence === recurrence && (showCompleted || task.stage !== 2),

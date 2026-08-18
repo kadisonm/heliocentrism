@@ -33,6 +33,7 @@ export default function TodoListWidget() {
     updateTodoStage,
     updateSubtaskStage,
     updateTodo,
+    deleteTodo,
     reorderTodos,
     reorderSubtasks,
   } = useTodoLists();
@@ -142,6 +143,7 @@ export default function TodoListWidget() {
                           task={todo}
                           onToggle={(id) => updateTodoStage(activeList.id, id)}
                           onEdit={(todo) => setModalState({ mode: 'edit', todo })}
+                          onDelete={(id) => deleteTodo(activeList.id, id)}
                           onToggleSubtask={(taskId, subtaskId) =>
                             updateSubtaskStage(activeList.id, taskId, subtaskId)
                           }
@@ -163,6 +165,7 @@ export default function TodoListWidget() {
                           updateSubtaskStage(activeList.id, taskId, subtaskId)
                         }
                         onEdit={(todo) => setModalState({ mode: 'edit', todo })}
+                        onDelete={(id) => deleteTodo(activeList.id, id)}
                         onReorderSubtasks={(taskId, activeId, overId) =>
                           reorderSubtasks(activeList.id, taskId, activeId, overId)
                         }

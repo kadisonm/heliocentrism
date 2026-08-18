@@ -9,9 +9,7 @@
 - Update todos to show the due date as 'today' 'tomorrow' 'yesterday' 'in x days'
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
-- Make it so tasks can be clicked to read / be edited in full and can still be dragged if held for long enough
 - Make it so when dragging tasks it has a grey filter
-- Add a setting to either truncate the task name or make it wrap
 - Add a delete button to tasks 
 
 # Dashboard Widget Ideas

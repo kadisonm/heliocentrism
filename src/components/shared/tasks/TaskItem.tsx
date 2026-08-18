@@ -1,15 +1,17 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import type { Subtask, Task } from '../../../lib/types';
 import SortableTaskList from './SortableTaskList';
+import { useSettings } from './useSettings';
 
 const statusLabels = ['To do', 'In progress', 'Done'] as const;
 
 type TaskItemHandlers<T extends Task> = {
   onToggle: (id: string) => void;
   onEdit: (task: T) => void;
+  onDelete: (id: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onReorderSubtasks?: (taskId: string, activeId: string, overId: string) => void;
   // Slot for a type-specific addition rendered next to the title (e.g. a
@@ -67,6 +69,7 @@ export function TaskItemView<T extends Task>({
   task,
   onToggle,
   onEdit,
+  onDelete,
   onToggleSubtask,
   onReorderSubtasks,
   extra,
@@ -79,6 +82,8 @@ export function TaskItemView<T extends Task>({
 }: TaskItemViewProps<T>) {
   const statusLabel = statusLabels[task.stage];
   const nextStatus = statusLabels[(task.stage + 1) % 3];
+  const { settings } = useSettings();
+  const isWrap = settings.taskTitleOverflow === 'wrap';
 
   return (
     <div
@@ -99,8 +104,32 @@ export function TaskItemView<T extends Task>({
       </button>
 
       <div className="task-item__content">
-        <div className="task-item__header">
-          <p className={`task-item__title ${task.stage === 2 ? 'is-done' : ''}`}>
+        <div className="task-item__toolbar">
+          <button
+            type="button"
+            className="task-item__toolbar-button"
+            onClick={() => onEdit(task)}
+            title="Edit"
+            aria-label={`Edit ${task.title}`}
+          >
+            <Pencil size={13} />
+          </button>
+
+          <button
+            type="button"
+            className="task-item__toolbar-button task-item__toolbar-button--danger"
+            onClick={() => onDelete(task.id)}
+            title="Delete"
+            aria-label={`Delete ${task.title}`}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+
+        <div className={`task-item__header ${isWrap ? 'task-item__header--wrap' : ''}`}>
+          <p
+            className={`task-item__title ${task.stage === 2 ? 'is-done' : ''} ${isWrap ? 'task-item__title--wrap' : ''}`}
+          >
             {task.title}
           </p>
 
@@ -112,16 +141,6 @@ export function TaskItemView<T extends Task>({
             >
               {statusLabel}
             </span>
-
-            <button
-              type="button"
-              className="task-item__edit-button"
-              onClick={() => onEdit(task)}
-              title="Edit"
-              aria-label={`Edit ${task.title}`}
-            >
-              <Pencil size={13} />
-            </button>
           </div>
         </div>
 

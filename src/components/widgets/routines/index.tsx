@@ -20,6 +20,7 @@ export default function RoutinesWidget() {
     updateSubtaskStage,
     updateTask,
     addTask,
+    deleteTask,
     reorderTasks,
     reorderSubtasks,
   } = useRoutineTasks();
@@ -84,6 +85,7 @@ export default function RoutinesWidget() {
                   onToggle={updateTaskStage}
                   onToggleSubtask={updateSubtaskStage}
                   onEdit={(task) => setModalState({ mode: 'edit', task })}
+                  onDelete={deleteTask}
                   onReorder={(activeId, overId) =>
                     reorderTasks(
                       (task) => task.recurrence === recurrence && (showCompleted || task.stage !== 2),

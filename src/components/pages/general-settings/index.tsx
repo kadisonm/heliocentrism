@@ -1,6 +1,6 @@
 'use client';
 
-import type { ThemeMode } from '../../../lib/types';
+import type { TaskTitleOverflow, ThemeMode } from '../../../lib/types';
 import { THEME_PALETTES } from '../../../lib/theme';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
@@ -21,6 +21,11 @@ const PALETTE_OPTIONS = THEME_PALETTES.map((palette) => ({
   value: palette.id,
   label: palette.label,
 }));
+
+const TASK_TITLE_OVERFLOW_OPTIONS: { value: TaskTitleOverflow; label: string }[] = [
+  { value: 'truncate', label: 'Truncate' },
+  { value: 'wrap', label: 'Wrap' },
+];
 
 export default function GeneralSettingsPanel({
   isOpen,
@@ -52,6 +57,18 @@ export default function GeneralSettingsPanel({
             updateSettings({
               ...settings,
               theme: { ...settings.theme, mode: value as ThemeMode },
+            })
+          }
+        />
+        <SettingsField
+          label="Task Names"
+          type="select"
+          value={settings.taskTitleOverflow}
+          options={TASK_TITLE_OVERFLOW_OPTIONS}
+          onChange={(value) =>
+            updateSettings({
+              ...settings,
+              taskTitleOverflow: value as TaskTitleOverflow,
             })
           }
         />

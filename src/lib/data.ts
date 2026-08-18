@@ -3,6 +3,7 @@ import type {
   PomodoroSettings,
   RoutineResetTimes,
   RoutineTask,
+  TaskTitleOverflow,
   ThemeSettings,
   TodoList,
 } from './types';
@@ -35,17 +36,21 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   mode: 'system',
 };
 
+export const DEFAULT_TASK_TITLE_OVERFLOW: TaskTitleOverflow = 'wrap';
+
 // General app settings — fields land here as they're built.
 export type AppSettings = {
   routineResetTimes: RoutineResetTimes;
   pomodoro: PomodoroSettings;
   theme: ThemeSettings;
+  taskTitleOverflow: TaskTitleOverflow;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   routineResetTimes: DEFAULT_ROUTINE_RESET_TIMES,
   pomodoro: DEFAULT_POMODORO_SETTINGS,
   theme: DEFAULT_THEME_SETTINGS,
+  taskTitleOverflow: DEFAULT_TASK_TITLE_OVERFLOW,
 };
 
 // Shape of the synced Firebase document, nested under a `data` field.

@@ -117,6 +117,13 @@ function updateTodo(listId: string, updatedTodo: Todo) {
   }));
 }
 
+function deleteTodo(listId: string, todoId: string) {
+  updateList(listId, (list) => ({
+    ...list,
+    todos: list.todos.filter((todo) => todo.id !== todoId),
+  }));
+}
+
 function addTodo(listId: string, input: Todo) {
   const now = new Date().toISOString();
   const todo: Todo = {
@@ -188,6 +195,7 @@ export function useTodoLists() {
     updateTodoStage,
     updateSubtaskStage,
     updateTodo,
+    deleteTodo,
     reorderTodos,
     reorderSubtasks,
   };
