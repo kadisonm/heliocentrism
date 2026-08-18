@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
-import { cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
+import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
 import { resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
 import type { Task, TaskList, TaskStageDef } from '../../../lib/types';
 
@@ -33,11 +33,29 @@ function getIsLoadingSnapshot() {
   return isLoading;
 }
 
+// Pre-Phase-4 data has no `stages` field at all and used the old fixed
+// 0|1|2 system. Only an actual old "done" (2) maps to the new done slot —
+// to-do (0) and in-progress (1) both map to the new start slot, never
+// silently promoted to done by a generic index clamp (which would map old
+// stage 1 onto the new default's max index, which is that array's *done*
+// slot).
+function remapLegacyStage(oldStage: number, newStagesLength: number): number {
+  if (oldStage >= 2) return newStagesLength - 1;
+  return 0;
+}
+
 function normalizeTask(task: Task): Task {
   const now = new Date().toISOString();
+  const hasStages = Array.isArray(task.stages) && task.stages.length >= 2;
+  const stages = hasStages ? task.stages : createDefaultStages();
+  const remapStage = (stage: number) =>
+    hasStages ? Math.min(stage, stages.length - 1) : remapLegacyStage(stage, stages.length);
+
   return {
     ...task,
-    subtasks: task.subtasks ?? [],
+    stage: remapStage(task.stage),
+    stages,
+    subtasks: (task.subtasks ?? []).map((subtask) => ({ ...subtask, stage: remapStage(subtask.stage) })),
     createdAt: task.createdAt ?? now,
     updatedAt: task.updatedAt ?? now,
     completedAt: task.completedAt ?? null,

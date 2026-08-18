@@ -1,12 +1,30 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Pencil, Trash2 } from 'lucide-react';
+import { createElement } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
-import type { Subtask, Task } from '../../../lib/types';
+import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
+import { getTaskStageIcon } from '../../../lib/taskStageIcons';
+import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import SortableTaskList from './SortableTaskList';
 import { useSettings } from './useSettings';
 
-const statusLabels = ['To do', 'In progress', 'Done'] as const;
+function stageAriaLabel(stageDef: TaskStageDef, index: number): string {
+  return stageDef.name || `stage ${index + 1}`;
+}
+
+function isBlankStage(stageDef: TaskStageDef): boolean {
+  return stageDef.name === '' && stageDef.color === 'none' && !stageDef.icon;
+}
+
+// Purely presentational classification (drives CSS only) — kept local
+// rather than in taskCascade.ts, unlike isTaskDone/the cascade functions,
+// which non-UI modules also consume.
+function getStagePosition(stage: number, stagesLength: number): 'start' | 'middle' | 'done' {
+  if (stage === stagesLength - 1) return 'done';
+  if (stage === 0) return 'start';
+  return 'middle';
+}
 
 type TaskItemHandlers<T extends Task> = {
   onToggle: (id: string) => void;
@@ -80,8 +98,10 @@ export function TaskItemView<T extends Task>({
   isPlaceholder,
   overlay,
 }: TaskItemViewProps<T>) {
-  const statusLabel = statusLabels[task.stage];
-  const nextStatus = statusLabels[(task.stage + 1) % 3];
+  const nextIndex = getNextStageIndex(task.stage, task.stages.length);
+  const activeStage = task.stages[task.stage];
+  const nextStage = task.stages[nextIndex];
+  const StageIcon = getTaskStageIcon(activeStage.icon);
   const { settings } = useSettings();
   const isWrap = settings.taskTitleOverflow === 'wrap';
 
@@ -97,8 +117,9 @@ export function TaskItemView<T extends Task>({
         type="button"
         className="task-toggle"
         data-stage={task.stage}
+        data-position={getStagePosition(task.stage, task.stages.length)}
         onClick={() => onToggle(task.id)}
-        aria-label={`Set ${task.title} to ${nextStatus}`}
+        aria-label={`Set ${task.title} to ${stageAriaLabel(nextStage, nextIndex)}`}
       >
         <span className="task-toggle__mark" />
       </button>
@@ -128,7 +149,7 @@ export function TaskItemView<T extends Task>({
 
         <div className={`task-item__header ${isWrap ? 'task-item__header--wrap' : ''}`}>
           <p
-            className={`task-item__title ${task.stage === 2 ? 'is-done' : ''} ${isWrap ? 'task-item__title--wrap' : ''}`}
+            className={`task-item__title ${isTaskDone(task) ? 'is-done' : ''} ${isWrap ? 'task-item__title--wrap' : ''}`}
           >
             {task.title}
           </p>
@@ -136,11 +157,12 @@ export function TaskItemView<T extends Task>({
           {extra}
 
           <div className="task-item__header-actions">
-            <span
-              className={`task-status task-status--${statusLabel.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {statusLabel}
-            </span>
+            {!isBlankStage(activeStage) && (
+              <span className={`task-item__stage task-item__stage--${activeStage.color}`}>
+                {StageIcon && createElement(StageIcon, { size: 12 })}
+                {activeStage.name && <span>{activeStage.name}</span>}
+              </span>
+            )}
           </div>
         </div>
 
@@ -150,7 +172,12 @@ export function TaskItemView<T extends Task>({
           (overlay ? (
             <div className="task-item__subtasks">
               {task.subtasks.map((subtask) => (
-                <SubtaskRowView key={subtask.id} subtask={subtask} onToggle={() => {}} />
+                <SubtaskRowView
+                  key={subtask.id}
+                  subtask={subtask}
+                  stages={task.stages}
+                  onToggle={() => {}}
+                />
               ))}
             </div>
           ) : (
@@ -160,7 +187,7 @@ export function TaskItemView<T extends Task>({
               renderOverlay={(activeId) => {
                 const subtask = task.subtasks.find((s) => s.id === activeId);
                 return subtask ? (
-                  <SubtaskRowView subtask={subtask} onToggle={() => {}} />
+                  <SubtaskRowView subtask={subtask} stages={task.stages} onToggle={() => {}} />
                 ) : null;
               }}
             >
@@ -169,6 +196,7 @@ export function TaskItemView<T extends Task>({
                   <SubtaskRow
                     key={subtask.id}
                     subtask={subtask}
+                    stages={task.stages}
                     onToggle={() => onToggleSubtask?.(task.id, subtask.id)}
                   />
                 ))}
@@ -180,7 +208,15 @@ export function TaskItemView<T extends Task>({
   );
 }
 
-function SubtaskRow({ subtask, onToggle }: { subtask: Subtask; onToggle: () => void }) {
+function SubtaskRow({
+  subtask,
+  stages,
+  onToggle,
+}: {
+  subtask: Subtask;
+  stages: TaskStageDef[];
+  onToggle: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subtask.id,
   });
@@ -193,6 +229,7 @@ function SubtaskRow({ subtask, onToggle }: { subtask: Subtask; onToggle: () => v
   return (
     <SubtaskRowView
       subtask={subtask}
+      stages={stages}
       onToggle={onToggle}
       isPlaceholder={isDragging}
       dragRef={setNodeRef}
@@ -203,10 +240,15 @@ function SubtaskRow({ subtask, onToggle }: { subtask: Subtask; onToggle: () => v
   );
 }
 
-type SubtaskRowViewProps = DragBindings & { subtask: Subtask; onToggle: () => void };
+type SubtaskRowViewProps = DragBindings & {
+  subtask: Subtask;
+  stages: TaskStageDef[];
+  onToggle: () => void;
+};
 
 function SubtaskRowView({
   subtask,
+  stages,
   onToggle,
   dragRef,
   dragStyle,
@@ -214,7 +256,7 @@ function SubtaskRowView({
   dragListeners,
   isPlaceholder,
 }: SubtaskRowViewProps) {
-  const subtaskStatusLabel = statusLabels[subtask.stage];
+  const subtaskStageLabel = stageAriaLabel(stages[subtask.stage], subtask.stage);
 
   return (
     <div
@@ -228,13 +270,14 @@ function SubtaskRowView({
         type="button"
         className="task-toggle"
         data-stage={subtask.stage}
+        data-position={getStagePosition(subtask.stage, stages.length)}
         onClick={onToggle}
         aria-label={`Set ${subtask.title} to next status`}
-        title={subtaskStatusLabel}
+        title={subtaskStageLabel}
       >
         <span className="task-toggle__mark" />
       </button>
-      <p className={`subtask__title ${subtask.stage === 2 ? 'is-done' : ''}`}>
+      <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
         {subtask.title}
       </p>
     </div>
