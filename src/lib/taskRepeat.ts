@@ -1,3 +1,4 @@
+import { isTaskDone } from './taskCascade';
 import type { RepeatUnit, Task, TaskRepeat } from './types';
 
 function daysInMonth(year: number, month: number): number {
@@ -124,7 +125,7 @@ export function getNextOccurrence(repeat: TaskRepeat, now: Date = new Date()): D
 // repeat schedule's most recent boundary has passed since it was completed
 // (or if we don't know when it was completed at all, e.g. pre-existing data).
 export function shouldResetTask(task: Task, now: Date = new Date()): boolean {
-  if (!task.repeat || task.stage !== 2) return false;
+  if (!task.repeat || !isTaskDone(task)) return false;
 
   const boundary = getMostRecentOccurrence(task.repeat, now);
   if (!boundary) return false;

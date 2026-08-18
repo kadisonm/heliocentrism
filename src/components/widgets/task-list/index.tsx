@@ -3,6 +3,7 @@
 import { Clock, Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
+import { isTaskDone } from '../../../lib/taskCascade';
 import { formatNextOccurrence } from '../../../lib/taskRepeat';
 import type { Task } from '../../../lib/types';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
@@ -68,7 +69,7 @@ export default function TaskListWidget() {
   }, [taskLists, selectedListId]);
 
   const visibleTasks = useMemo(
-    () => (activeList ? activeList.tasks.filter((task) => showCompleted || task.stage !== 2) : []),
+    () => (activeList ? activeList.tasks.filter((task) => showCompleted || !isTaskDone(task)) : []),
     [activeList, showCompleted]
   );
 
@@ -150,7 +151,7 @@ export default function TaskListWidget() {
                     onReorder={(activeId, overId) =>
                       reorderTasks(
                         activeList.id,
-                        (task) => showCompleted || task.stage !== 2,
+                        (task) => showCompleted || !isTaskDone(task),
                         activeId,
                         overId
                       )

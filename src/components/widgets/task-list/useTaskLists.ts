@@ -4,9 +4,9 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
-import { cycleSubtaskStage, cycleTaskStage } from '../../../lib/taskCascade';
+import { cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
 import { resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
-import type { Task, TaskList } from '../../../lib/types';
+import type { Task, TaskList, TaskStageDef } from '../../../lib/types';
 
 // Module-level singleton — every widget instance sharing the same in-memory
 // copy, one Firestore writer.
@@ -107,13 +107,13 @@ function ensureRepeatWatcherStarted() {
   });
 }
 
-function withStageTimestamps<T extends { stage: number; completedAt: string | null }>(
+function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; completedAt: string | null }>(
   previousStage: number,
   updated: T,
   now: string
 ): T {
   if (previousStage === updated.stage) return updated;
-  return { ...updated, completedAt: updated.stage === 2 ? now : null };
+  return { ...updated, completedAt: isTaskDone(updated) ? now : null };
 }
 
 function updateList(listId: string, updater: (list: TaskList) => TaskList) {
@@ -171,7 +171,7 @@ function addTask(listId: string, input: Task) {
     ...input,
     createdAt: now,
     updatedAt: now,
-    completedAt: input.stage === 2 ? now : null,
+    completedAt: isTaskDone(input) ? now : null,
   };
   updateList(listId, (list) => ({ ...list, tasks: [...list.tasks, task] }));
 }
