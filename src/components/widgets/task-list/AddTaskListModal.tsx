@@ -4,13 +4,13 @@ import { useState } from 'react';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
 
-type AddTodoListModalProps = {
+type AddTaskListModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string) => void;
 };
 
-export default function AddTodoListModal({ isOpen, onClose, onCreate }: AddTodoListModalProps) {
+export default function AddTaskListModal({ isOpen, onClose, onCreate }: AddTaskListModalProps) {
   const [name, setName] = useState('');
 
   const resetAndClose = () => {

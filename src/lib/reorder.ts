@@ -1,10 +1,9 @@
 import { arrayMove } from '@dnd-kit/sortable';
 
 // Reorders only the items matching `predicate`, preserving every other
-// item's position in the underlying array untouched — e.g. moving one
-// daily routine task relative to other daily tasks without disturbing
-// where weekly/monthly tasks sit in the flat backing array, or reordering
-// only the currently-visible items when completed ones are hidden.
+// item's position in the underlying array untouched — e.g. reordering only
+// the currently-visible items when completed ones are hidden, without
+// disturbing where hidden items sit in the flat backing array.
 export function reorderWithinGroup<T>(
   items: T[],
   predicate: (item: T) => boolean,

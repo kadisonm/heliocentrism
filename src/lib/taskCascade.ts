@@ -1,13 +1,13 @@
-import type { Subtask, TodoStage } from './types';
+import type { Subtask, TaskStage } from './types';
 
-export function getNextStage(stage: TodoStage): TodoStage {
-  return ((stage + 1) % 3) as TodoStage;
+export function getNextStage(stage: TaskStage): TaskStage {
+  return ((stage + 1) % 3) as TaskStage;
 }
 
 // A task's own stage, derived from its subtasks: all done -> done; any not
 // "to do" -> in progress; otherwise to do. Only meaningful when there's at
 // least one subtask — callers should leave a subtask-less task's stage alone.
-export function deriveStageFromSubtasks(subtasks: Subtask[]): TodoStage {
+export function deriveStageFromSubtasks(subtasks: Subtask[]): TaskStage {
   if (subtasks.length === 0) return 0;
   if (subtasks.every((subtask) => subtask.stage === 2)) return 2;
   if (subtasks.some((subtask) => subtask.stage !== 0)) return 1;
@@ -15,7 +15,7 @@ export function deriveStageFromSubtasks(subtasks: Subtask[]): TodoStage {
 }
 
 type Cascadable = {
-  stage: TodoStage;
+  stage: TaskStage;
   subtasks: Subtask[];
 };
 

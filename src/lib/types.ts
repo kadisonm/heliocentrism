@@ -1,18 +1,18 @@
 import type { Layout } from 'react-grid-layout';
 
-export type TodoStage = 0 | 1 | 2;
+export type TaskStage = 0 | 1 | 2;
 
 export type Subtask = {
   id: string;
   title: string;
-  stage: TodoStage;
+  stage: TaskStage;
 };
 
-export type Todo = {
+export type Task = {
   id: string;
   title: string;
   description?: string;
-  stage: TodoStage;
+  stage: TaskStage;
   subtasks: Subtask[];
   due: string;
   createdAt: string; // ISO 8601
@@ -20,12 +20,12 @@ export type Todo = {
   completedAt: string | null; // ISO 8601, null while not done
 };
 
-// A named collection of todos — the Todo List widget can switch between
+// A named collection of tasks — the Todo List widget can switch between
 // several of these, each with its own independent set of tasks.
-export type TodoList = {
+export type TaskList = {
   id: string;
   name: string;
-  todos: Todo[];
+  tasks: Task[];
 };
 
 export type FirebaseConfig = {

@@ -1,13 +1,13 @@
 import type {
   DashboardState,
   PomodoroSettings,
+  TaskList,
   TaskTitleOverflow,
   ThemeSettings,
-  TodoList,
 } from './types';
 
 // User task defaults should start empty.
-export const DEFAULT_TODO_LISTS: TodoList[] = [];
+export const DEFAULT_TASK_LISTS: TaskList[] = [];
 
 export const DEFAULT_DASHBOARD: DashboardState = {
   breakpoints: {
@@ -44,13 +44,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 // Shape of the synced Firebase document, nested under a `data` field.
 export type AppData = {
-  todoLists: TodoList[];
+  taskLists: TaskList[];
   dashboard: DashboardState;
   settings: AppSettings;
 };
 
 export const DEFAULT_DATA: AppData = {
-  todoLists: DEFAULT_TODO_LISTS,
+  taskLists: DEFAULT_TASK_LISTS,
   dashboard: DEFAULT_DASHBOARD,
   settings: DEFAULT_SETTINGS,
 };

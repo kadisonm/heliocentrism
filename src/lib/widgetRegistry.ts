@@ -5,7 +5,7 @@ import PhotoSettingsModal from '../components/widgets/photo/PhotoSettingsModal';
 import PomodoroTimerWidget from '../components/widgets/pomodoro-timer';
 import PomodoroSettingsModal from '../components/widgets/pomodoro-timer/PomodoroSettingsModal';
 import SpacerWidget from '../components/widgets/spacer';
-import TodoListWidget from '../components/widgets/todo-list';
+import TaskListWidget from '../components/widgets/task-list';
 
 export type WidgetType =
   | 'todo-list'
@@ -46,7 +46,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     description: 'A flat list of one-off tasks with due dates.',
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 2, h: 3 },
-    component: TodoListWidget,
+    component: TaskListWidget,
     supportsAutoExpand: true,
   },
   {

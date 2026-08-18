@@ -3,53 +3,53 @@
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
-import type { Todo } from '../../../lib/types';
+import type { Task } from '../../../lib/types';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
-import AddTodoListModal from './AddTodoListModal';
+import AddTaskListModal from './AddTaskListModal';
 import { formatDue, getDueUrgency } from './dueDate';
-import TodoModal from './TodoModal';
-import { useTodoLists } from './useTodoLists';
+import TaskModal from './TaskModal';
+import { useTaskLists } from './useTaskLists';
 
 const NEW_LIST_OPTION = '__new__';
 
-type TodoModalState = { mode: 'add' } | { mode: 'edit'; todo: Todo };
+type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
 
-function renderDueBadge(todo: Todo) {
-  if (!todo.due) return undefined;
+function renderDueBadge(task: Task) {
+  if (!task.due) return undefined;
   return (
-    <span className={`task-item__due task-item__due--${getDueUrgency(todo.due)}`}>
-      {formatDue(todo.due)}
+    <span className={`task-item__due task-item__due--${getDueUrgency(task.due)}`}>
+      {formatDue(task.due)}
     </span>
   );
 }
 
-export default function TodoListWidget() {
+export default function TaskListWidget() {
   const {
-    todoLists,
+    taskLists,
     isLoading,
     createList,
-    addTodo,
-    updateTodoStage,
+    addTask,
+    updateTaskStage,
     updateSubtaskStage,
-    updateTodo,
-    deleteTodo,
-    reorderTodos,
+    updateTask,
+    deleteTask,
+    reorderTasks,
     reorderSubtasks,
-  } = useTodoLists();
+  } = useTaskLists();
   const { widget, onUpdate } = useWidgetContext();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [modalState, setModalState] = useState<TodoModalState | null>(null);
+  const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const showCompleted = widget.showCompleted ?? false;
   const [isAddListOpen, setIsAddListOpen] = useState(false);
 
   const activeList = useMemo(() => {
-    const found = todoLists.find((list) => list.id === selectedListId);
-    return found ?? todoLists[0] ?? null;
-  }, [todoLists, selectedListId]);
+    const found = taskLists.find((list) => list.id === selectedListId);
+    return found ?? taskLists[0] ?? null;
+  }, [taskLists, selectedListId]);
 
-  const visibleTodos = useMemo(
-    () => (activeList ? activeList.todos.filter((todo) => showCompleted || todo.stage !== 2) : []),
+  const visibleTasks = useMemo(
+    () => (activeList ? activeList.tasks.filter((task) => showCompleted || task.stage !== 2) : []),
     [activeList, showCompleted]
   );
 
@@ -58,7 +58,7 @@ export default function TodoListWidget() {
       <aside className="widget-content-shell">
         <div className="widget-content">
           <div className="widget-content-header">
-            {todoLists.length > 0 ? (
+            {taskLists.length > 0 ? (
               <select
                 className="todo-list-select"
                 value={activeList?.id ?? ''}
@@ -71,7 +71,7 @@ export default function TodoListWidget() {
                 }}
                 aria-label="Select todo list"
               >
-                {todoLists.map((list) => (
+                {taskLists.map((list) => (
                   <option key={list.id} value={list.id}>
                     {list.name}
                   </option>
@@ -125,51 +125,51 @@ export default function TodoListWidget() {
                       <Plus size={14} />
                     </button>
                   </div>
-                ) : visibleTodos.length > 0 ? (
+                ) : visibleTasks.length > 0 ? (
                   <SortableTaskList
-                    ids={visibleTodos.map((todo) => todo.id)}
+                    ids={visibleTasks.map((task) => task.id)}
                     onReorder={(activeId, overId) =>
-                      reorderTodos(
+                      reorderTasks(
                         activeList.id,
-                        (todo) => showCompleted || todo.stage !== 2,
+                        (task) => showCompleted || task.stage !== 2,
                         activeId,
                         overId
                       )
                     }
                     renderOverlay={(activeId) => {
-                      const todo = visibleTodos.find((t) => t.id === activeId);
-                      return todo ? (
+                      const task = visibleTasks.find((t) => t.id === activeId);
+                      return task ? (
                         <TaskItemView
-                          task={todo}
-                          onToggle={(id) => updateTodoStage(activeList.id, id)}
-                          onEdit={(todo) => setModalState({ mode: 'edit', todo })}
-                          onDelete={(id) => deleteTodo(activeList.id, id)}
+                          task={task}
+                          onToggle={(id) => updateTaskStage(activeList.id, id)}
+                          onEdit={(task) => setModalState({ mode: 'edit', task })}
+                          onDelete={(id) => deleteTask(activeList.id, id)}
                           onToggleSubtask={(taskId, subtaskId) =>
                             updateSubtaskStage(activeList.id, taskId, subtaskId)
                           }
                           onReorderSubtasks={(taskId, activeId, overId) =>
                             reorderSubtasks(activeList.id, taskId, activeId, overId)
                           }
-                          extra={renderDueBadge(todo)}
+                          extra={renderDueBadge(task)}
                           overlay
                         />
                       ) : null;
                     }}
                   >
-                    {visibleTodos.map((todo) => (
+                    {visibleTasks.map((task) => (
                       <TaskItem
-                        key={todo.id}
-                        task={todo}
-                        onToggle={(id) => updateTodoStage(activeList.id, id)}
+                        key={task.id}
+                        task={task}
+                        onToggle={(id) => updateTaskStage(activeList.id, id)}
                         onToggleSubtask={(taskId, subtaskId) =>
                           updateSubtaskStage(activeList.id, taskId, subtaskId)
                         }
-                        onEdit={(todo) => setModalState({ mode: 'edit', todo })}
-                        onDelete={(id) => deleteTodo(activeList.id, id)}
+                        onEdit={(task) => setModalState({ mode: 'edit', task })}
+                        onDelete={(id) => deleteTask(activeList.id, id)}
                         onReorderSubtasks={(taskId, activeId, overId) =>
                           reorderSubtasks(activeList.id, taskId, activeId, overId)
                         }
-                        extra={renderDueBadge(todo)}
+                        extra={renderDueBadge(task)}
                       />
                     ))}
                   </SortableTaskList>
@@ -182,24 +182,24 @@ export default function TodoListWidget() {
         </div>
       </aside>
 
-      <TodoModal
-        key={modalState ? (modalState.mode === 'edit' ? modalState.todo.id : 'add') : 'idle'}
+      <TaskModal
+        key={modalState ? (modalState.mode === 'edit' ? modalState.task.id : 'add') : 'idle'}
         isOpen={modalState !== null}
-        todo={modalState?.mode === 'edit' ? modalState.todo : null}
+        task={modalState?.mode === 'edit' ? modalState.task : null}
         onClose={() => setModalState(null)}
-        onSubmit={(todo) => {
+        onSubmit={(task) => {
           if (activeList) {
             if (modalState?.mode === 'edit') {
-              updateTodo(activeList.id, todo);
+              updateTask(activeList.id, task);
             } else {
-              addTodo(activeList.id, todo);
+              addTask(activeList.id, task);
             }
           }
           setModalState(null);
         }}
       />
 
-      <AddTodoListModal
+      <AddTaskListModal
         isOpen={isAddListOpen}
         onClose={() => setIsAddListOpen(false)}
         onCreate={(name) => setSelectedListId(createList(name))}

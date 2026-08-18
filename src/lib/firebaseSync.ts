@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type { DashboardState, FirebaseConfig, SyncStatus, TodoList } from './types';
+import type { DashboardState, FirebaseConfig, SyncStatus, TaskList } from './types';
 
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
@@ -309,25 +309,25 @@ export async function signOutFirebaseUser(): Promise<{
   }
 }
 
-export async function readTodoLists(): Promise<TodoList[] | null> {
+export async function readTaskLists(): Promise<TaskList[] | null> {
   try {
     const snapshot = await getAuthenticatedSnapshot();
     if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as { data?: Partial<AppData> };
-    return Array.isArray(doc.data?.todoLists) ? doc.data.todoLists : null;
+    return Array.isArray(doc.data?.taskLists) ? doc.data.taskLists : null;
   } catch (error) {
-    console.error('Error reading todo lists from Firestore:', error);
+    console.error('Error reading task lists from Firestore:', error);
     return null;
   }
 }
 
-export async function writeTodoLists(todoLists: TodoList[]): Promise<boolean> {
+export async function writeTaskLists(taskLists: TaskList[]): Promise<boolean> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'todoLists'> = { todoLists };
+    const data: Pick<AppData, 'taskLists'> = { taskLists };
     await setDoc(
       docRef,
       {
@@ -338,7 +338,7 @@ export async function writeTodoLists(todoLists: TodoList[]): Promise<boolean> {
     );
     return true;
   } catch (error) {
-    console.error('Error writing todo lists to Firestore:', error);
+    console.error('Error writing task lists to Firestore:', error);
     return false;
   }
 }
