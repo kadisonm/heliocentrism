@@ -5,6 +5,7 @@ import { DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
 import { cycleSubtaskStage, cycleTaskStage } from '../../../lib/taskCascade';
+import { resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
 import type { Task, TaskList, TaskStage } from '../../../lib/types';
 
 // Module-level singleton — every widget instance sharing the same in-memory
@@ -12,6 +13,7 @@ import type { Task, TaskList, TaskStage } from '../../../lib/types';
 let taskLists: TaskList[] = [];
 let isLoading = true;
 let hasStartedLoad = false;
+let hasStartedRepeatWatcher = false;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -55,6 +57,7 @@ function ensureLoaded() {
     taskLists = (synced ?? DEFAULT_TASK_LISTS).map(normalizeTaskList);
     isLoading = false;
     notify();
+    runRepeatResetCheck();
   })();
 }
 
@@ -62,6 +65,46 @@ function persist() {
   if (taskLists.length > 0) {
     writeTaskLists(taskLists);
   }
+}
+
+// Resets any completed repeating task whose schedule has passed since it
+// was last completed (or all subtasks reset along with it — see
+// resetRepeatingTask). Not tied to exact-time triggering — see
+// ensureRepeatWatcherStarted.
+function runRepeatResetCheck() {
+  if (taskLists.length === 0) return;
+
+  const now = new Date();
+  let changed = false;
+
+  const next = taskLists.map((list) => {
+    let listChanged = false;
+    const tasks = list.tasks.map((task) => {
+      if (!shouldResetTask(task, now)) return task;
+      listChanged = true;
+      changed = true;
+      return resetRepeatingTask(task, now);
+    });
+    return listChanged ? { ...list, tasks } : list;
+  });
+
+  if (!changed) return;
+  taskLists = next;
+  notify();
+  persist();
+}
+
+// Wired up once at module scope (not per hook call) so N mounted widgets
+// still only run one timer and one listener between them.
+function ensureRepeatWatcherStarted() {
+  if (hasStartedRepeatWatcher) return;
+  hasStartedRepeatWatcher = true;
+
+  setInterval(runRepeatResetCheck, 60_000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') runRepeatResetCheck();
+  });
 }
 
 function withStageTimestamps<T extends { stage: TaskStage; completedAt: string | null }>(
@@ -176,6 +219,7 @@ function createList(name: string): string {
 export function useTaskLists() {
   useEffect(() => {
     ensureLoaded();
+    ensureRepeatWatcherStarted();
   }, []);
 
   const currentTaskLists = useSyncExternalStore(

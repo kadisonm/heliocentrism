@@ -1,14 +1,16 @@
 'use client';
 
-import { Eye, EyeOff, Plus } from 'lucide-react';
+import { Clock, Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
+import { formatNextOccurrence } from '../../../lib/taskRepeat';
 import type { Task } from '../../../lib/types';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
 import { formatDue, getDueUrgency } from './dueDate';
 import TaskModal from './TaskModal';
+import TaskRepeatModal from './TaskRepeatModal';
 import { useTaskLists } from './useTaskLists';
 
 const NEW_LIST_OPTION = '__new__';
@@ -21,6 +23,22 @@ function renderDueBadge(task: Task) {
     <span className={`task-item__due task-item__due--${getDueUrgency(task.due)}`}>
       {formatDue(task.due)}
     </span>
+  );
+}
+
+function renderRepeatBadge(task: Task, onClick: () => void) {
+  if (!task.repeat) return undefined;
+  return (
+    <button
+      type="button"
+      className="task-item__repeat"
+      onClick={onClick}
+      title="Edit repeat"
+      aria-label={`Edit repeat schedule for ${task.title}`}
+    >
+      <Clock size={13} />
+      {formatNextOccurrence(task.repeat)}
+    </button>
   );
 }
 
@@ -40,6 +58,7 @@ export default function TaskListWidget() {
   const { widget, onUpdate } = useWidgetContext();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
+  const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
   const showCompleted = widget.showCompleted ?? false;
   const [isAddListOpen, setIsAddListOpen] = useState(false);
 
@@ -150,7 +169,12 @@ export default function TaskListWidget() {
                           onReorderSubtasks={(taskId, activeId, overId) =>
                             reorderSubtasks(activeList.id, taskId, activeId, overId)
                           }
-                          extra={renderDueBadge(task)}
+                          extra={
+                            <>
+                              {renderDueBadge(task)}
+                              {renderRepeatBadge(task, () => setRepeatModalTask(task))}
+                            </>
+                          }
                           overlay
                         />
                       ) : null;
@@ -169,7 +193,12 @@ export default function TaskListWidget() {
                         onReorderSubtasks={(taskId, activeId, overId) =>
                           reorderSubtasks(activeList.id, taskId, activeId, overId)
                         }
-                        extra={renderDueBadge(task)}
+                        extra={
+                          <>
+                            {renderDueBadge(task)}
+                            {renderRepeatBadge(task, () => setRepeatModalTask(task))}
+                          </>
+                        }
                       />
                     ))}
                   </SortableTaskList>
@@ -203,6 +232,17 @@ export default function TaskListWidget() {
         isOpen={isAddListOpen}
         onClose={() => setIsAddListOpen(false)}
         onCreate={(name) => setSelectedListId(createList(name))}
+      />
+
+      <TaskRepeatModal
+        key={repeatModalTask?.id ?? 'idle'}
+        isOpen={repeatModalTask !== null}
+        task={repeatModalTask}
+        onClose={() => setRepeatModalTask(null)}
+        onSubmit={(task) => {
+          if (activeList) updateTask(activeList.id, task);
+          setRepeatModalTask(null);
+        }}
       />
     </>
   );

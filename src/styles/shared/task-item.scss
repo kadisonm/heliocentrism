@@ -252,6 +252,28 @@
   color: var(--error);
 }
 
+// A clickable counterpart to .task-item__due — shows when a repeating task
+// will next come back, and opens TaskRepeatModal on click. No urgency-color
+// variants: there's no "overdue" concept for a repeat schedule.
+.task-item__repeat {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
 // Floating edit/delete controls, revealed on hover, flush with the card's
 // right edge and centered on its top border (translateY(-50%) off a top: 0
 // anchor keeps the center line pinned to the border regardless of the
