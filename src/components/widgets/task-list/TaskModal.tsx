@@ -5,6 +5,7 @@ import type { Subtask, Task } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorField from '../../shared/editor/EditorField';
 import EditorModal from '../../shared/editor/EditorModal';
+import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
 import EditorSubtaskList from '../../shared/editor/EditorSubtaskList';
 
 type TaskModalProps = {
@@ -119,6 +120,8 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
           />
         </div>
       </EditorField>
+
+      <EditorRepeatFields repeat={draft.repeat} onChange={(repeat) => updateDraft('repeat', repeat)} />
 
       <EditorField label="Subtasks" as="div">
         <EditorSubtaskList subtasks={draft.subtasks} onAdd={addSubtask} onRemove={removeSubtask} />

@@ -8,6 +8,25 @@ export type Subtask = {
   stage: TaskStage;
 };
 
+export type RepeatUnit = 'day' | 'week' | 'month' | 'year';
+
+export type RepeatEnd =
+  | { type: 'never' }
+  | { type: 'onDate'; date: string } // 'YYYY-MM-DD', inclusive
+  | { type: 'afterOccurrences'; count: number }; // >= 1, total occurrences (not "extra" repeats)
+
+export type TaskRepeat = {
+  interval: number; // >= 1, "every N units"
+  unit: RepeatUnit;
+  time: string; // 'HH:MM' 24h — always independent of Task.due's time-of-day
+  // 'YYYY-MM-DD' — internal phase reference the schedule is calculated
+  // from, stamped once when repeat is first turned on. Not directly
+  // user-editable: exposing it would let editing interval/unit/time/end
+  // later silently re-anchor which weekday/day-of-month the task recurs on.
+  anchor: string;
+  end: RepeatEnd;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -15,6 +34,7 @@ export type Task = {
   stage: TaskStage;
   subtasks: Subtask[];
   due: string;
+  repeat?: TaskRepeat; // undefined = task does not repeat
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   completedAt: string | null; // ISO 8601, null while not done

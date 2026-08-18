@@ -87,6 +87,20 @@
   }
 }
 
+.editor-repeat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    accent-color: var(--accent);
+  }
+}
+
 // A row of two inputs side by side within a single field (e.g. a task's
 // due date + time).
 .editor-field-row {
