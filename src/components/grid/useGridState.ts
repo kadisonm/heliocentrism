@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Layout } from 'react-grid-layout';
+import { verticalCompactor, type Layout } from 'react-grid-layout';
 import { DEFAULT_DASHBOARD } from '../../lib/data';
 import { GRID_COLS, DEFAULT_WIDGET_SIZE } from '../../lib/gridConfig';
 import { readDashboardState, writeDashboardState } from '../../lib/firebaseSync';
@@ -173,6 +173,60 @@ export function useGridState() {
     }));
   }, []);
 
+  const setWidgetAutoExpand = useCallback(
+    (id: string, breakpoint: DashboardBreakpoint, autoExpand: boolean) => {
+      setBreakpoints((current) => {
+        const tier = current[breakpoint];
+        return {
+          ...current,
+          [breakpoint]: {
+            ...tier,
+            widgets: tier.widgets.map((widget) =>
+              widget.id === id ? { ...widget, autoExpand } : widget
+            ),
+          },
+        };
+      });
+    },
+    []
+  );
+
+  // Called continuously by WidgetShell's ResizeObserver while a widget's
+  // auto-expand is on — patches just that one layout item's height and
+  // bails out if it's already correct so a settled widget doesn't keep
+  // scheduling no-op state updates (and debounced Firestore writes) on
+  // every observer callback.
+  //
+  // Compacts and persists the result immediately, here, rather than
+  // leaving that to Grid's own layout useMemo + waiting for GridLayout to
+  // echo the recompacted array back through onLayoutChange — that
+  // round-trip depends on GridLayout's internal prop-sync effect timing,
+  // which turned out not to reliably push a widget further down when
+  // there was a gap between it and the one below (the two-item push was
+  // fine; anything needing compaction to also close a gap first wasn't
+  // making it back into state). Compacting at the source removes that
+  // dependency entirely — this is the same algorithm react-grid-layout
+  // itself uses for drag/resize, so it's a no-op on an already-settled
+  // layout.
+  const setWidgetHeight = useCallback(
+    (id: string, breakpoint: DashboardBreakpoint, h: number) => {
+      setBreakpoints((current) => {
+        const tier = current[breakpoint];
+        const item = tier.layout.find((entry) => entry.i === id);
+        if (!item || item.h === h) return current;
+
+        const resized = tier.layout.map((entry) => (entry.i === id ? { ...entry, h } : entry));
+        const compacted = verticalCompactor.compact(resized, GRID_COLS[breakpoint]);
+
+        return {
+          ...current,
+          [breakpoint]: { ...tier, layout: compacted },
+        };
+      });
+    },
+    []
+  );
+
   return {
     breakpoints,
     isLoading,
@@ -180,5 +234,7 @@ export function useGridState() {
     removeWidget,
     setWidgetType,
     setLayout,
+    setWidgetAutoExpand,
+    setWidgetHeight,
   };
 }

@@ -45,6 +45,8 @@ export default function DashboardPage() {
             onLayoutChange={dashboard.setLayout}
             onSetWidgetType={dashboard.setWidgetType}
             onRemoveWidget={dashboard.removeWidget}
+            onSetAutoExpand={dashboard.setWidgetAutoExpand}
+            onWidgetHeightChange={dashboard.setWidgetHeight}
           />
         )}
       </div>

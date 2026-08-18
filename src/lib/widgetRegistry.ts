@@ -38,6 +38,11 @@ export type WidgetDefinition = {
   // widget's content) is only shown while editing — for widgets like Spacer
   // that should be fully invisible once you're done editing, not just empty.
   transparentInViewMode?: boolean;
+  // When true, WidgetShell offers an auto-expand toggle (edit mode only)
+  // that sizes this widget's height to its content instead of scrolling.
+  // Only meaningful for widgets whose content can genuinely overflow —
+  // decorative/fixed-size widgets (Orbit, Spacer) leave this unset.
+  supportsAutoExpand?: boolean;
 };
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
@@ -49,6 +54,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: RoutinesWidget,
     settingsComponent: RoutineSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'daily-routine',
@@ -58,6 +64,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: DailyRoutineWidget,
     settingsComponent: RoutineSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'weekly-routine',
@@ -67,6 +74,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: WeeklyRoutineWidget,
     settingsComponent: RoutineSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'monthly-routine',
@@ -76,6 +84,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: MonthlyRoutineWidget,
     settingsComponent: RoutineSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'todo-list',
@@ -84,6 +93,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 2, h: 3 },
     component: TodoListWidget,
+    supportsAutoExpand: true,
   },
   {
     type: 'orbit',
@@ -101,6 +111,7 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 2, h: 3 },
     component: PomodoroTimerWidget,
     settingsComponent: PomodoroSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'spacer',

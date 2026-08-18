@@ -12,6 +12,21 @@ export const GRID_COLS: Record<DashboardBreakpoint, number> = {
   mobile: 4,
 };
 
+// Shared with Grid's gridConfig (rowHeight/margin passed to react-grid-
+// layout) and WidgetShell's auto-expand measurement — both need to agree on
+// the same pixel-to-row conversion, so this is the single source of truth
+// for it.
+export const GRID_ROW_HEIGHT = 40;
+export const GRID_ITEM_MARGIN: [number, number] = [16, 16];
+
+// Converts a measured content height in pixels to the number of grid rows
+// needed to contain it without clipping — the inverse of react-grid-
+// layout's own `h rows -> px` formula (h * rowHeight + (h - 1) * marginY).
+export function pxToGridRows(px: number): number {
+  const marginY = GRID_ITEM_MARGIN[1];
+  return Math.max(1, Math.ceil((px + marginY) / (GRID_ROW_HEIGHT + marginY)));
+}
+
 // Shared with useDeviceTier (the real device/window) and Grid's view-mode
 // selection (the grid's own measured container width) — same thresholds,
 // applied to whichever width is the relevant one for the caller.

@@ -53,6 +53,7 @@
 }
 
 .grid-widget {
+  position: relative;
   width: 100%;
   height: 100%;
   display: flex;
@@ -140,6 +141,79 @@
     opacity: 0.55;
     filter: grayscale(0.4);
   }
+
+  // Frees the widget's own content root from the fixed height:100% it
+  // normally stretches to fill, so it renders at its true natural height
+  // instead — WidgetShell measures that via ResizeObserver and feeds it
+  // back as this widget's grid row count. Targets widgets/shared.scss's
+  // shell/content pair by name since that's what every widget declaring
+  // supportsAutoExpand in widgetRegistry.ts is built on.
+  //
+  // height: auto alone doesn't actually free it: this container's
+  // align-items: stretch (the default, left implicit above) overrides an
+  // auto cross-size to fill the line instead of shrinking to content — that
+  // behavior is the opposite of what auto-expand needs, and it's what was
+  // making the measured height never change. align-self: flex-start opts
+  // .widget-content-shell (the direct flex child) out of that stretch so
+  // height: auto can actually mean "shrink to content" here.
+  //
+  // Also drops this container's own overflow: auto — otherwise, whenever
+  // content is briefly taller than the not-yet-caught-up grid cell, a
+  // scrollbar appears and eats into the available width, which can wrap
+  // text onto more lines and make the content taller still, which can
+  // make the scrollbar's presence flip again next measurement — an
+  // oscillation that never settles.
+  &.grid-widget-body--auto-expand {
+    overflow: hidden;
+
+    .widget-content-shell {
+      align-self: flex-start;
+      height: auto;
+    }
+
+    .widget-content {
+      height: auto;
+      overflow: visible;
+    }
+  }
+}
+
+// Bottom-center toggle for a widget's auto-expand mode (edit mode only,
+// only for widgets declaring supportsAutoExpand — see WidgetShell). Sits on
+// top of the body rather than in the chrome bar above, so it stays anchored
+// to the edge whose behavior it's actually changing.
+.grid-widget-auto-expand {
+  position: absolute;
+  left: 50%;
+  bottom: 0.5rem;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-scrim) 70%, transparent);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  &:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+}
+
+.grid-widget-auto-expand--active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 // The Spacer widget (components/widgets/spacer) — its own content is just

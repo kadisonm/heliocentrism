@@ -1,28 +1,29 @@
 'use client';
 
-import { GridLayout, useContainerWidth } from 'react-grid-layout';
+import { GridLayout, useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   GRID_COLS,
+  GRID_ITEM_MARGIN,
   GRID_PREVIEW_FRAME_CHROME,
   GRID_PREVIEW_WIDTHS,
+  GRID_ROW_HEIGHT,
   DEFAULT_WIDGET_MIN_SIZE,
 } from '../../lib/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState } from '../../lib/types';
 import { findWidgetDefinition } from '../../lib/widgetRegistry';
 import WidgetShell from './WidgetShell';
 
-// Static across every render — module-level constants so <GridLayout> gets
-// the same array/object reference every time instead of a fresh one, which
-// would otherwise defeat its own internal useMemos (they key off these
-// props) on every drag/resize frame.
-const ITEM_MARGIN: [number, number] = [16, 16];
 // Zero: the horizontal/vertical inset comes entirely from the page's own
 // container padding, so the grid's edge lines up with it exactly instead of
 // stacking an extra inset on top.
 const ITEM_CONTAINER_PADDING: [number, number] = [0, 0];
 const RESIZE_HANDLES: Array<'se' | 'sw'> = ['se', 'sw'];
+// A widget with auto-expand on manages its own height (see WidgetShell's
+// ResizeObserver) — offering only east/west handles keeps width resizing
+// available without letting a manual drag fight that measurement.
+const AUTO_EXPAND_RESIZE_HANDLES: Array<'e' | 'w'> = ['e', 'w'];
 
 type GridProps = {
   breakpoints: Record<DashboardBreakpoint, DashboardBreakpointState>;
@@ -36,6 +37,8 @@ type GridProps = {
   onLayoutChange: (breakpoint: DashboardBreakpoint, layout: Layout) => void;
   onSetWidgetType: (id: string, breakpoint: DashboardBreakpoint, type: string) => void;
   onRemoveWidget: (id: string, breakpoint: DashboardBreakpoint) => void;
+  onSetAutoExpand: (id: string, breakpoint: DashboardBreakpoint, autoExpand: boolean) => void;
+  onWidgetHeightChange: (id: string, breakpoint: DashboardBreakpoint, h: number) => void;
 };
 
 export default function Grid({
@@ -46,6 +49,8 @@ export default function Grid({
   onLayoutChange,
   onSetWidgetType,
   onRemoveWidget,
+  onSetAutoExpand,
+  onWidgetHeightChange,
 }: GridProps) {
   const { width, containerRef, mounted } = useContainerWidth();
   const gridElRef = useRef<HTMLDivElement>(null);
@@ -89,6 +94,16 @@ export default function Grid({
     [onRemoveWidget, effectiveBreakpoint]
   );
 
+  const handleSetAutoExpand = useCallback(
+    (id: string, autoExpand: boolean) => onSetAutoExpand(id, effectiveBreakpoint, autoExpand),
+    [onSetAutoExpand, effectiveBreakpoint]
+  );
+
+  const handleWidgetHeightChange = useCallback(
+    (id: string, h: number) => onWidgetHeightChange(id, effectiveBreakpoint, h),
+    [onWidgetHeightChange, effectiveBreakpoint]
+  );
+
   // Stabilized so <GridLayout>'s own internal useMemos (keyed off these
   // props) actually hit instead of recomputing every render — otherwise a
   // fresh object/array here every render, even with identical values,
@@ -113,8 +128,8 @@ export default function Grid({
   const gridConfig = useMemo(
     () => ({
       cols: GRID_COLS[effectiveBreakpoint],
-      rowHeight: 40,
-      margin: ITEM_MARGIN,
+      rowHeight: GRID_ROW_HEIGHT,
+      margin: GRID_ITEM_MARGIN,
       containerPadding: ITEM_CONTAINER_PADDING,
     }),
     [effectiveBreakpoint]
@@ -126,22 +141,42 @@ export default function Grid({
   // the chrome dropdown. Also floors h. Stale entries (leftover layout
   // items for a widget id no longer in this breakpoint's own widget list)
   // are dropped. w/x capping to the column count is left to react-grid-
-  // layout's own bounds correction rather than duplicated here.
+  // layout's own bounds correction rather than duplicated here. A widget
+  // with auto-expand on gets width-only resize handles (see
+  // AUTO_EXPAND_RESIZE_HANDLES) so its own ResizeObserver-driven height
+  // isn't fought by a manual corner drag.
+  //
+  // Compacted explicitly here (not left to GridLayout's own internal
+  // prop-sync recompaction) because WidgetShell's auto-expand measurement
+  // only ever patches the one item it's measuring — it has no idea what
+  // sits below it. Recompacting the whole array on every change is what
+  // actually pushes those items down to make room; it's a no-op once
+  // everything's already settled, so this doesn't affect ordinary
+  // drag/resize (which is already compacted by the time it reaches here).
   const layout = useMemo(() => {
     const cols = GRID_COLS[effectiveBreakpoint];
-    const widgetTypeById = new Map(tier.widgets.map((widget) => [widget.id, widget.type]));
+    const widgetById = new Map(tier.widgets.map((widget) => [widget.id, widget]));
 
-    return tier.layout
-      .filter((item) => widgetTypeById.has(item.i))
+    const withSizing = tier.layout
+      .filter((item) => widgetById.has(item.i))
       .map((item) => {
-        const type = widgetTypeById.get(item.i);
+        const widget = widgetById.get(item.i);
         const minSize =
-          (type ? findWidgetDefinition(type)?.minSize : undefined) ?? DEFAULT_WIDGET_MIN_SIZE;
+          (widget ? findWidgetDefinition(widget.type)?.minSize : undefined) ??
+          DEFAULT_WIDGET_MIN_SIZE;
         const minW = Math.min(minSize.w, cols);
         const minH = minSize.h;
 
-        return { ...item, minW, minH, h: Math.max(item.h, minH) };
+        return {
+          ...item,
+          minW,
+          minH,
+          h: Math.max(item.h, minH),
+          resizeHandles: widget?.autoExpand ? AUTO_EXPAND_RESIZE_HANDLES : undefined,
+        };
       });
+
+    return verticalCompactor.compact(withSizing, cols);
   }, [tier, effectiveBreakpoint]);
 
   // Switching edit/view mode (or the edit-mode breakpoint) jumps every widget
@@ -190,6 +225,8 @@ export default function Grid({
                   isEditMode={isEditMode}
                   onSetType={handleSetType}
                   onRemove={handleRemove}
+                  onSetAutoExpand={handleSetAutoExpand}
+                  onHeightChange={handleWidgetHeightChange}
                 />
               </div>
             ))}

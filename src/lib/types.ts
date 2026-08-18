@@ -80,6 +80,10 @@ export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 export type DashboardWidget = {
   id: string;
   type: string;
+  // When true, this widget's height is driven by its content's natural
+  // size instead of being manually resizable — see WidgetShell's
+  // ResizeObserver-based measurement.
+  autoExpand?: boolean;
 };
 
 // Each breakpoint owns its widgets and their layout together, as one unit
