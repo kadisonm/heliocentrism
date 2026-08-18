@@ -1,11 +1,22 @@
 import type { Layout } from 'react-grid-layout';
 
-export type TaskStage = 0 | 1 | 2;
+export type StageColor = 'none' | 'accent' | 'success' | 'warning' | 'error' | 'secondary' | 'muted';
+
+// One user-defined step in a task's lifecycle. `id` is independent of
+// position in `Task.stages` — needed as a stable key for the stage-list
+// editor's add/remove UI (removing a middle stage shifts every later
+// stage's array index), same reasoning Subtask already has its own id for.
+export type TaskStageDef = {
+  id: string;
+  name: string; // '' allowed — renders no visible label
+  color: StageColor;
+  icon?: string; // key into TASK_STAGE_ICONS (src/lib/taskStageIcons.ts)
+};
 
 export type Subtask = {
   id: string;
   title: string;
-  stage: TaskStage;
+  stage: number; // index into the PARENT Task's `stages` — no list of its own
 };
 
 export type RepeatUnit = 'day' | 'week' | 'month' | 'year';
@@ -31,7 +42,8 @@ export type Task = {
   id: string;
   title: string;
   description?: string;
-  stage: TaskStage;
+  stage: number; // index into `stages`
+  stages: TaskStageDef[]; // always length >= 2; [0] = start, [last] = complete
   subtasks: Subtask[];
   due: string;
   repeat?: TaskRepeat; // undefined = task does not repeat

@@ -34,7 +34,13 @@
 - Upcoming google calendar event list
 - Spotify player
 
+- The current season, and if any pollen is active
+
 
 # Fitness section (?) maybe later
 - Widget to track your weight
 - Macros, water?
+
+# Garden page
+- Customisable garden layout, the current season and what plants do best.
+- Ideal planting time and estimated harvest time

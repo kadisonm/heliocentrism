@@ -6,7 +6,7 @@ import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
 import { cycleSubtaskStage, cycleTaskStage } from '../../../lib/taskCascade';
 import { resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
-import type { Task, TaskList, TaskStage } from '../../../lib/types';
+import type { Task, TaskList } from '../../../lib/types';
 
 // Module-level singleton — every widget instance sharing the same in-memory
 // copy, one Firestore writer.
@@ -107,8 +107,8 @@ function ensureRepeatWatcherStarted() {
   });
 }
 
-function withStageTimestamps<T extends { stage: TaskStage; completedAt: string | null }>(
-  previousStage: TaskStage,
+function withStageTimestamps<T extends { stage: number; completedAt: string | null }>(
+  previousStage: number,
   updated: T,
   now: string
 ): T {

@@ -212,7 +212,7 @@ export default function TaskListWidget() {
       </aside>
 
       <TaskModal
-        key={modalState ? (modalState.mode === 'edit' ? modalState.task.id : 'add') : 'idle'}
+        key={`task-${modalState ? (modalState.mode === 'edit' ? modalState.task.id : 'add') : 'idle'}`}
         isOpen={modalState !== null}
         task={modalState?.mode === 'edit' ? modalState.task : null}
         onClose={() => setModalState(null)}
@@ -235,7 +235,7 @@ export default function TaskListWidget() {
       />
 
       <TaskRepeatModal
-        key={repeatModalTask?.id ?? 'idle'}
+        key={`repeat-${repeatModalTask?.id ?? 'idle'}`}
         isOpen={repeatModalTask !== null}
         task={repeatModalTask}
         onClose={() => setRepeatModalTask(null)}

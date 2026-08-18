@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createDefaultStages } from '../../../lib/taskCascade';
 import type { Subtask, Task } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorField from '../../shared/editor/EditorField';
@@ -23,6 +24,7 @@ function createDraftTask(): Task {
     description: '',
     due: '',
     stage: 0,
+    stages: createDefaultStages(),
     subtasks: [],
     createdAt: '',
     updatedAt: '',
