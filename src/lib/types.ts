@@ -92,6 +92,10 @@ export type DashboardWidget = {
   autoExpand?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
+  // Routines/Todo List widgets only — whether completed tasks are shown.
+  // Not surfaced in any settings modal; toggled via the widget's own
+  // show/hide button. Defaults to false (hidden) when unset.
+  showCompleted?: boolean;
 };
 
 // Each breakpoint owns its widgets and their layout together, as one unit

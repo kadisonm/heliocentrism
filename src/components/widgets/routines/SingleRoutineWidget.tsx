@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useWidgetContext } from '../../grid/widgetContext';
 import type { RecurrenceValue, RoutineTask } from '../../../lib/types';
 import RoutineTaskModal from './RoutineTaskModal';
 import RoutineTaskSection from './RoutineTaskSection';
@@ -25,8 +26,9 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
     reorderTasks,
     reorderSubtasks,
   } = useRoutineTasks();
+  const { widget, onUpdate } = useWidgetContext();
   const [modalState, setModalState] = useState<RoutineModalState | null>(null);
-  const [showCompleted, setShowCompleted] = useState(true);
+  const showCompleted = widget.showCompleted ?? false;
 
   const sectionTasks = useMemo(
     () =>
@@ -47,7 +49,7 @@ export default function SingleRoutineWidget({ title, recurrence }: SingleRoutine
               <button
                 type="button"
                 className="widget-show-toggle"
-                onClick={() => setShowCompleted((current) => !current)}
+                onClick={() => onUpdate({ showCompleted: !showCompleted })}
                 title={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
                 aria-label={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
               >

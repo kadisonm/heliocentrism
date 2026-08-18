@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useWidgetContext } from '../../grid/widgetContext';
 import type { Todo } from '../../../lib/types';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
@@ -35,9 +36,10 @@ export default function TodoListWidget() {
     reorderTodos,
     reorderSubtasks,
   } = useTodoLists();
+  const { widget, onUpdate } = useWidgetContext();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<TodoModalState | null>(null);
-  const [showCompleted, setShowCompleted] = useState(true);
+  const showCompleted = widget.showCompleted ?? false;
   const [isAddListOpen, setIsAddListOpen] = useState(false);
 
   const activeList = useMemo(() => {
@@ -85,7 +87,7 @@ export default function TodoListWidget() {
                   <button
                     type="button"
                     className="widget-show-toggle"
-                    onClick={() => setShowCompleted((current) => !current)}
+                    onClick={() => onUpdate({ showCompleted: !showCompleted })}
                     title={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
                     aria-label={showCompleted ? 'Hide completed tasks' : 'Show completed tasks'}
                   >
