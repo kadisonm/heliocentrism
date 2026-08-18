@@ -1,6 +1,7 @@
 import type {
   DashboardState,
   PomodoroSettings,
+  StagePreset,
   TaskList,
   TaskTitleOverflow,
   ThemeSettings,
@@ -29,17 +30,23 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
 
 export const DEFAULT_TASK_TITLE_OVERFLOW: TaskTitleOverflow = 'wrap';
 
+// User-saved stage presets start empty — the built-in Normal/Kanban presets
+// are pure code constants (src/lib/taskCascade.ts) and never stored here.
+export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
+
 // General app settings — fields land here as they're built.
 export type AppSettings = {
   pomodoro: PomodoroSettings;
   theme: ThemeSettings;
   taskTitleOverflow: TaskTitleOverflow;
+  customStagePresets: StagePreset[];
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pomodoro: DEFAULT_POMODORO_SETTINGS,
   theme: DEFAULT_THEME_SETTINGS,
   taskTitleOverflow: DEFAULT_TASK_TITLE_OVERFLOW,
+  customStagePresets: DEFAULT_CUSTOM_STAGE_PRESETS,
 };
 
 // Shape of the synced Firebase document, nested under a `data` field.

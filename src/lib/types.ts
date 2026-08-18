@@ -19,6 +19,15 @@ export type Subtask = {
   stage: number; // index into the PARENT Task's `stages` — no list of its own
 };
 
+// A named, user-saved `stages` list a task can be seeded from — distinct
+// from the built-in presets (Normal/Kanban), which are pure code constants
+// and never stored here.
+export type StagePreset = {
+  id: string;
+  name: string;
+  stages: TaskStageDef[];
+};
+
 export type RepeatUnit = 'day' | 'week' | 'month' | 'year';
 
 export type RepeatEnd =

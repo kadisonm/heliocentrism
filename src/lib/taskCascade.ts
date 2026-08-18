@@ -43,10 +43,31 @@ export function isTaskDone(task: { stage: number; stages: TaskStageDef[] }): boo
 
 export function createDefaultStages(): TaskStageDef[] {
   return [
-    { id: crypto.randomUUID(), name: '', color: 'none' },
-    { id: crypto.randomUUID(), name: 'done', color: 'success' },
+    { id: crypto.randomUUID(), name: 'Todo', color: 'none' },
+    { id: crypto.randomUUID(), name: 'Done', color: 'success', icon: 'Check' },
   ];
 }
+
+export function createKanbanStages(): TaskStageDef[] {
+  return [
+    { id: crypto.randomUUID(), name: 'Todo', color: 'none' },
+    { id: crypto.randomUUID(), name: 'Doing', color: 'warning', icon: 'Dot' },
+    { id: crypto.randomUUID(), name: 'Done', color: 'success', icon: 'Check' },
+  ];
+}
+
+export type BuiltInStagePreset = {
+  id: string;
+  name: string;
+  createStages: () => TaskStageDef[];
+};
+
+// Pure code constants, never stored/synced — "cannot be deleted" is
+// structural (the preset-delete UI simply never offers these), not a flag.
+export const BUILT_IN_STAGE_PRESETS: BuiltInStagePreset[] = [
+  { id: 'normal', name: 'Normal', createStages: createDefaultStages },
+  { id: 'kanban', name: 'Kanban', createStages: createKanbanStages },
+];
 
 // Keeps a task's own stage index, and every subtask's, in bounds after
 // `stages` shrinks (the editor can remove middle stages). Safe/idempotent

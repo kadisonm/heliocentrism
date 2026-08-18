@@ -9,6 +9,7 @@ import {
   Ban,
   Hourglass,
   Loader,
+  Dot,
   // priority / flags
   Flag,
   FlagTriangleRight,
@@ -108,7 +109,7 @@ import {
 } from 'lucide-react';
 
 export const TASK_STAGE_ICON_NAMES = [
-  'Circle', 'CircleDot', 'CircleCheckBig', 'CircleX', 'Check', 'X', 'Ban', 'Hourglass', 'Loader',
+  'Circle', 'CircleDot', 'CircleCheckBig', 'CircleX', 'Check', 'X', 'Ban', 'Hourglass', 'Loader', 'Dot',
   'Flag', 'FlagTriangleRight', 'TriangleAlert', 'CircleAlert', 'OctagonAlert', 'Star', 'Bookmark',
   'BookmarkCheck', 'ArrowUp', 'Zap', 'Flame', 'Target', 'Award',
   'Clock', 'Clock3', 'Timer', 'Calendar', 'CalendarCheck', 'CalendarClock', 'CalendarDays', 'Sunrise',
@@ -126,7 +127,7 @@ export const TASK_STAGE_ICON_NAMES = [
 export type TaskStageIconName = (typeof TASK_STAGE_ICON_NAMES)[number];
 
 export const TASK_STAGE_ICONS: Record<TaskStageIconName, LucideIcon> = {
-  Circle, CircleDot, CircleCheckBig, CircleX, Check, X, Ban, Hourglass, Loader,
+  Circle, CircleDot, CircleCheckBig, CircleX, Check, X, Ban, Hourglass, Loader, Dot,
   Flag, FlagTriangleRight, TriangleAlert, CircleAlert, OctagonAlert, Star, Bookmark,
   BookmarkCheck, ArrowUp, Zap, Flame, Target, Award,
   Clock, Clock3, Timer, Calendar, CalendarCheck, CalendarClock, CalendarDays, Sunrise,

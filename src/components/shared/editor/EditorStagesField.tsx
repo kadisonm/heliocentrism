@@ -25,12 +25,12 @@ function isDefaultStageShape(stages: TaskStageDef[]): boolean {
   if (stages.length !== 2) return false;
   const [start, done] = stages;
   return (
-    start.name === '' &&
+    start.name === 'Todo' &&
     start.color === 'none' &&
     !start.icon &&
-    done.name === 'done' &&
+    done.name === 'Done' &&
     done.color === 'success' &&
-    !done.icon
+    done.icon === 'Check'
   );
 }
 
