@@ -162,8 +162,8 @@ function getFirebaseAuth() {
   return getAuth(services.app);
 }
 
-// Doc name predates this doc holding todos, dashboard layout, and settings
-// all together — 'userData' describes what's actually in here.
+// Doc name predates this doc holding task lists, dashboard layout, and
+// settings all together — 'userData' describes what's actually in here.
 function getAppDataDocRef(uid: string) {
   const services = getFirebaseServices();
   if (!services) return null;

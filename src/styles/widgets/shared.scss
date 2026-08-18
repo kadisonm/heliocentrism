@@ -1,7 +1,6 @@
 // Shared "widget content" shell + header controls, reused by the widgets
-// that render a scrollable list inside their body (Routines, Todo List,
-// Pomodoro Timer) — not routine-specific, despite the historical class
-// names this replaced.
+// that render a scrollable list inside their body (Task List, Pomodoro
+// Timer).
 .widget-content-shell {
   width: 100%;
   height: 100%;

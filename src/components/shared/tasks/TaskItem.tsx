@@ -14,8 +14,8 @@ type TaskItemHandlers<T extends Task> = {
   onDelete: (id: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onReorderSubtasks?: (taskId: string, activeId: string, overId: string) => void;
-  // Slot for a type-specific addition rendered next to the title (e.g. a
-  // Todo's due date) — keeps this component generic across Task variants.
+  // Slot for an extra bit of UI rendered next to the title (e.g. the due
+  // date badge).
   extra?: ReactNode;
 };
 

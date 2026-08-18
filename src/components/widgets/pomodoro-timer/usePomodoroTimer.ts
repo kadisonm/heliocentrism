@@ -17,11 +17,10 @@ function phaseDurationSeconds(targetPhase: PomodoroPhase): number {
   return (targetPhase === 'study' ? studyMinutes : breakMinutes) * 60;
 }
 
-// Module-level singleton, mirroring src/components/widgets/routines/useRoutineTasks.ts
-// — every widget instance shares the same running timer instead of each
-// instance counting down independently. Deliberately not synced to
-// Firestore: a countdown mid-session isn't meaningful across devices, and
-// resetting on reload is the expected behavior for a focus timer.
+// Module-level singleton — every widget instance shares the same running
+// timer instead of each instance counting down independently. Deliberately
+// not synced to Firestore: a countdown mid-session isn't meaningful across
+// devices, and resetting on reload is the expected behavior for a focus timer.
 let phase: PomodoroPhase = 'study';
 let remainingSeconds = phaseDurationSeconds('study');
 let isRunning = false;

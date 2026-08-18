@@ -236,8 +236,7 @@
   }
 }
 
-// Todo-specific — the only part of this file about due dates, kept off the
-// base .task-item since RoutineTask has no due date at all.
+// The only part of this file about due dates.
 .task-item__due {
   flex-shrink: 0;
   font-size: 0.72rem;

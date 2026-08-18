@@ -11,8 +11,8 @@ type EditorModalProps = {
   actions: ReactNode;
 };
 
-// Shared shell for task-editing modals (routine tasks, todos) — an overlay
-// + panel with a header/close button, a fields section, and an actions row.
+// Shared shell for task-editing modals — an overlay + panel with a
+// header/close button, a fields section, and an actions row.
 // Visually distinct from common/Modal.tsx (used by Settings-style modals):
 // same portal-to-body/mounted-gate mechanics, different chrome.
 export default function EditorModal({ isOpen, title, onClose, children, actions }: EditorModalProps) {
