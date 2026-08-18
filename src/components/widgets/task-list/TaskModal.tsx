@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { createDefaultStages } from '../../../lib/taskCascade';
+import { clampTaskStages, createDefaultStages } from '../../../lib/taskCascade';
 import type { Subtask, Task } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorField from '../../shared/editor/EditorField';
 import EditorModal from '../../shared/editor/EditorModal';
 import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
+import EditorStagesField from '../../shared/editor/EditorStagesField';
 import EditorSubtaskList from '../../shared/editor/EditorSubtaskList';
 
 type TaskModalProps = {
@@ -75,7 +76,7 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
   const handleSubmit = () => {
     const trimmedTitle = draft.title.trim();
     if (!trimmedTitle) return;
-    onSubmit({ ...draft, title: trimmedTitle });
+    onSubmit(clampTaskStages({ ...draft, title: trimmedTitle }));
   };
 
   return (
@@ -106,6 +107,8 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
           onChange={(event) => updateDraft('description', event.target.value)}
         />
       </EditorField>
+
+      <EditorStagesField stages={draft.stages} onChange={(stages) => updateDraft('stages', stages)} />
 
       <EditorField label="Due">
         <div className="editor-field-row">
