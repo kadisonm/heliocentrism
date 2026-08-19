@@ -54,6 +54,13 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
     );
   };
 
+  const updateSubtask = (id: string, patch: Partial<Subtask>) => {
+    updateDraft(
+      'subtasks',
+      draft.subtasks.map((subtask) => (subtask.id === id ? { ...subtask, ...patch } : subtask))
+    );
+  };
+
   const handleSubmit = () => {
     const trimmedTitle = draft.title.trim();
     if (!trimmedTitle) return;
@@ -96,7 +103,12 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
       <EditorRepeatFields repeat={draft.repeat} onChange={(repeat) => updateDraft('repeat', repeat)} />
 
       <EditorField label="Subtasks" as="div">
-        <EditorSubtaskList subtasks={draft.subtasks} onAdd={addSubtask} onRemove={removeSubtask} />
+        <EditorSubtaskList
+          subtasks={draft.subtasks}
+          onAdd={addSubtask}
+          onRemove={removeSubtask}
+          onUpdate={updateSubtask}
+        />
       </EditorField>
     </EditorModal>
   );
