@@ -140,9 +140,15 @@
   }
 }
 
+.editor-stage-row {
+  & + & {
+    margin-top: 0.4rem;
+  }
+}
+
 .editor-stage {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
@@ -151,10 +157,12 @@
   font-weight: 400;
   font-size: 0.82rem;
   color: var(--text);
+}
 
-  & + & {
-    margin-top: 0.4rem;
-  }
+.editor-stage__main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
   input[type='text'] {
     flex: 1;
@@ -163,17 +171,6 @@
     border-radius: 0.5rem;
     padding: 0.4rem 0.55rem;
     font-size: 0.82rem;
-    color: var(--text);
-    background: var(--panel);
-  }
-
-  select {
-    flex-shrink: 0;
-    width: 6.5rem;
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.4rem;
-    font-size: 0.78rem;
     color: var(--text);
     background: var(--panel);
   }
@@ -187,6 +184,67 @@
     cursor: pointer;
     flex-shrink: 0;
   }
+}
+
+.editor-stage__swatches {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.editor-swatch {
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--panel);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.editor-swatch--none {
+  background: transparent;
+  border-style: dashed;
+}
+
+.editor-swatch--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.editor-swatch--success {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.editor-swatch--warning {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+
+.editor-swatch--error {
+  background: var(--error);
+  border-color: var(--error);
+}
+
+.editor-swatch--secondary {
+  background: var(--secondary);
+  border-color: var(--secondary);
+}
+
+.editor-swatch--muted {
+  background: var(--muted);
+  border-color: var(--muted);
+}
+
+.editor-swatch--selected {
+  box-shadow: 0 0 0 2px var(--panel-soft), 0 0 0 4px var(--accent);
 }
 
 .editor-stage__icon-trigger {

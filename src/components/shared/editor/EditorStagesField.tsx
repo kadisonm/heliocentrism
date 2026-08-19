@@ -77,43 +77,47 @@ export default function EditorStagesField({ stages, onChange }: EditorStagesFiel
           const Icon = getTaskStageIcon(stage.icon);
 
           return (
-            <div key={stage.id}>
+            <div key={stage.id} className="editor-stage-row">
               <div className="editor-stage">
-                <input
-                  type="text"
-                  placeholder="Stage name"
-                  value={stage.name}
-                  onChange={(event) => updateStage(stage.id, { name: event.target.value })}
-                />
-                <select
-                  value={stage.color}
-                  onChange={(event) =>
-                    updateStage(stage.id, { color: event.target.value as StageColor })
-                  }
-                >
-                  {STAGE_COLOR_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="editor-stage__icon-trigger"
-                  onClick={() => setOpenPickerId(openPickerId === stage.id ? null : stage.id)}
-                  aria-label="Choose icon"
-                >
-                  {Icon ? (
-                    createElement(Icon, { size: 14 })
-                  ) : (
-                    <span className="editor-stage__icon-placeholder">—</span>
-                  )}
-                </button>
-                {!locked && (
-                  <button type="button" onClick={() => removeStage(stage.id)}>
-                    Remove
+                <div className="editor-stage__main">
+                  <input
+                    type="text"
+                    placeholder="Stage name"
+                    value={stage.name}
+                    onChange={(event) => updateStage(stage.id, { name: event.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="editor-stage__icon-trigger"
+                    onClick={() => setOpenPickerId(openPickerId === stage.id ? null : stage.id)}
+                    aria-label="Choose icon"
+                  >
+                    {Icon ? (
+                      createElement(Icon, { size: 14 })
+                    ) : (
+                      <span className="editor-stage__icon-placeholder">—</span>
+                    )}
                   </button>
-                )}
+                  {!locked && (
+                    <button type="button" onClick={() => removeStage(stage.id)}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <div className="editor-stage__swatches">
+                  {STAGE_COLOR_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`editor-swatch editor-swatch--${option.value}${
+                        stage.color === option.value ? ' editor-swatch--selected' : ''
+                      }`}
+                      aria-label={option.label}
+                      aria-pressed={stage.color === option.value}
+                      onClick={() => updateStage(stage.id, { color: option.value })}
+                    />
+                  ))}
+                </div>
               </div>
 
               {openPickerId === stage.id && (
