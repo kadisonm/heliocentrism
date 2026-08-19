@@ -142,13 +142,19 @@ function ensureRepeatWatcherStarted() {
   });
 }
 
+// Compares done-ness before vs. after, not raw stage numbers — a stages
+// list edit (via TaskModal) can shrink the array so the SAME numeric stage
+// index now means "done" when it didn't before (e.g. a 3-stage list
+// shrinking to 2 turns index 1 from "Doing" into "Done"). Comparing stage
+// numbers alone would miss that transition and skip the stamp.
 function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; completedAt: string | null }>(
-  previousStage: number,
+  wasDone: boolean,
   updated: T,
   now: string
 ): T {
-  if (previousStage === updated.stage) return updated;
-  return { ...updated, completedAt: isTaskDone(updated) ? now : null };
+  const isDone = isTaskDone(updated);
+  if (wasDone === isDone) return updated;
+  return { ...updated, completedAt: isDone ? now : null };
 }
 
 // Mirrors withStageTimestamps, but for one subtask within a task whose own
@@ -158,14 +164,10 @@ function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; 
 // repeat has an accurate completedAt to check itself against
 // (shouldResetSubtask) instead of reading null and being treated as
 // immediately stale.
-function withSubtaskCompletedAt(
-  previousStage: number,
-  subtask: Subtask,
-  stages: TaskStageDef[],
-  now: string
-): Subtask {
-  if (previousStage === subtask.stage) return subtask;
-  return { ...subtask, completedAt: isTaskDone({ stage: subtask.stage, stages }) ? now : null };
+function withSubtaskCompletedAt(wasDone: boolean, subtask: Subtask, stages: TaskStageDef[], now: string): Subtask {
+  const isDone = isTaskDone({ stage: subtask.stage, stages });
+  if (wasDone === isDone) return subtask;
+  return { ...subtask, completedAt: isDone ? now : null };
 }
 
 function updateList(listId: string, updater: (list: TaskList) => TaskList) {
@@ -182,16 +184,18 @@ function updateTaskStage(listId: string, taskId: string) {
       if (task.id !== taskId) return task;
       const cycled = cycleTaskStage(task);
       // cycleTaskStage can cascade lagging subtasks forward to meet the
-      // parent's new stage — stamp completedAt for any subtask whose stage
-      // actually changed, not just the one the user clicked.
+      // parent's new stage — stamp completedAt for any subtask whose
+      // done-ness actually changed, not just the one the user clicked.
       const cascaded = {
         ...cycled,
         subtasks: cycled.subtasks.map((subtask) => {
           const previous = task.subtasks.find((s) => s.id === subtask.id);
-          return previous ? withSubtaskCompletedAt(previous.stage, subtask, cycled.stages, now) : subtask;
+          return previous
+            ? withSubtaskCompletedAt(isTaskDone({ stage: previous.stage, stages: task.stages }), subtask, cycled.stages, now)
+            : subtask;
         }),
       };
-      return { ...withStageTimestamps(task.stage, cascaded, now), updatedAt: now };
+      return { ...withStageTimestamps(isTaskDone(task), cascaded, now), updatedAt: now };
     }),
   }));
 }
@@ -208,11 +212,16 @@ function updateSubtaskStage(listId: string, taskId: string, subtaskId: string) {
         ...cycled,
         subtasks: cycled.subtasks.map((subtask) =>
           subtask.id === subtaskId && previousSubtask
-            ? withSubtaskCompletedAt(previousSubtask.stage, subtask, cycled.stages, now)
+            ? withSubtaskCompletedAt(
+                isTaskDone({ stage: previousSubtask.stage, stages: task.stages }),
+                subtask,
+                cycled.stages,
+                now
+              )
             : subtask
         ),
       };
-      return { ...withStageTimestamps(task.stage, withTimestamp, now), updatedAt: now };
+      return { ...withStageTimestamps(isTaskDone(task), withTimestamp, now), updatedAt: now };
     }),
   }));
 }
@@ -226,7 +235,10 @@ function updateTask(listId: string, updatedTask: Task) {
       // A TaskModal save can clamp a subtask's stage (e.g. shrinking the
       // stages list) without that going through updateSubtaskStage/
       // updateTaskStage above — stamp completedAt here too so it's never
-      // missed. A brand-new subtask added in the same save has no
+      // missed. Done-ness is checked against each side's OWN stages array
+      // (task.stages before, updatedTask.stages after) since a shrink can
+      // change what a given stage number means without changing the
+      // number itself. A brand-new subtask added in the same save has no
       // `previous` match and passes through untouched (already correct:
       // { stage: 0, completedAt: null } from addSubtask).
       const withSubtaskTimestamps = {
@@ -234,11 +246,16 @@ function updateTask(listId: string, updatedTask: Task) {
         subtasks: updatedTask.subtasks.map((subtask) => {
           const previous = task.subtasks.find((s) => s.id === subtask.id);
           return previous
-            ? withSubtaskCompletedAt(previous.stage, subtask, updatedTask.stages, now)
+            ? withSubtaskCompletedAt(
+                isTaskDone({ stage: previous.stage, stages: task.stages }),
+                subtask,
+                updatedTask.stages,
+                now
+              )
             : subtask;
         }),
       };
-      return { ...withStageTimestamps(task.stage, withSubtaskTimestamps, now), updatedAt: now };
+      return { ...withStageTimestamps(isTaskDone(task), withSubtaskTimestamps, now), updatedAt: now };
     }),
   }));
 }

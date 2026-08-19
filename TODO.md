@@ -17,6 +17,7 @@
 - Move the task names setting to the task list settings
 - Refactor the task list dropdown and management
 - Subtasks should be able to edit the name of them and include a description
+- Make subtasks follow the same wrap/truncate rule as normal tasks
 
 ---
 
