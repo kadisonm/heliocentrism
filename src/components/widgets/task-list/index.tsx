@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
 import { isTaskDone } from '../../../lib/taskCascade';
 import { formatNextOccurrence } from '../../../lib/taskRepeat';
-import type { Task } from '../../../lib/types';
+import type { Subtask, Task } from '../../../lib/types';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
@@ -40,6 +40,37 @@ function renderRepeatBadge(task: Task, onClick: () => void) {
       <Clock size={13} />
       {formatNextOccurrence(task.repeat)}
     </button>
+  );
+}
+
+function renderSubtaskDueBadge(subtask: Subtask) {
+  if (!subtask.due) return undefined;
+  return (
+    <span className={`task-item__due task-item__due--${getDueUrgency(subtask.due)}`}>
+      {formatDue(subtask.due)}
+    </span>
+  );
+}
+
+// Read-only counterpart to renderRepeatBadge — subtasks have no edit
+// affordance on the live board yet (that arrives with the Task Toolbar
+// phase), so this is a plain span, not a clickable button.
+function renderSubtaskRepeatBadge(subtask: Subtask) {
+  if (!subtask.repeat) return undefined;
+  return (
+    <span className="task-item__repeat task-item__repeat--static">
+      <Clock size={13} />
+      {formatNextOccurrence(subtask.repeat)}
+    </span>
+  );
+}
+
+function renderSubtaskExtra(subtask: Subtask) {
+  return (
+    <>
+      {renderSubtaskDueBadge(subtask)}
+      {renderSubtaskRepeatBadge(subtask)}
+    </>
   );
 }
 
@@ -176,6 +207,7 @@ export default function TaskListWidget() {
                               {renderRepeatBadge(task, () => setRepeatModalTask(task))}
                             </>
                           }
+                          renderSubtaskExtra={renderSubtaskExtra}
                           overlay
                         />
                       ) : null;
@@ -200,6 +232,7 @@ export default function TaskListWidget() {
                             {renderRepeatBadge(task, () => setRepeatModalTask(task))}
                           </>
                         }
+                        renderSubtaskExtra={renderSubtaskExtra}
                       />
                     ))}
                   </SortableTaskList>

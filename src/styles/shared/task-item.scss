@@ -245,9 +245,14 @@
 }
 
 .subtask__title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-size: 0.875rem;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &.is-done {
     color: var(--muted);
@@ -290,6 +295,19 @@
 
   &:hover {
     color: var(--text);
+  }
+
+  // Read-only counterpart for a subtask's own repeat badge — <span>-based,
+  // no onClick. Same look minus the pointer cursor/hover shift that would
+  // otherwise misleadingly imply it's clickable; subtasks get no
+  // click-to-edit affordance on the live board until a future "Task
+  // Toolbar" phase.
+  &.task-item__repeat--static {
+    cursor: default;
+
+    &:hover {
+      color: var(--muted);
+    }
   }
 }
 

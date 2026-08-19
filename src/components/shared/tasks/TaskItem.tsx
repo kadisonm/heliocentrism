@@ -35,6 +35,9 @@ type TaskItemHandlers<T extends Task> = {
   // Slot for an extra bit of UI rendered next to the title (e.g. the due
   // date badge).
   extra?: ReactNode;
+  // Per-subtask counterpart to `extra` — called once per subtask (not once
+  // per Task) since each subtask's badges depend on its own due/repeat.
+  renderSubtaskExtra?: (subtask: Subtask) => ReactNode;
 };
 
 type TaskItemProps<T extends Task> = TaskItemHandlers<T> & { task: T };
@@ -91,6 +94,7 @@ export function TaskItemView<T extends Task>({
   onToggleSubtask,
   onReorderSubtasks,
   extra,
+  renderSubtaskExtra,
   dragRef,
   dragStyle,
   dragAttributes,
@@ -177,6 +181,7 @@ export function TaskItemView<T extends Task>({
                   subtask={subtask}
                   stages={task.stages}
                   onToggle={() => {}}
+                  extra={renderSubtaskExtra?.(subtask)}
                 />
               ))}
             </div>
@@ -187,7 +192,12 @@ export function TaskItemView<T extends Task>({
               renderOverlay={(activeId) => {
                 const subtask = task.subtasks.find((s) => s.id === activeId);
                 return subtask ? (
-                  <SubtaskRowView subtask={subtask} stages={task.stages} onToggle={() => {}} />
+                  <SubtaskRowView
+                    subtask={subtask}
+                    stages={task.stages}
+                    onToggle={() => {}}
+                    extra={renderSubtaskExtra?.(subtask)}
+                  />
                 ) : null;
               }}
             >
@@ -198,6 +208,7 @@ export function TaskItemView<T extends Task>({
                     subtask={subtask}
                     stages={task.stages}
                     onToggle={() => onToggleSubtask?.(task.id, subtask.id)}
+                    extra={renderSubtaskExtra?.(subtask)}
                   />
                 ))}
               </div>
@@ -212,10 +223,12 @@ function SubtaskRow({
   subtask,
   stages,
   onToggle,
+  extra,
 }: {
   subtask: Subtask;
   stages: TaskStageDef[];
   onToggle: () => void;
+  extra?: ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subtask.id,
@@ -231,6 +244,7 @@ function SubtaskRow({
       subtask={subtask}
       stages={stages}
       onToggle={onToggle}
+      extra={extra}
       isPlaceholder={isDragging}
       dragRef={setNodeRef}
       dragStyle={style}
@@ -244,12 +258,14 @@ type SubtaskRowViewProps = DragBindings & {
   subtask: Subtask;
   stages: TaskStageDef[];
   onToggle: () => void;
+  extra?: ReactNode;
 };
 
 function SubtaskRowView({
   subtask,
   stages,
   onToggle,
+  extra,
   dragRef,
   dragStyle,
   dragAttributes,
@@ -282,6 +298,7 @@ function SubtaskRowView({
       <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
         {subtask.title}
       </p>
+      {extra}
     </div>
   );
 }
