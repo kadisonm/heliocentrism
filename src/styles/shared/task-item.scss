@@ -7,20 +7,18 @@
   background: var(--panel-soft);
   border-radius: 0.85rem;
   padding: 0.75rem;
+  cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
     background: var(--panel-strong);
+  }
 
-    .task-item__toolbar {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(-50%);
-    }
-
-    .task-item__stage {
-      opacity: 0;
-    }
+  // Click-driven "selected" state (toggled in TaskItem.tsx) — its floating
+  // toolbar (see .floating-toolbar) is a separate portaled popup, not
+  // anchored inside this card, so all this needs to do is lighten the row.
+  &.task-item--active {
+    background: var(--panel-strong);
   }
 
   // The dragged item's original slot — content stays in the DOM (so the
@@ -215,14 +213,22 @@
 }
 
 .subtask {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.2rem 0.35rem;
   border-radius: 0.5rem;
+  cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
+    background: var(--panel-soft);
+  }
+
+  // Click-driven "selected" state — see .task-item--active above, same
+  // reasoning (floating toolbar lives elsewhere, this just lightens).
+  &.subtask--active {
     background: var(--panel-soft);
   }
 
@@ -311,16 +317,12 @@
   }
 }
 
-// Floating edit/delete controls, revealed on hover, flush with the card's
-// right edge and centered on its top border (translateY(-50%) off a top: 0
-// anchor keeps the center line pinned to the border regardless of the
-// toolbar's own rendered height) — like a tab sitting on top of the card.
-// The status badge fades out in tandem (see .task-item:hover) so it isn't
-// hidden underneath.
-.task-item__toolbar {
-  position: absolute;
-  top: 0;
-  right: 0;
+// A context-menu-style popup, portaled to document.body by FloatingToolbar
+// and positioned via inline style (its `left`/`bottom` set to the click
+// point, so it opens upward-and-rightward with its bottom-left corner
+// pinned to the cursor) — not anchored inside any particular row.
+.floating-toolbar {
+  position: fixed;
   display: flex;
   align-items: center;
   gap: 0.3rem;
@@ -329,11 +331,7 @@
   background: var(--panel-strong);
   border-radius: 0.6rem;
   box-shadow: 0 4px 12px var(--shadow);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(calc(-50% + 0.2rem));
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 1;
+  z-index: 1000;
 }
 
 .task-item__toolbar-button {

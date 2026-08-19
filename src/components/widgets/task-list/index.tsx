@@ -1,11 +1,12 @@
 'use client';
 
-import { Clock, Eye, EyeOff, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Clock, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
 import { isTaskDone } from '../../../lib/taskCascade';
 import { formatNextOccurrence } from '../../../lib/taskRepeat';
 import type { Subtask, Task } from '../../../lib/types';
+import FloatingToolbar, { type FloatingToolbarPosition } from '../../shared/tasks/FloatingToolbar';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
@@ -19,6 +20,14 @@ const NEW_LIST_OPTION = '__new__';
 
 type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
 type SubtaskModalState = { taskId: string; subtask: Subtask | null }; // null = adding
+// Which single task/subtask row currently has its floating toolbar open —
+// click-driven, not hover. At most one at a time; both the task and
+// subtask rows stopPropagation() on click so only a genuine outside click
+// reaches the document-level listener that clears this. `position` is
+// where the toolbar popup anchors (its bottom-left corner at the click).
+type ActiveToolbar =
+  | { type: 'task'; taskId: string; position: FloatingToolbarPosition }
+  | { type: 'subtask'; taskId: string; subtaskId: string; position: FloatingToolbarPosition };
 
 function renderDueBadge(task: Task) {
   if (!task.due) return undefined;
@@ -35,7 +44,10 @@ function renderRepeatBadge(task: Task, onClick: () => void) {
     <button
       type="button"
       className="task-item__repeat"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
       title="Edit repeat"
       aria-label={`Edit repeat schedule for ${task.title}`}
     >
@@ -54,9 +66,9 @@ function renderSubtaskDueBadge(subtask: Subtask) {
   );
 }
 
-// Read-only counterpart to renderRepeatBadge — subtasks have no edit
-// affordance on the live board yet (that arrives with the Task Toolbar
-// phase), so this is a plain span, not a clickable button.
+// Read-only counterpart to renderRepeatBadge — a plain span, not a
+// clickable button. Editing a subtask's repeat happens through its own
+// toolbar's Edit button (opens SubtaskModal), not by clicking this badge.
 function renderSubtaskRepeatBadge(subtask: Subtask) {
   if (!subtask.repeat) return undefined;
   return (
@@ -88,6 +100,7 @@ export default function TaskListWidget() {
     deleteTask,
     addSubtask,
     updateSubtask,
+    deleteSubtask,
     reorderTasks,
     reorderSubtasks,
   } = useTaskLists();
@@ -96,8 +109,43 @@ export default function TaskListWidget() {
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
   const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
+  const [activeToolbar, setActiveToolbar] = useState<ActiveToolbar | null>(null);
   const showCompleted = widget.showCompleted ?? false;
   const [isAddListOpen, setIsAddListOpen] = useState(false);
+
+  // A click anywhere NOT inside a task/subtask row or the floating toolbar
+  // itself is an "outside" click — close whatever toolbar is open. Uses
+  // DOM containment (event.target.closest(...)) rather than relying on
+  // each row's onClick calling stopPropagation() to prevent this listener
+  // from ever seeing an "inside" click — dnd-kit's own PointerSensor
+  // registers its own document-level click listener for its internal
+  // press/tap handling, and empirically that interaction meant
+  // stopPropagation() alone did not reliably keep a same-click "inside"
+  // event from also reaching this one. Containment-checking here sidesteps
+  // that entirely, regardless of the exact propagation-order cause.
+  useEffect(() => {
+    const handleDocumentClick = (event: globalThis.MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.task-item, .subtask, .floating-toolbar')) return;
+      setActiveToolbar(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
+
+  const toggleTaskToolbar = (taskId: string, position: FloatingToolbarPosition) => {
+    setActiveToolbar((current) =>
+      current?.type === 'task' && current.taskId === taskId ? null : { type: 'task', taskId, position }
+    );
+  };
+
+  const toggleSubtaskToolbar = (taskId: string, subtaskId: string, position: FloatingToolbarPosition) => {
+    setActiveToolbar((current) =>
+      current?.type === 'subtask' && current.taskId === taskId && current.subtaskId === subtaskId
+        ? null
+        : { type: 'subtask', taskId, subtaskId, position }
+    );
+  };
 
   const activeList = useMemo(() => {
     const found = taskLists.find((list) => list.id === selectedListId);
@@ -108,6 +156,90 @@ export default function TaskListWidget() {
     () => (activeList ? activeList.tasks.filter((task) => showCompleted || !isTaskDone(task)) : []),
     [activeList, showCompleted]
   );
+
+  // The one floating toolbar popup — its buttons depend on whether a task
+  // or a subtask is active, looked up fresh from activeList by id (rather
+  // than storing the object itself) so it never goes stale.
+  function renderActiveToolbar() {
+    if (!activeToolbar || !activeList) return null;
+    const activeTask = activeList.tasks.find((t) => t.id === activeToolbar.taskId);
+    if (!activeTask) return null;
+
+    if (activeToolbar.type === 'task') {
+      return (
+        <FloatingToolbar position={activeToolbar.position}>
+          <button
+            type="button"
+            className="task-item__toolbar-button"
+            onClick={() => {
+              setSubtaskModalState({ taskId: activeTask.id, subtask: null });
+              setActiveToolbar(null);
+            }}
+            title="Add subtask"
+            aria-label={`Add subtask to ${activeTask.title}`}
+          >
+            <Plus size={13} />
+          </button>
+          <button
+            type="button"
+            className="task-item__toolbar-button"
+            onClick={() => {
+              setModalState({ mode: 'edit', task: activeTask });
+              setActiveToolbar(null);
+            }}
+            title="Edit"
+            aria-label={`Edit ${activeTask.title}`}
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            type="button"
+            className="task-item__toolbar-button task-item__toolbar-button--danger"
+            onClick={() => {
+              deleteTask(activeList.id, activeTask.id);
+              setActiveToolbar(null);
+            }}
+            title="Delete"
+            aria-label={`Delete ${activeTask.title}`}
+          >
+            <Trash2 size={13} />
+          </button>
+        </FloatingToolbar>
+      );
+    }
+
+    const activeSubtask = activeTask.subtasks.find((s) => s.id === activeToolbar.subtaskId);
+    if (!activeSubtask) return null;
+
+    return (
+      <FloatingToolbar position={activeToolbar.position}>
+        <button
+          type="button"
+          className="task-item__toolbar-button"
+          onClick={() => {
+            setSubtaskModalState({ taskId: activeTask.id, subtask: activeSubtask });
+            setActiveToolbar(null);
+          }}
+          title="Edit"
+          aria-label={`Edit ${activeSubtask.title}`}
+        >
+          <Pencil size={12} />
+        </button>
+        <button
+          type="button"
+          className="task-item__toolbar-button task-item__toolbar-button--danger"
+          onClick={() => {
+            deleteSubtask(activeList.id, activeTask.id, activeSubtask.id);
+            setActiveToolbar(null);
+          }}
+          title="Delete"
+          aria-label={`Delete ${activeSubtask.title}`}
+        >
+          <Trash2 size={12} />
+        </button>
+      </FloatingToolbar>
+    );
+  }
 
   return (
     <>
@@ -198,8 +330,6 @@ export default function TaskListWidget() {
                         <TaskItemView
                           task={task}
                           onToggle={(id) => updateTaskStage(activeList.id, id)}
-                          onEdit={(task) => setModalState({ mode: 'edit', task })}
-                          onDelete={(id) => deleteTask(activeList.id, id)}
                           onToggleSubtask={(taskId, subtaskId) =>
                             updateSubtaskStage(activeList.id, taskId, subtaskId)
                           }
@@ -226,12 +356,19 @@ export default function TaskListWidget() {
                         onToggleSubtask={(taskId, subtaskId) =>
                           updateSubtaskStage(activeList.id, taskId, subtaskId)
                         }
-                        onEdit={(task) => setModalState({ mode: 'edit', task })}
-                        onDelete={(id) => deleteTask(activeList.id, id)}
                         onReorderSubtasks={(taskId, activeId, overId) =>
                           reorderSubtasks(activeList.id, taskId, activeId, overId)
                         }
-                        onAddSubtask={(taskId) => setSubtaskModalState({ taskId, subtask: null })}
+                        isActive={activeToolbar?.type === 'task' && activeToolbar.taskId === task.id}
+                        onRowClick={(position) => toggleTaskToolbar(task.id, position)}
+                        activeSubtaskId={
+                          activeToolbar?.type === 'subtask' && activeToolbar.taskId === task.id
+                            ? activeToolbar.subtaskId
+                            : null
+                        }
+                        onSubtaskRowClick={(subtaskId, position) =>
+                          toggleSubtaskToolbar(task.id, subtaskId, position)
+                        }
                         extra={
                           <>
                             {renderDueBadge(task)}
@@ -301,6 +438,8 @@ export default function TaskListWidget() {
           setSubtaskModalState(null);
         }}
       />
+
+      {renderActiveToolbar()}
     </>
   );
 }
