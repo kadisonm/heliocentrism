@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { clampTaskStages, createDefaultStages } from '../../../lib/taskCascade';
 import type { Subtask, Task } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
+import EditorDueField from '../../shared/editor/EditorDueField';
 import EditorField from '../../shared/editor/EditorField';
 import EditorModal from '../../shared/editor/EditorModal';
 import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
@@ -42,7 +43,7 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
   };
 
   const addSubtask = (title: string) => {
-    const subtask: Subtask = { id: crypto.randomUUID(), title, stage: 0 };
+    const subtask: Subtask = { id: crypto.randomUUID(), title, stage: 0, due: '', repeat: undefined, completedAt: null };
     updateDraft('subtasks', [...draft.subtasks, subtask]);
   };
 
@@ -51,26 +52,6 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
       'subtasks',
       draft.subtasks.filter((subtask) => subtask.id !== id)
     );
-  };
-
-  const [dueDatePart, dueTimePart = ''] = draft.due.split('T');
-
-  // A native datetime-local input only reports a value once every subfield
-  // (year/month/day/hour/minute) is filled in — pick just a date and it
-  // stays empty, silently dropping the due date on save. Splitting into
-  // separate date/time inputs avoids that: picking a date alone is already
-  // a complete, valid value, and the time defaults to end-of-day.
-  const updateDueDate = (dateValue: string) => {
-    if (!dateValue) {
-      updateDraft('due', '');
-      return;
-    }
-    updateDraft('due', `${dateValue}T${dueTimePart || '23:59'}`);
-  };
-
-  const updateDueTime = (timeValue: string) => {
-    if (!dueDatePart) return;
-    updateDraft('due', `${dueDatePart}T${timeValue || '23:59'}`);
   };
 
   const handleSubmit = () => {
@@ -110,21 +91,7 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
 
       <EditorStagesField stages={draft.stages} onChange={(stages) => updateDraft('stages', stages)} />
 
-      <EditorField label="Due">
-        <div className="editor-field-row">
-          <input
-            type="date"
-            value={dueDatePart}
-            onChange={(event) => updateDueDate(event.target.value)}
-          />
-          <input
-            type="time"
-            value={dueTimePart}
-            onChange={(event) => updateDueTime(event.target.value)}
-            disabled={!dueDatePart}
-          />
-        </div>
-      </EditorField>
+      <EditorDueField value={draft.due} onChange={(due) => updateDraft('due', due)} />
 
       <EditorRepeatFields repeat={draft.repeat} onChange={(repeat) => updateDraft('repeat', repeat)} />
 

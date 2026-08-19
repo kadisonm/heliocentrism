@@ -1,21 +1,36 @@
-# Data
-- [ ] Figure out how to allow google accounts to also be connected to an email address and password. (For google calendar integration etc)
-- [ ] Add import and export firebase sync settings + the option to export/ import user data
-- [ ] Add data backups and the option to export them/ change how often and how many are saved
-- [ ] Force the user to configure before they can access the dashboard and make sure they can only see the configuration screen.
-- [ ] Write tutorial for adding firebase domain 
+# TODO
+
+---
 
 # General Fixes
-- Update todos to show the due date as 'today' 'tomorrow' 'yesterday' 'in x days'
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
-- Make it so when dragging tasks it has a grey filter
+
 - Allow widgets to be placed anywhere without gravity
+
+## Tasks
+- Update task dates to show the due date as 'today' 'tomorrow' 'yesterday' 'in x days'
 - Fix tasks minimum stage not being updated
-- Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
+- Make it so when dragging tasks it has a grey filter
 - Fix task badge placement
+- Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
+- Move the task names setting to the task list settings
+- Refactor the task list dropdown and management
+
+---
+
+# Data
+- Figure out how to allow google accounts to also be connected to an email address and password. (For google calendar integration etc)
+- Add import and export firebase sync settings + the option to export/ import user data
+- Add data backups and the option to export them/ change how often and how many are saved
+- Force the user to configure before they can access the dashboard and make sure they can only see the configuration screen.
+- Write tutorial for adding firebase domain 
+
+---
 
 # Dashboard
+- Investigate tablet mode and turning the tablet to portrait
+
 ## Multiple pages feature
 - [ ] Implemented?
 ### Pages

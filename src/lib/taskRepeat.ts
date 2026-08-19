@@ -1,5 +1,5 @@
-import { isTaskDone } from './taskCascade';
-import type { RepeatUnit, Task, TaskRepeat } from './types';
+import { deriveStageFromSubtasks, isTaskDone } from './taskCascade';
+import type { RepeatUnit, Subtask, Task, TaskRepeat, TaskStageDef } from './types';
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -156,18 +156,77 @@ export function advanceDueDate(due: string, repeat: TaskRepeat, now: Date = new 
   return timePart ? `${dateStr}T${timePart}` : dateStr;
 }
 
+// Mirrors shouldResetTask, but for one subtask within a task — checked
+// against the PARENT's stages array (a subtask has no stages of its own)
+// and the subtask's own completedAt/repeat. Entirely independent of
+// whether the parent itself has a repeat or resets on this tick.
+export function shouldResetSubtask(
+  subtask: Subtask,
+  parentStages: TaskStageDef[],
+  now: Date = new Date()
+): boolean {
+  if (!subtask.repeat || !isTaskDone({ stage: subtask.stage, stages: parentStages })) return false;
+
+  const boundary = getMostRecentOccurrence(subtask.repeat, now);
+  if (!boundary) return false;
+  if (!subtask.completedAt) return true;
+
+  return new Date(subtask.completedAt) < boundary;
+}
+
+// Transform applied to one subtask, either because its own repeat is due
+// (shouldResetSubtask) or because its parent reset as a whole (which
+// forces every subtask back to its start stage unconditionally — see
+// resetRepeatingTask below). due only advances via the subtask's OWN
+// repeat, same rule as a task's own due.
+export function resetSubtaskState(subtask: Subtask, now: Date = new Date()): Subtask {
+  return {
+    ...subtask,
+    stage: 0,
+    completedAt: null,
+    due: subtask.due && subtask.repeat ? advanceDueDate(subtask.due, subtask.repeat, now) : subtask.due,
+  };
+}
+
 // Transform applied when shouldResetTask is true: stage/completion clear,
-// every subtask resets too (mirroring the old routine-reset behavior), and
-// due (if set) catches up to the current cycle. repeat itself (anchor
-// included) is left completely untouched — the schedule's phase never moves.
+// every subtask resets too (mirroring the old routine-reset behavior, now
+// also clearing each subtask's own completedAt and advancing its own due
+// if it has its own repeat — see resetSubtaskState), and due (if set)
+// catches up to the current cycle. repeat itself (anchor included) is left
+// completely untouched — the schedule's phase never moves.
 export function resetRepeatingTask(task: Task, now: Date = new Date()): Task {
   return {
     ...task,
     stage: 0,
     completedAt: null,
-    subtasks: task.subtasks.map((subtask) => ({ ...subtask, stage: 0 })),
+    subtasks: task.subtasks.map((subtask) => resetSubtaskState(subtask, now)),
     due: task.due && task.repeat ? advanceDueDate(task.due, task.repeat, now) : task.due,
     updatedAt: now.toISOString(),
+  };
+}
+
+// Independent of resetRepeatingTask above — resets any subtask whose OWN
+// repeat schedule is due, regardless of whether the parent itself has a
+// repeat or reset this tick, and re-derives the parent's stage from the
+// resulting subtask stages if anything changed (same "lowest incomplete
+// subtask" rule cycleSubtaskStage already uses for a manual click). Call
+// this AFTER any parent-level resetRepeatingTask has already run for this
+// task on the same tick — shouldResetSubtask's isTaskDone gate then
+// naturally skips any subtask the blanket reset just touched, since it's
+// no longer "done" at stage 0.
+export function resetDueSubtasks(task: Task, now: Date = new Date()): { task: Task; changed: boolean } {
+  let changed = false;
+  const subtasks = task.subtasks.map((subtask) => {
+    if (!shouldResetSubtask(subtask, task.stages, now)) return subtask;
+    changed = true;
+    return resetSubtaskState(subtask, now);
+  });
+
+  if (!changed) return { task, changed: false };
+
+  return {
+    task: { ...task, subtasks, stage: deriveStageFromSubtasks(subtasks, task.stage), updatedAt: now.toISOString() },
+    changed: true,
   };
 }
 

@@ -5,8 +5,8 @@ import { DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
 import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
-import { resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
-import type { Task, TaskList, TaskStageDef } from '../../../lib/types';
+import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
+import type { Subtask, Task, TaskList, TaskStageDef } from '../../../lib/types';
 
 // Module-level singleton — every widget instance sharing the same in-memory
 // copy, one Firestore writer.
@@ -55,7 +55,12 @@ function normalizeTask(task: Task): Task {
     ...task,
     stage: remapStage(task.stage),
     stages,
-    subtasks: (task.subtasks ?? []).map((subtask) => ({ ...subtask, stage: remapStage(subtask.stage) })),
+    subtasks: (task.subtasks ?? []).map((subtask) => ({
+      ...subtask,
+      stage: remapStage(subtask.stage),
+      due: subtask.due ?? '',
+      completedAt: subtask.completedAt ?? null,
+    })),
     createdAt: task.createdAt ?? now,
     updatedAt: task.updatedAt ?? now,
     completedAt: task.completedAt ?? null,
@@ -87,8 +92,9 @@ function persist() {
 
 // Resets any completed repeating task whose schedule has passed since it
 // was last completed (or all subtasks reset along with it — see
-// resetRepeatingTask). Not tied to exact-time triggering — see
-// ensureRepeatWatcherStarted.
+// resetRepeatingTask), plus, independently, any subtask whose OWN repeat
+// schedule has passed regardless of the parent (see resetDueSubtasks).
+// Not tied to exact-time triggering — see ensureRepeatWatcherStarted.
 function runRepeatResetCheck() {
   if (taskLists.length === 0) return;
 
@@ -98,11 +104,22 @@ function runRepeatResetCheck() {
   const next = taskLists.map((list) => {
     let listChanged = false;
     const tasks = list.tasks.map((task) => {
-      if (!shouldResetTask(task, now)) return task;
-      listChanged = true;
-      changed = true;
-      return resetRepeatingTask(task, now);
+      let current = task;
+
+      if (shouldResetTask(current, now)) {
+        current = resetRepeatingTask(current, now);
+        listChanged = true;
+      }
+
+      const subtaskResult = resetDueSubtasks(current, now);
+      if (subtaskResult.changed) {
+        current = subtaskResult.task;
+        listChanged = true;
+      }
+
+      return current;
     });
+    if (listChanged) changed = true;
     return listChanged ? { ...list, tasks } : list;
   });
 
@@ -134,6 +151,23 @@ function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; 
   return { ...updated, completedAt: isTaskDone(updated) ? now : null };
 }
 
+// Mirrors withStageTimestamps, but for one subtask within a task whose own
+// stage just changed — either because the user clicked that subtask
+// directly, the parent's own toggle cascaded it forward (cycleTaskStage),
+// or a TaskModal save clamped its stage. Needed so a subtask with its own
+// repeat has an accurate completedAt to check itself against
+// (shouldResetSubtask) instead of reading null and being treated as
+// immediately stale.
+function withSubtaskCompletedAt(
+  previousStage: number,
+  subtask: Subtask,
+  stages: TaskStageDef[],
+  now: string
+): Subtask {
+  if (previousStage === subtask.stage) return subtask;
+  return { ...subtask, completedAt: isTaskDone({ stage: subtask.stage, stages }) ? now : null };
+}
+
 function updateList(listId: string, updater: (list: TaskList) => TaskList) {
   taskLists = taskLists.map((list) => (list.id === listId ? updater(list) : list));
   notify();
@@ -147,7 +181,17 @@ function updateTaskStage(listId: string, taskId: string) {
     tasks: list.tasks.map((task) => {
       if (task.id !== taskId) return task;
       const cycled = cycleTaskStage(task);
-      return { ...withStageTimestamps(task.stage, cycled, now), updatedAt: now };
+      // cycleTaskStage can cascade lagging subtasks forward to meet the
+      // parent's new stage — stamp completedAt for any subtask whose stage
+      // actually changed, not just the one the user clicked.
+      const cascaded = {
+        ...cycled,
+        subtasks: cycled.subtasks.map((subtask) => {
+          const previous = task.subtasks.find((s) => s.id === subtask.id);
+          return previous ? withSubtaskCompletedAt(previous.stage, subtask, cycled.stages, now) : subtask;
+        }),
+      };
+      return { ...withStageTimestamps(task.stage, cascaded, now), updatedAt: now };
     }),
   }));
 }
@@ -158,8 +202,17 @@ function updateSubtaskStage(listId: string, taskId: string, subtaskId: string) {
     ...list,
     tasks: list.tasks.map((task) => {
       if (task.id !== taskId) return task;
+      const previousSubtask = task.subtasks.find((s) => s.id === subtaskId);
       const cycled = cycleSubtaskStage(task, subtaskId);
-      return { ...withStageTimestamps(task.stage, cycled, now), updatedAt: now };
+      const withTimestamp = {
+        ...cycled,
+        subtasks: cycled.subtasks.map((subtask) =>
+          subtask.id === subtaskId && previousSubtask
+            ? withSubtaskCompletedAt(previousSubtask.stage, subtask, cycled.stages, now)
+            : subtask
+        ),
+      };
+      return { ...withStageTimestamps(task.stage, withTimestamp, now), updatedAt: now };
     }),
   }));
 }
@@ -168,11 +221,25 @@ function updateTask(listId: string, updatedTask: Task) {
   const now = new Date().toISOString();
   updateList(listId, (list) => ({
     ...list,
-    tasks: list.tasks.map((task) =>
-      task.id === updatedTask.id
-        ? { ...withStageTimestamps(task.stage, updatedTask, now), updatedAt: now }
-        : task
-    ),
+    tasks: list.tasks.map((task) => {
+      if (task.id !== updatedTask.id) return task;
+      // A TaskModal save can clamp a subtask's stage (e.g. shrinking the
+      // stages list) without that going through updateSubtaskStage/
+      // updateTaskStage above — stamp completedAt here too so it's never
+      // missed. A brand-new subtask added in the same save has no
+      // `previous` match and passes through untouched (already correct:
+      // { stage: 0, completedAt: null } from addSubtask).
+      const withSubtaskTimestamps = {
+        ...updatedTask,
+        subtasks: updatedTask.subtasks.map((subtask) => {
+          const previous = task.subtasks.find((s) => s.id === subtask.id);
+          return previous
+            ? withSubtaskCompletedAt(previous.stage, subtask, updatedTask.stages, now)
+            : subtask;
+        }),
+      };
+      return { ...withStageTimestamps(task.stage, withSubtaskTimestamps, now), updatedAt: now };
+    }),
   }));
 }
 

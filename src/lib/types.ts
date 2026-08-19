@@ -17,6 +17,9 @@ export type Subtask = {
   id: string;
   title: string;
   stage: number; // index into the PARENT Task's `stages` — no list of its own
+  due: string; // '' = unset, same sentinel convention as Task.due
+  repeat?: TaskRepeat; // independent of the parent Task's own repeat
+  completedAt: string | null; // ISO 8601, null while not done — mirrors Task.completedAt
 };
 
 // A named, user-saved `stages` list a task can be seeded from — distinct
