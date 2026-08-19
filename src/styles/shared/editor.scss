@@ -102,14 +102,47 @@
 }
 
 // A row of two inputs side by side within a single field (e.g. a task's
-// due date + time).
+// due date + time), or a select paired with a trailing action button (e.g.
+// the stage-preset picker's delete button).
 .editor-field-row {
   display: flex;
   gap: 0.5rem;
 
-  input {
+  input,
+  select {
     flex: 1;
     min-width: 0;
+  }
+}
+
+.editor-preset-delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--error);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// Deliberately its own class rather than reusing .editor-subtask-add's
+// wrapper — that class's own `button {}` rule sits at higher specificity
+// than the plain .editor-save/.editor-cancel classes and would silently
+// override their styling.
+.editor-preset-save {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+
+  input[type='text'] {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    color: var(--text);
+    background: var(--panel-soft);
   }
 }
 

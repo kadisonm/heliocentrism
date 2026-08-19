@@ -1,9 +1,11 @@
 'use client';
 
 import { createElement, useState } from 'react';
-import { createDefaultStages } from '../../../lib/taskCascade';
+import { BUILT_IN_STAGE_PRESETS } from '../../../lib/taskCascade';
 import { getTaskStageIcon } from '../../../lib/taskStageIcons';
-import type { StageColor, TaskStageDef } from '../../../lib/types';
+import type { StageColor, StagePreset, TaskStageDef } from '../../../lib/types';
+import { useSettings } from '../tasks/useSettings';
+import EditorField from './EditorField';
 import EditorIconPicker from './EditorIconPicker';
 
 type EditorStagesFieldProps = {
@@ -21,29 +23,42 @@ const STAGE_COLOR_OPTIONS: { value: StageColor; label: string }[] = [
   { value: 'muted', label: 'Muted' },
 ];
 
-function isDefaultStageShape(stages: TaskStageDef[]): boolean {
-  if (stages.length !== 2) return false;
-  const [start, done] = stages;
-  return (
-    start.name === 'Todo' &&
-    start.color === 'none' &&
-    !start.icon &&
-    done.name === 'Done' &&
-    done.color === 'success' &&
-    done.icon === 'Check'
-  );
+function stagesMatch(a: TaskStageDef[], b: TaskStageDef[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((stage, index) => {
+    const other = b[index];
+    return stage.name === other.name && stage.color === other.color && stage.icon === other.icon;
+  });
+}
+
+function detectPresetId(stages: TaskStageDef[], customPresets: StagePreset[]): string {
+  for (const preset of BUILT_IN_STAGE_PRESETS) {
+    if (stagesMatch(stages, preset.createStages())) return preset.id;
+  }
+  for (const preset of customPresets) {
+    if (stagesMatch(stages, preset.stages)) return preset.id;
+  }
+  return 'custom';
 }
 
 export default function EditorStagesField({ stages, onChange }: EditorStagesFieldProps) {
-  // Unlike EditorRepeatFields' toggle, this can't be a pure `checked={...}`
-  // derivation from `stages` — `stages` has no "absent/off" state the data
-  // model can represent (even the default 2-stage list is real, present
-  // data), so a purely-derived checkbox would make unchecking a no-op
-  // whenever the shape still equals the default, re-deriving straight back
-  // to checked. Seeded once on mount; safe because this component fully
-  // remounts whenever the Task modal opens for a different task (the
-  // parent's existing `key={...}` pattern).
-  const [useDefault, setUseDefault] = useState(() => isDefaultStageShape(stages));
+  const { settings, updateSettings } = useSettings();
+  const customPresets = settings.customStagePresets;
+
+  // Purely derived from `stages` rather than a synchronous-once useState
+  // initializer — self-corrects if `settings` (and so `customPresets`) is
+  // still loading when this mounts and a real match arrives moments later,
+  // with no useEffect/isLoading plumbing needed. Becomes non-null the
+  // moment the user makes an explicit choice (picks a preset, goes Custom,
+  // saves, or deletes) — after that the derived fallback no longer matters,
+  // so hand-editing stages while a preset is selected never silently snaps
+  // the dropdown back to "Custom".
+  const [presetOverride, setPresetOverride] = useState<string | null>(null);
+  const selectedPresetId = presetOverride ?? detectPresetId(stages, customPresets);
+  const isCustomPresetSelected = customPresets.some((preset) => preset.id === selectedPresetId);
+
+  const [isSavingPreset, setIsSavingPreset] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
   const [openPickerId, setOpenPickerId] = useState<string | null>(null);
 
   const updateStage = (id: string, patch: Partial<TaskStageDef>) =>
@@ -57,21 +72,63 @@ export default function EditorStagesField({ stages, onChange }: EditorStagesFiel
 
   const removeStage = (id: string) => onChange(stages.filter((stage) => stage.id !== id));
 
+  const handlePresetChange = (id: string) => {
+    setPresetOverride(id);
+    setIsSavingPreset(false);
+    if (id === 'custom') return;
+    const builtIn = BUILT_IN_STAGE_PRESETS.find((preset) => preset.id === id);
+    if (builtIn) {
+      onChange(builtIn.createStages());
+      return;
+    }
+    const custom = customPresets.find((preset) => preset.id === id);
+    if (custom) onChange(custom.stages.map((stage) => ({ ...stage })));
+  };
+
+  const handleSavePreset = () => {
+    const name = newPresetName.trim();
+    if (!name) return;
+    const preset: StagePreset = { id: crypto.randomUUID(), name, stages };
+    updateSettings({ ...settings, customStagePresets: [...customPresets, preset] });
+    setPresetOverride(preset.id);
+    setIsSavingPreset(false);
+    setNewPresetName('');
+  };
+
+  const handleDeletePreset = () => {
+    updateSettings({
+      ...settings,
+      customStagePresets: customPresets.filter((preset) => preset.id !== selectedPresetId),
+    });
+    setPresetOverride('custom');
+  };
+
   return (
     <>
-      <label className="editor-repeat-toggle">
-        <input
-          type="checkbox"
-          checked={useDefault}
-          onChange={(event) => {
-            setUseDefault(event.target.checked);
-            if (event.target.checked) onChange(createDefaultStages());
-          }}
-        />
-        <span>Use default stages</span>
-      </label>
+      <EditorField label="Preset">
+        <div className="editor-field-row">
+          <select value={selectedPresetId} onChange={(event) => handlePresetChange(event.target.value)}>
+            {BUILT_IN_STAGE_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+            {customPresets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+            <option value="custom">Custom</option>
+          </select>
+          {isCustomPresetSelected && (
+            <button type="button" className="editor-preset-delete" onClick={handleDeletePreset}>
+              Delete preset
+            </button>
+          )}
+        </div>
+      </EditorField>
 
-      {!useDefault &&
+      {selectedPresetId === 'custom' &&
         stages.map((stage, index) => {
           const locked = index === 0 || index === stages.length - 1;
           const Icon = getTaskStageIcon(stage.icon);
@@ -131,10 +188,33 @@ export default function EditorStagesField({ stages, onChange }: EditorStagesFiel
           );
         })}
 
-      {!useDefault && (
-        <button type="button" className="editor-stage-add" onClick={addStage}>
-          + Add stage
-        </button>
+      {selectedPresetId === 'custom' && (
+        <>
+          <button type="button" className="editor-stage-add" onClick={addStage}>
+            + Add stage
+          </button>
+
+          {!isSavingPreset ? (
+            <button type="button" onClick={() => setIsSavingPreset(true)}>
+              Save as preset
+            </button>
+          ) : (
+            <div className="editor-preset-save">
+              <input
+                type="text"
+                placeholder="Preset name"
+                value={newPresetName}
+                onChange={(event) => setNewPresetName(event.target.value)}
+              />
+              <button type="button" className="editor-save" onClick={handleSavePreset}>
+                Save
+              </button>
+              <button type="button" className="editor-cancel" onClick={() => setIsSavingPreset(false)}>
+                Cancel
+              </button>
+            </div>
+          )}
+        </>
       )}
     </>
   );
