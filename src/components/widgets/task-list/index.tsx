@@ -10,6 +10,7 @@ import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
 import { formatDue, getDueUrgency } from './dueDate';
+import SubtaskModal from './SubtaskModal';
 import TaskModal from './TaskModal';
 import TaskRepeatModal from './TaskRepeatModal';
 import { useTaskLists } from './useTaskLists';
@@ -17,6 +18,7 @@ import { useTaskLists } from './useTaskLists';
 const NEW_LIST_OPTION = '__new__';
 
 type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
+type SubtaskModalState = { taskId: string; subtask: Subtask | null }; // null = adding
 
 function renderDueBadge(task: Task) {
   if (!task.due) return undefined;
@@ -84,6 +86,8 @@ export default function TaskListWidget() {
     updateSubtaskStage,
     updateTask,
     deleteTask,
+    addSubtask,
+    updateSubtask,
     reorderTasks,
     reorderSubtasks,
   } = useTaskLists();
@@ -91,6 +95,7 @@ export default function TaskListWidget() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
+  const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
   const showCompleted = widget.showCompleted ?? false;
   const [isAddListOpen, setIsAddListOpen] = useState(false);
 
@@ -226,6 +231,7 @@ export default function TaskListWidget() {
                         onReorderSubtasks={(taskId, activeId, overId) =>
                           reorderSubtasks(activeList.id, taskId, activeId, overId)
                         }
+                        onAddSubtask={(taskId) => setSubtaskModalState({ taskId, subtask: null })}
                         extra={
                           <>
                             {renderDueBadge(task)}
@@ -276,6 +282,23 @@ export default function TaskListWidget() {
         onSubmit={(task) => {
           if (activeList) updateTask(activeList.id, task);
           setRepeatModalTask(null);
+        }}
+      />
+
+      <SubtaskModal
+        key={`subtask-${subtaskModalState ? (subtaskModalState.subtask?.id ?? 'add') : 'idle'}`}
+        isOpen={subtaskModalState !== null}
+        subtask={subtaskModalState?.subtask ?? null}
+        onClose={() => setSubtaskModalState(null)}
+        onSubmit={(values) => {
+          if (activeList && subtaskModalState) {
+            if (subtaskModalState.subtask) {
+              updateSubtask(activeList.id, subtaskModalState.taskId, subtaskModalState.subtask.id, values);
+            } else {
+              addSubtask(activeList.id, subtaskModalState.taskId, values);
+            }
+          }
+          setSubtaskModalState(null);
         }}
       />
     </>

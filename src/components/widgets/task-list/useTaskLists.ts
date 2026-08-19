@@ -6,7 +6,7 @@ import { readTaskLists, writeTaskLists } from '../../../lib/firebaseSync';
 import { reorderWithinGroup } from '../../../lib/reorder';
 import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
 import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
-import type { Subtask, Task, TaskList, TaskStageDef } from '../../../lib/types';
+import type { Subtask, Task, TaskList, TaskRepeat, TaskStageDef } from '../../../lib/types';
 
 // Module-level singleton — every widget instance sharing the same in-memory
 // copy, one Firestore writer.
@@ -294,6 +294,68 @@ function reorderTasks(
   }));
 }
 
+// Does not re-derive the parent's stage from its subtasks (via
+// deriveStageFromSubtasks) — matches the already-existing behavior of the
+// old modal-based add path, where clampTaskStages never did that either,
+// only clamped bounds. A parent shown "done" with zero subtasks that then
+// gets a fresh incomplete subtask added won't visually un-done itself
+// until some other stage-changing operation touches it — a pre-existing
+// latent gap, not something introduced or fixed here.
+function addSubtask(listId: string, taskId: string, input: { title: string; due: string; repeat?: TaskRepeat }) {
+  const now = new Date().toISOString();
+  const subtask: Subtask = {
+    id: crypto.randomUUID(),
+    title: input.title,
+    stage: 0,
+    due: input.due,
+    repeat: input.repeat,
+    completedAt: null,
+  };
+  updateList(listId, (list) => ({
+    ...list,
+    tasks: list.tasks.map((task) =>
+      task.id === taskId ? { ...task, subtasks: [...task.subtasks, subtask], updatedAt: now } : task
+    ),
+  }));
+}
+
+// Title/due/repeat only — never stage/completedAt, those are only ever
+// touched by the stage-toggle cascade functions above. Same
+// no-stage-re-derivation scope as addSubtask.
+function updateSubtask(
+  listId: string,
+  taskId: string,
+  subtaskId: string,
+  patch: { title: string; due: string; repeat?: TaskRepeat }
+) {
+  const now = new Date().toISOString();
+  updateList(listId, (list) => ({
+    ...list,
+    tasks: list.tasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            subtasks: task.subtasks.map((subtask) => (subtask.id === subtaskId ? { ...subtask, ...patch } : subtask)),
+            updatedAt: now,
+          }
+        : task
+    ),
+  }));
+}
+
+// Same no-stage-re-derivation scope as addSubtask.
+function deleteSubtask(listId: string, taskId: string, subtaskId: string) {
+  const now = new Date().toISOString();
+  updateList(listId, (list) => ({
+    ...list,
+    tasks: list.tasks.map((task) =>
+      task.id === taskId
+        ? { ...task, subtasks: task.subtasks.filter((subtask) => subtask.id !== subtaskId), updatedAt: now }
+        : task
+    ),
+  }));
+}
+
 function reorderSubtasks(listId: string, taskId: string, activeId: string, overId: string) {
   const now = new Date().toISOString();
   updateList(listId, (list) => ({
@@ -340,6 +402,9 @@ export function useTaskLists() {
     updateSubtaskStage,
     updateTask,
     deleteTask,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
     reorderTasks,
     reorderSubtasks,
   };

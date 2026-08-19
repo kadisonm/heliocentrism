@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { createElement } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
@@ -32,6 +32,7 @@ type TaskItemHandlers<T extends Task> = {
   onDelete: (id: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onReorderSubtasks?: (taskId: string, activeId: string, overId: string) => void;
+  onAddSubtask?: (taskId: string) => void;
   // Slot for an extra bit of UI rendered next to the title (e.g. the due
   // date badge).
   extra?: ReactNode;
@@ -93,6 +94,7 @@ export function TaskItemView<T extends Task>({
   onDelete,
   onToggleSubtask,
   onReorderSubtasks,
+  onAddSubtask,
   extra,
   renderSubtaskExtra,
   dragRef,
@@ -130,6 +132,18 @@ export function TaskItemView<T extends Task>({
 
       <div className="task-item__content">
         <div className="task-item__toolbar">
+          {onAddSubtask && (
+            <button
+              type="button"
+              className="task-item__toolbar-button"
+              onClick={() => onAddSubtask(task.id)}
+              title="Add subtask"
+              aria-label={`Add subtask to ${task.title}`}
+            >
+              <Plus size={13} />
+            </button>
+          )}
+
           <button
             type="button"
             className="task-item__toolbar-button"
