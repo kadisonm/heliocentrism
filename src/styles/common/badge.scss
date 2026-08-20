@@ -1,0 +1,57 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.badge--interactive {
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
+
+.badge--none {
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--text);
+}
+
+.badge--accent {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.badge--success {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+}
+
+.badge--warning {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning);
+}
+
+.badge--error {
+  background: color-mix(in srgb, var(--error) 16%, transparent);
+  color: var(--error);
+}
+
+.badge--secondary {
+  background: color-mix(in srgb, var(--secondary) 18%, transparent);
+  color: var(--secondary);
+}
+
+.badge--muted {
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  color: var(--muted);
+}

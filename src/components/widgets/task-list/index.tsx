@@ -1,17 +1,19 @@
 'use client';
 
-import { Clock, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Eye, EyeOff, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
 import { isTaskDone } from '../../../lib/taskCascade';
-import { formatNextOccurrence } from '../../../lib/taskRepeat';
+import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/taskRepeat';
 import type { Subtask, Task, TaskList } from '../../../lib/types';
+import Badge from '../../common/Badge';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import FloatingToolbar, { type FloatingToolbarPosition } from '../../shared/tasks/FloatingToolbar';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
-import { formatDue, getDueUrgency } from './dueDate';
+import TaskDueModal from './TaskDueModal';
+import { dueBadgeColor, formatDue, formatDueFull, getDueUrgency } from './dueDate';
 import SubtaskModal from './SubtaskModal';
 import TaskListSwitcher from './TaskListSwitcher';
 import TaskModal from './TaskModal';
@@ -32,61 +34,71 @@ type ActiveToolbar =
   | { type: 'task'; taskId: string; position: FloatingToolbarPosition }
   | { type: 'subtask'; taskId: string; subtaskId: string; position: FloatingToolbarPosition };
 
-function renderDueBadge(task: Task) {
+function renderDueBadge(task: Task, onClick: () => void) {
   if (!task.due) return undefined;
   return (
-    <span className={`task-item__due task-item__due--${getDueUrgency(task.due)}`}>
-      {formatDue(task.due)}
-    </span>
+    <Badge
+      icon={Calendar}
+      title={formatDue(task.due)}
+      ariaLabel={`Due ${formatDueFull(task.due)}`}
+      color={dueBadgeColor(getDueUrgency(task.due))}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    />
   );
 }
 
 function renderRepeatBadge(task: Task, onClick: () => void) {
   if (!task.repeat) return undefined;
   return (
-    <button
-      type="button"
-      className="task-item__repeat"
+    <Badge
+      icon={RefreshCw}
+      title={formatNextOccurrence(task.repeat)}
+      ariaLabel={`Repeats ${formatNextOccurrenceFull(task.repeat)}`}
+      color="muted"
       onClick={(event) => {
         event.stopPropagation();
         onClick();
       }}
-      title="Edit repeat"
-      aria-label={`Edit repeat schedule for ${task.title}`}
-    >
-      <Clock size={13} />
-      {formatNextOccurrence(task.repeat)}
-    </button>
+    />
   );
 }
 
 function renderSubtaskDueBadge(subtask: Subtask) {
   if (!subtask.due) return undefined;
   return (
-    <span className={`task-item__due task-item__due--${getDueUrgency(subtask.due)}`}>
-      {formatDue(subtask.due)}
-    </span>
+    <Badge
+      icon={Calendar}
+      title={formatDue(subtask.due)}
+      ariaLabel={`Due ${formatDueFull(subtask.due)}`}
+      color={dueBadgeColor(getDueUrgency(subtask.due))}
+    />
   );
 }
 
-// Read-only counterpart to renderRepeatBadge — a plain span, not a
-// clickable button. Editing a subtask's repeat happens through its own
-// toolbar's Edit button (opens SubtaskModal), not by clicking this badge.
+// Read-only counterpart to renderRepeatBadge — no onClick, so Badge renders
+// a plain span rather than a button. Editing a subtask's repeat happens
+// through its own toolbar's Edit button (opens SubtaskModal), not by
+// clicking this badge.
 function renderSubtaskRepeatBadge(subtask: Subtask) {
   if (!subtask.repeat) return undefined;
   return (
-    <span className="task-item__repeat task-item__repeat--static">
-      <Clock size={13} />
-      {formatNextOccurrence(subtask.repeat)}
-    </span>
+    <Badge
+      icon={RefreshCw}
+      title={formatNextOccurrence(subtask.repeat)}
+      ariaLabel={`Repeats ${formatNextOccurrenceFull(subtask.repeat)}`}
+      color="muted"
+    />
   );
 }
 
 function renderSubtaskExtra(subtask: Subtask) {
   return (
     <>
-      {renderSubtaskDueBadge(subtask)}
       {renderSubtaskRepeatBadge(subtask)}
+      {renderSubtaskDueBadge(subtask)}
     </>
   );
 }
@@ -113,6 +125,7 @@ export default function TaskListWidget() {
   const selectedListId = widget.selectedListId;
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
+  const [dueModalTask, setDueModalTask] = useState<Task | null>(null);
   const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
   const [activeToolbar, setActiveToolbar] = useState<ActiveToolbar | null>(null);
   const [listPendingDelete, setListPendingDelete] = useState<TaskList | null>(null);
@@ -333,8 +346,8 @@ export default function TaskListWidget() {
                           }
                           extra={
                             <>
-                              {renderDueBadge(task)}
                               {renderRepeatBadge(task, () => setRepeatModalTask(task))}
+                              {renderDueBadge(task, () => setDueModalTask(task))}
                             </>
                           }
                           renderSubtaskExtra={renderSubtaskExtra}
@@ -366,8 +379,8 @@ export default function TaskListWidget() {
                         }
                         extra={
                           <>
-                            {renderDueBadge(task)}
                             {renderRepeatBadge(task, () => setRepeatModalTask(task))}
+                            {renderDueBadge(task, () => setDueModalTask(task))}
                           </>
                         }
                         renderSubtaskExtra={renderSubtaskExtra}
@@ -424,6 +437,17 @@ export default function TaskListWidget() {
         onSubmit={(task) => {
           if (activeList) updateTask(activeList.id, task);
           setRepeatModalTask(null);
+        }}
+      />
+
+      <TaskDueModal
+        key={`due-${dueModalTask?.id ?? 'idle'}`}
+        isOpen={dueModalTask !== null}
+        task={dueModalTask}
+        onClose={() => setDueModalTask(null)}
+        onSubmit={(task) => {
+          if (activeList) updateTask(activeList.id, task);
+          setDueModalTask(null);
         }}
       />
 

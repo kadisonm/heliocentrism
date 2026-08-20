@@ -4,6 +4,11 @@
 .widget-content-shell {
   width: 100%;
   height: 100%;
+  // Lets task-item.scss query the widget's own inline size (its column
+  // width in the grid) rather than the viewport, so badges can switch to a
+  // vertical stack when this particular widget is narrow.
+  container-type: inline-size;
+  container-name: widget-content;
 }
 
 .widget-content {

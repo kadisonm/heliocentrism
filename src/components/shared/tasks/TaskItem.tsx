@@ -5,6 +5,7 @@ import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode } from 'react
 import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
 import { getTaskStageIcon } from '../../../lib/taskStageIcons';
 import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
+import Badge from '../../common/Badge';
 import type { FloatingToolbarPosition } from './FloatingToolbar';
 import SortableTaskList from './SortableTaskList';
 import { useSettings } from './useSettings';
@@ -156,14 +157,15 @@ export function TaskItemView<T extends Task>({
             {task.title}
           </p>
 
-          {extra}
-
           <div className="task-item__header-actions">
+            {extra}
             {!isBlankStage(activeStage) && (
-              <span className={`task-item__stage task-item__stage--${activeStage.color}`}>
-                {StageIcon && createElement(StageIcon, { size: 12 })}
-                {activeStage.name && <span>{activeStage.name}</span>}
-              </span>
+              <Badge
+                icon={StageIcon}
+                title={activeStage.name || undefined}
+                ariaLabel={`Status: ${stageAriaLabel(activeStage, task.stage)}`}
+                color={activeStage.color}
+              />
             )}
           </div>
         </div>
@@ -317,7 +319,7 @@ function SubtaskRowView({
       <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
         {subtask.title}
       </p>
-      {extra}
+      <div className="task-item__header-actions">{extra}</div>
     </div>
   );
 }

@@ -147,53 +147,15 @@
   align-items: center;
   gap: 0.4rem;
   flex-shrink: 0;
-}
 
-.task-item__stage {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  border-radius: 999px;
-  padding: 0.18rem 0.5rem;
-  font-size: 0.62rem;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: opacity 0.15s ease;
-}
-
-.task-item__stage--none {
-  background: color-mix(in srgb, var(--muted) 20%, transparent);
-  color: var(--text);
-}
-
-.task-item__stage--accent {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-}
-
-.task-item__stage--success {
-  background: color-mix(in srgb, var(--success) 18%, transparent);
-  color: var(--success);
-}
-
-.task-item__stage--warning {
-  background: color-mix(in srgb, var(--warning) 16%, transparent);
-  color: var(--warning);
-}
-
-.task-item__stage--error {
-  background: color-mix(in srgb, var(--error) 16%, transparent);
-  color: var(--error);
-}
-
-.task-item__stage--secondary {
-  background: color-mix(in srgb, var(--secondary) 18%, transparent);
-  color: var(--secondary);
-}
-
-.task-item__stage--muted {
-  background: color-mix(in srgb, var(--muted) 18%, transparent);
-  color: var(--muted);
+  // A slim widget doesn't have room for repeat/due/status side by side
+  // without squeezing the title — stack them instead, still anchored to
+  // the same top-right corner.
+  @container widget-content (max-width: 340px) {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+  }
 }
 
 .task-item__description {
@@ -263,57 +225,6 @@
   &.is-done {
     color: var(--muted);
     text-decoration: line-through;
-  }
-}
-
-// The only part of this file about due dates.
-.task-item__due {
-  flex-shrink: 0;
-  font-size: 0.72rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.task-item__due--today {
-  color: var(--warning);
-}
-
-.task-item__due--overdue {
-  color: var(--error);
-}
-
-// A clickable counterpart to .task-item__due — shows when a repeating task
-// will next come back, and opens TaskRepeatModal on click. No urgency-color
-// variants: there's no "overdue" concept for a repeat schedule.
-.task-item__repeat {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 0.72rem;
-  color: var(--muted);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.15s ease;
-
-  &:hover {
-    color: var(--text);
-  }
-
-  // Read-only counterpart for a subtask's own repeat badge — <span>-based,
-  // no onClick. Same look minus the pointer cursor/hover shift that would
-  // otherwise misleadingly imply it's clickable; subtasks get no
-  // click-to-edit affordance on the live board until a future "Task
-  // Toolbar" phase.
-  &.task-item__repeat--static {
-    cursor: default;
-
-    &:hover {
-      color: var(--muted);
-    }
   }
 }
 

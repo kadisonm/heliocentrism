@@ -1,3 +1,4 @@
+import { formatRelativeDateTime } from './relativeDate';
 import { deriveStageFromSubtasks, isTaskDone } from './taskCascade';
 import type { RepeatUnit, Subtask, Task, TaskRepeat, TaskStageDef } from './types';
 
@@ -230,13 +231,26 @@ export function resetDueSubtasks(task: Task, now: Date = new Date()): { task: Ta
   };
 }
 
+// "Tomorrow, 9 am" / "In 2 days, 9 am" out to a week, then an absolute
+// short date — see formatRelativeDateTime.
 export function formatNextOccurrence(repeat: TaskRepeat, now: Date = new Date()): string {
   const next = getNextOccurrence(repeat, now);
   if (!next) return 'Repeat ended';
 
+  return formatRelativeDateTime(next, now);
+}
+
+// Full date/time, used as the repeat badge's hover/aria label rather than
+// its visible (abbreviated) text.
+export function formatNextOccurrenceFull(repeat: TaskRepeat, now: Date = new Date()): string {
+  const next = getNextOccurrence(repeat, now);
+  if (!next) return 'Repeat ended';
+
   return next.toLocaleString(undefined, {
-    month: 'short',
+    weekday: 'long',
+    month: 'long',
     day: 'numeric',
+    year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   });
