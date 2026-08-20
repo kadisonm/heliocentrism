@@ -42,6 +42,15 @@ export default function Modal({ isOpen, onClose, title, scope, scopeLabel, child
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !mounted) return null;
 
   const ScopeIcon = scope ? SCOPE_ICONS[scope] : null;

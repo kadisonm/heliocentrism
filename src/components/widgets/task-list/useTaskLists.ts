@@ -380,6 +380,23 @@ function createList(name: string): string {
   return id;
 }
 
+function renameList(listId: string, name: string) {
+  updateList(listId, (list) => ({ ...list, name }));
+}
+
+// Bypasses persist()'s `taskLists.length > 0` guard deliberately: that
+// guard exists to avoid clobbering Firestore during the pre-load race
+// (module-scope `taskLists` starts as `[]` before ensureLoaded() resolves),
+// but deleting someone's last remaining list is a legitimate explicit
+// action that SHOULD write an empty array — going through persist() here
+// would silently skip the sync and the deleted list would reappear on
+// next load.
+function deleteList(listId: string) {
+  taskLists = taskLists.filter((list) => list.id !== listId);
+  notify();
+  writeTaskLists(taskLists);
+}
+
 export function useTaskLists() {
   useEffect(() => {
     ensureLoaded();
@@ -397,6 +414,8 @@ export function useTaskLists() {
     taskLists: currentTaskLists,
     isLoading: currentIsLoading,
     createList,
+    renameList,
+    deleteList,
     addTask,
     updateTaskStage,
     updateSubtaskStage,

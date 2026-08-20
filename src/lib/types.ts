@@ -128,6 +128,10 @@ export type DashboardWidget = {
   // Not surfaced in any settings modal; toggled via the widget's own
   // show/hide button. Defaults to false (hidden) when unset.
   showCompleted?: boolean;
+  // Task List widget only — which list is currently shown. Not surfaced in
+  // any settings modal; changed via the widget's own list switcher. Falls
+  // back to the first list when unset (or when it points at a deleted one).
+  selectedListId?: string;
 };
 
 // Each breakpoint owns its widgets and their layout together, as one unit

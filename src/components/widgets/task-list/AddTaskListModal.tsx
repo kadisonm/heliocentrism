@@ -3,15 +3,26 @@
 import { useState } from 'react';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
+import type { TaskList } from '../../../lib/types';
 
 type AddTaskListModalProps = {
   isOpen: boolean;
+  // Non-null while editing an existing list — read for its initial name
+  // only, matching SubtaskModal's `subtask: Subtask | null` convention.
+  list?: TaskList | null;
+  // Pre-fills the name field when adding — used when opened from the list
+  // switcher's "Add list" row, seeded with whatever the user had already
+  // typed into its search box. The parent remounts this component (via a
+  // `key` tied to the seed/list) whenever either changes, since this only
+  // matters at mount.
+  initialName?: string;
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onSubmit: (name: string) => void;
 };
 
-export default function AddTaskListModal({ isOpen, onClose, onCreate }: AddTaskListModalProps) {
-  const [name, setName] = useState('');
+export default function AddTaskListModal({ isOpen, list = null, initialName = '', onClose, onSubmit }: AddTaskListModalProps) {
+  const [name, setName] = useState(list?.name ?? initialName);
+  const isEditing = list !== null;
 
   const resetAndClose = () => {
     setName('');
@@ -22,13 +33,20 @@ export default function AddTaskListModal({ isOpen, onClose, onCreate }: AddTaskL
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    onCreate(trimmedName);
+    onSubmit(trimmedName);
     resetAndClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={resetAndClose} title="New List">
-      <div className="settings-section">
+    <Modal isOpen={isOpen} onClose={resetAndClose} title={isEditing ? 'Edit List' : 'New List'}>
+      {/* A <form> so Enter in the name field submits natively, no keydown handler needed. */}
+      <form
+        className="settings-section"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSubmit();
+        }}
+      >
         <SettingsField
           label="Name"
           value={name}
@@ -38,19 +56,18 @@ export default function AddTaskListModal({ isOpen, onClose, onCreate }: AddTaskL
 
         <div className="settings-actions">
           <button
-            type="button"
+            type="submit"
             className="settings-button settings-button-primary"
-            onClick={handleSubmit}
             disabled={!name.trim()}
           >
-            Create List
+            {isEditing ? 'Save' : 'Create List'}
           </button>
 
           <button type="button" className="settings-button" onClick={resetAndClose}>
             Cancel
           </button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }

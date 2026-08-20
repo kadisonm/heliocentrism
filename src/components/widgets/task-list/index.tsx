@@ -5,21 +5,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
 import { isTaskDone } from '../../../lib/taskCascade';
 import { formatNextOccurrence } from '../../../lib/taskRepeat';
-import type { Subtask, Task } from '../../../lib/types';
+import type { Subtask, Task, TaskList } from '../../../lib/types';
+import ConfirmDialog from '../../common/ConfirmDialog';
 import FloatingToolbar, { type FloatingToolbarPosition } from '../../shared/tasks/FloatingToolbar';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
 import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
 import AddTaskListModal from './AddTaskListModal';
 import { formatDue, getDueUrgency } from './dueDate';
 import SubtaskModal from './SubtaskModal';
+import TaskListSwitcher from './TaskListSwitcher';
 import TaskModal from './TaskModal';
 import TaskRepeatModal from './TaskRepeatModal';
 import { useTaskLists } from './useTaskLists';
 
-const NEW_LIST_OPTION = '__new__';
-
 type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
 type SubtaskModalState = { taskId: string; subtask: Subtask | null }; // null = adding
+// Drives AddTaskListModal — 'add' seeds the name field (e.g. from the
+// switcher's search box), 'edit' pre-fills it from an existing list.
+type ListModalState = { mode: 'add'; seedName: string } | { mode: 'edit'; list: TaskList };
 // Which single task/subtask row currently has its floating toolbar open —
 // click-driven, not hover. At most one at a time; both the task and
 // subtask rows stopPropagation() on click so only a genuine outside click
@@ -93,6 +96,8 @@ export default function TaskListWidget() {
     taskLists,
     isLoading,
     createList,
+    renameList,
+    deleteList,
     addTask,
     updateTaskStage,
     updateSubtaskStage,
@@ -105,13 +110,14 @@ export default function TaskListWidget() {
     reorderSubtasks,
   } = useTaskLists();
   const { widget, onUpdate } = useWidgetContext();
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const selectedListId = widget.selectedListId;
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
   const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
   const [activeToolbar, setActiveToolbar] = useState<ActiveToolbar | null>(null);
+  const [listPendingDelete, setListPendingDelete] = useState<TaskList | null>(null);
   const showCompleted = widget.showCompleted ?? false;
-  const [isAddListOpen, setIsAddListOpen] = useState(false);
+  const [listModalState, setListModalState] = useState<ListModalState | null>(null);
 
   // A click anywhere NOT inside a task/subtask row or the floating toolbar
   // itself is an "outside" click — close whatever toolbar is open. Uses
@@ -247,25 +253,14 @@ export default function TaskListWidget() {
         <div className="widget-content">
           <div className="widget-content-header">
             {taskLists.length > 0 ? (
-              <select
-                className="task-list-select"
-                value={activeList?.id ?? ''}
-                onChange={(event) => {
-                  if (event.target.value === NEW_LIST_OPTION) {
-                    setIsAddListOpen(true);
-                    return;
-                  }
-                  setSelectedListId(event.target.value);
-                }}
-                aria-label="Select task list"
-              >
-                {taskLists.map((list) => (
-                  <option key={list.id} value={list.id}>
-                    {list.name}
-                  </option>
-                ))}
-                <option value={NEW_LIST_OPTION}>+ New list</option>
-              </select>
+              <TaskListSwitcher
+                lists={taskLists}
+                activeList={activeList}
+                onSelect={(id) => onUpdate({ selectedListId: id })}
+                onRequestDelete={setListPendingDelete}
+                onRequestCreate={(name) => setListModalState({ mode: 'add', seedName: name })}
+                onRequestEdit={(list) => setListModalState({ mode: 'edit', list })}
+              />
             ) : (
               <h2>Task List</h2>
             )}
@@ -306,7 +301,7 @@ export default function TaskListWidget() {
                     <button
                       type="button"
                       className="widget-add-button"
-                      onClick={() => setIsAddListOpen(true)}
+                      onClick={() => setListModalState({ mode: 'add', seedName: '' })}
                       title="Create list"
                       aria-label="Create list"
                     >
@@ -406,9 +401,19 @@ export default function TaskListWidget() {
       />
 
       <AddTaskListModal
-        isOpen={isAddListOpen}
-        onClose={() => setIsAddListOpen(false)}
-        onCreate={(name) => setSelectedListId(createList(name))}
+        key={`list-${listModalState ? (listModalState.mode === 'edit' ? listModalState.list.id : `add-${listModalState.seedName}`) : 'idle'}`}
+        isOpen={listModalState !== null}
+        list={listModalState?.mode === 'edit' ? listModalState.list : null}
+        initialName={listModalState?.mode === 'add' ? listModalState.seedName : ''}
+        onClose={() => setListModalState(null)}
+        onSubmit={(name) => {
+          if (listModalState?.mode === 'edit') {
+            renameList(listModalState.list.id, name);
+          } else {
+            onUpdate({ selectedListId: createList(name) });
+          }
+          setListModalState(null);
+        }}
       />
 
       <TaskRepeatModal
@@ -440,6 +445,19 @@ export default function TaskListWidget() {
       />
 
       {renderActiveToolbar()}
+
+      <ConfirmDialog
+        isOpen={listPendingDelete !== null}
+        title="Delete list?"
+        message={`Delete "${listPendingDelete?.name}" and all its tasks? This can't be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          if (listPendingDelete) deleteList(listPendingDelete.id);
+          setListPendingDelete(null);
+        }}
+        onCancel={() => setListPendingDelete(null)}
+      />
     </>
   );
 }

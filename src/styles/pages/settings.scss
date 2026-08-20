@@ -50,6 +50,15 @@
   line-height: 1.5;
 }
 
+// ConfirmDialog's body copy — same reasoning as .onboarding-intro above
+// (not .settings-help, which would double-margin as a first child here).
+.confirm-dialog__message {
+  margin: 0;
+  color: var(--muted-slate);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .settings-header {
   display: flex;
   align-items: center;
