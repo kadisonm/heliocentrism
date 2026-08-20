@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import type { Subtask } from '../../../lib/types';
 import EditorDueField from './EditorDueField';
+import EditorField from './EditorField';
 import EditorRepeatFields from './EditorRepeatFields';
 
 type EditorSubtaskListProps = {
@@ -50,6 +51,13 @@ export default function EditorSubtaskList({ subtasks, onAdd, onRemove, onUpdate 
 
             {isOpen && (
               <div className="editor-subtask__expanded">
+                <EditorField label="Description">
+                  <input
+                    type="text"
+                    value={subtask.description ?? ''}
+                    onChange={(event) => onUpdate(subtask.id, { description: event.target.value })}
+                  />
+                </EditorField>
                 <EditorDueField value={subtask.due} onChange={(due) => onUpdate(subtask.id, { due })} />
                 <EditorRepeatFields
                   repeat={subtask.repeat}

@@ -55,3 +55,24 @@
   background: color-mix(in srgb, var(--muted) 18%, transparent);
   color: var(--muted);
 }
+
+// "Set due date"/"Set repeat" placeholders — only ever mounted while the
+// parent row is hovered (see TaskItem.tsx's hoverExtra). A dashed outline
+// (vs. the filled pill the other badge colors use) reads as "not set yet,
+// click to add" rather than as a real value. The enter/exit fade+grow
+// itself lives on the .task-item__hover-reveal wrapper (task-item.scss),
+// not here — a `transition` there can reverse smoothly on hover-out,
+// which a mount-triggered `animation` on the badge itself couldn't.
+//
+// `outline`, not `border`: every other badge color has no border, so a
+// real border here would make this badge ~2px taller than its siblings —
+// small enough to be easy to miss, but enough that align-items: center on
+// .task-item__footer grows the whole row to fit it, even while this badge
+// stays on the same line as the others. `outline` draws without taking
+// any box space, so it can't perturb the row's height.
+.badge--ghost {
+  background: transparent;
+  outline: 1px dashed var(--border);
+  outline-offset: -1px;
+  color: var(--muted);
+}

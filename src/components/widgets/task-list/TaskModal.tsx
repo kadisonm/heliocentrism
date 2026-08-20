@@ -43,7 +43,15 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
   };
 
   const addSubtask = (title: string) => {
-    const subtask: Subtask = { id: crypto.randomUUID(), title, stage: 0, due: '', repeat: undefined, completedAt: null };
+    const subtask: Subtask = {
+      id: crypto.randomUUID(),
+      title,
+      description: '',
+      stage: 0,
+      due: '',
+      repeat: undefined,
+      completedAt: null,
+    };
     updateDraft('subtasks', [...draft.subtasks, subtask]);
   };
 

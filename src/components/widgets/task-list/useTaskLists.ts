@@ -301,11 +301,16 @@ function reorderTasks(
 // gets a fresh incomplete subtask added won't visually un-done itself
 // until some other stage-changing operation touches it — a pre-existing
 // latent gap, not something introduced or fixed here.
-function addSubtask(listId: string, taskId: string, input: { title: string; due: string; repeat?: TaskRepeat }) {
+function addSubtask(
+  listId: string,
+  taskId: string,
+  input: { title: string; description?: string; due: string; repeat?: TaskRepeat }
+) {
   const now = new Date().toISOString();
   const subtask: Subtask = {
     id: crypto.randomUUID(),
     title: input.title,
+    description: input.description,
     stage: 0,
     due: input.due,
     repeat: input.repeat,
@@ -319,14 +324,14 @@ function addSubtask(listId: string, taskId: string, input: { title: string; due:
   }));
 }
 
-// Title/due/repeat only — never stage/completedAt, those are only ever
-// touched by the stage-toggle cascade functions above. Same
+// Title/description/due/repeat only — never stage/completedAt, those are
+// only ever touched by the stage-toggle cascade functions above. Same
 // no-stage-re-derivation scope as addSubtask.
 function updateSubtask(
   listId: string,
   taskId: string,
   subtaskId: string,
-  patch: Partial<Pick<Subtask, 'title' | 'due' | 'repeat'>>
+  patch: Partial<Pick<Subtask, 'title' | 'description' | 'due' | 'repeat'>>
 ) {
   const now = new Date().toISOString();
   updateList(listId, (list) => ({

@@ -16,6 +16,7 @@ export type TaskStageDef = {
 export type Subtask = {
   id: string;
   title: string;
+  description?: string;
   stage: number; // index into the PARENT Task's `stages` — no list of its own
   due: string; // '' = unset, same sentinel convention as Task.due
   repeat?: TaskRepeat; // independent of the parent Task's own repeat

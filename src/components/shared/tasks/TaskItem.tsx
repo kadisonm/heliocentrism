@@ -49,6 +49,15 @@ type TaskItemHandlers = {
   // Per-subtask counterpart to `extra` — called once per subtask (not once
   // per Task) since each subtask's badges depend on its own due/repeat.
   renderSubtaskExtra?: (subtask: Subtask) => ReactNode;
+  // "Set due date"/"Set repeat" placeholder badges — built by the caller
+  // (which owns due/repeat formatting). Always in the DOM; visibility is
+  // driven purely by the .task-item__hover-reveal CSS (see task-item.scss)
+  // reacting to :hover on the row, rather than by mounting/unmounting them
+  // from JS — a JS-timed unmount kept racing the CSS transition it was
+  // supposed to wait for, snapping the last bit of the collapse instead of
+  // animating it.
+  hoverExtra?: ReactNode;
+  renderSubtaskHoverExtra?: (subtask: Subtask) => ReactNode;
 };
 
 type TaskItemProps<T extends Task> = TaskItemHandlers & { task: T };
@@ -108,6 +117,8 @@ export function TaskItemView<T extends Task>({
   onSubtaskRowClick,
   extra,
   renderSubtaskExtra,
+  hoverExtra,
+  renderSubtaskHoverExtra,
   dragRef,
   dragStyle,
   dragAttributes,
@@ -153,7 +164,7 @@ export function TaskItemView<T extends Task>({
 
         {task.description && <p className="task-item__description">{task.description}</p>}
 
-        {(extra || !isBlankStage(activeStage)) && (
+        {(extra || !isBlankStage(activeStage) || hoverExtra) && (
           <div className="task-item__footer">
             {!isBlankStage(activeStage) && (
               <Badge
@@ -164,6 +175,11 @@ export function TaskItemView<T extends Task>({
               />
             )}
             {extra}
+            {hoverExtra && (
+              <div className="task-item__hover-reveal">
+                <div className="task-item__hover-reveal-inner">{hoverExtra}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -178,6 +194,7 @@ export function TaskItemView<T extends Task>({
                   onToggle={() => {}}
                   onRowClick={() => {}}
                   extra={renderSubtaskExtra?.(subtask)}
+                  hoverExtra={renderSubtaskHoverExtra?.(subtask)}
                 />
               ))}
             </div>
@@ -194,6 +211,7 @@ export function TaskItemView<T extends Task>({
                     onToggle={() => {}}
                     onRowClick={() => {}}
                     extra={renderSubtaskExtra?.(subtask)}
+                    hoverExtra={renderSubtaskHoverExtra?.(subtask)}
                   />
                 ) : null;
               }}
@@ -208,6 +226,7 @@ export function TaskItemView<T extends Task>({
                     isActive={activeSubtaskId === subtask.id}
                     onRowClick={(position) => onSubtaskRowClick?.(subtask.id, position)}
                     extra={renderSubtaskExtra?.(subtask)}
+                    hoverExtra={renderSubtaskHoverExtra?.(subtask)}
                   />
                 ))}
               </div>
@@ -225,6 +244,7 @@ function SubtaskRow({
   isActive,
   onRowClick,
   extra,
+  hoverExtra,
 }: {
   subtask: Subtask;
   stages: TaskStageDef[];
@@ -232,6 +252,7 @@ function SubtaskRow({
   isActive?: boolean;
   onRowClick: (position: FloatingToolbarPosition) => void;
   extra?: ReactNode;
+  hoverExtra?: ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subtask.id,
@@ -250,6 +271,7 @@ function SubtaskRow({
       isActive={isActive}
       onRowClick={onRowClick}
       extra={extra}
+      hoverExtra={hoverExtra}
       isPlaceholder={isDragging}
       dragRef={setNodeRef}
       dragStyle={style}
@@ -266,6 +288,7 @@ type SubtaskRowViewProps = DragBindings & {
   isActive?: boolean;
   onRowClick: (position: FloatingToolbarPosition) => void;
   extra?: ReactNode;
+  hoverExtra?: ReactNode;
 };
 
 function SubtaskRowView({
@@ -275,6 +298,7 @@ function SubtaskRowView({
   isActive,
   onRowClick,
   extra,
+  hoverExtra,
   dragRef,
   dragStyle,
   dragAttributes,
@@ -315,7 +339,17 @@ function SubtaskRowView({
         <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
           {subtask.title}
         </p>
-        {extra && <div className="task-item__footer">{extra}</div>}
+        {subtask.description && <p className="task-item__description">{subtask.description}</p>}
+        {(extra || hoverExtra) && (
+          <div className="task-item__footer">
+            {extra}
+            {hoverExtra && (
+              <div className="task-item__hover-reveal">
+                <div className="task-item__hover-reveal-inner">{hoverExtra}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,12 @@ import EditorField from '../../shared/editor/EditorField';
 import EditorModal from '../../shared/editor/EditorModal';
 import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
 
-export type SubtaskFormValues = { title: string; due: string; repeat?: TaskRepeat };
+export type SubtaskFormValues = {
+  title: string;
+  description?: string;
+  due: string;
+  repeat?: TaskRepeat;
+};
 
 type SubtaskModalProps = {
   isOpen: boolean;
@@ -19,8 +24,8 @@ type SubtaskModalProps = {
 
 function createDraftValues(subtask: Subtask | null): SubtaskFormValues {
   return subtask
-    ? { title: subtask.title, due: subtask.due, repeat: subtask.repeat }
-    : { title: '', due: '', repeat: undefined };
+    ? { title: subtask.title, description: subtask.description, due: subtask.due, repeat: subtask.repeat }
+    : { title: '', description: '', due: '', repeat: undefined };
 }
 
 export default function SubtaskModal({ isOpen, subtask, onClose, onSubmit }: SubtaskModalProps) {
@@ -55,6 +60,14 @@ export default function SubtaskModal({ isOpen, subtask, onClose, onSubmit }: Sub
           type="text"
           value={draft.title}
           onChange={(event) => updateDraft('title', event.target.value)}
+        />
+      </EditorField>
+
+      <EditorField label="Description">
+        <input
+          type="text"
+          value={draft.description ?? ''}
+          onChange={(event) => updateDraft('description', event.target.value)}
         />
       </EditorField>
 

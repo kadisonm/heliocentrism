@@ -121,6 +121,67 @@ function renderSubtaskExtra(
   );
 }
 
+// "Set due date"/"Set repeat" placeholders — only ever passed as
+// `hoverExtra`/`renderSubtaskHoverExtra`, which TaskItem only mounts while
+// the row is hovered, so these never render for a task/subtask that
+// already has the field set.
+function renderSetDueBadge(onClick: () => void) {
+  return (
+    <Badge
+      icon={Calendar}
+      title="Set due date"
+      ariaLabel="Set due date"
+      className="badge--ghost"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    />
+  );
+}
+
+function renderSetRepeatBadge(onClick: () => void) {
+  return (
+    <Badge
+      icon={RefreshCw}
+      title="Set repeat"
+      ariaLabel="Set repeat"
+      className="badge--ghost"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    />
+  );
+}
+
+function renderTaskHoverExtra(
+  task: Task,
+  onEditRepeat: (target: EditTarget) => void,
+  onEditDue: (target: EditTarget) => void
+) {
+  return (
+    <>
+      {!task.repeat && renderSetRepeatBadge(() => onEditRepeat({ type: 'task', task }))}
+      {!task.due && renderSetDueBadge(() => onEditDue({ type: 'task', task }))}
+    </>
+  );
+}
+
+function renderSubtaskHoverExtra(
+  subtask: Subtask,
+  taskId: string,
+  onEditRepeat: (target: EditTarget) => void,
+  onEditDue: (target: EditTarget) => void
+) {
+  return (
+    <>
+      {!subtask.repeat && renderSetRepeatBadge(() => onEditRepeat({ type: 'subtask', taskId, subtask }))}
+      {!subtask.due && renderSetDueBadge(() => onEditDue({ type: 'subtask', taskId, subtask }))}
+    </>
+  );
+}
+
 export default function TaskListWidget() {
   const {
     taskLists,
@@ -371,6 +432,10 @@ export default function TaskListWidget() {
                           renderSubtaskExtra={(subtask) =>
                             renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
                           }
+                          hoverExtra={renderTaskHoverExtra(task, setRepeatTarget, setDueTarget)}
+                          renderSubtaskHoverExtra={(subtask) =>
+                            renderSubtaskHoverExtra(subtask, task.id, setRepeatTarget, setDueTarget)
+                          }
                           overlay
                         />
                       ) : null;
@@ -405,6 +470,10 @@ export default function TaskListWidget() {
                         }
                         renderSubtaskExtra={(subtask) =>
                           renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
+                        }
+                        hoverExtra={renderTaskHoverExtra(task, setRepeatTarget, setDueTarget)}
+                        renderSubtaskHoverExtra={(subtask) =>
+                          renderSubtaskHoverExtra(subtask, task.id, setRepeatTarget, setDueTarget)
                         }
                       />
                     ))}

@@ -147,6 +147,46 @@
   gap: 0.4rem;
 }
 
+// Wraps the "Set due date"/"Set repeat" placeholders (task-item__footer's
+// last children). Always in the DOM — reveal is driven purely by :hover
+// below, not by mounting/unmounting from React. A JS-timed unmount (tried
+// first, staged mount + a fixed-delay unmount; then refined to wait for a
+// `transitionend` event instead of a guessed delay) kept beating the
+// visible animation to the finish, snapping the last bit of the collapse
+// instead of animating it — CSS driving both the transition and the
+// visibility off the same :hover state can't drift out of sync with
+// itself the way a separate JS trigger could.
+//
+// grid-template-rows (not height: auto) is what makes 0 -> content-height
+// animatable at all — plain `height` can't transition to/from `auto`.
+.task-item__hover-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  // Collapsing (this resting state, applied whenever the row isn't
+  // hovered) uses ease-in rather than ease-out: ease-out front-loads most
+  // of the visible shrink into the first ~100ms and trails off almost
+  // imperceptibly after that, which reads as an abrupt snap rather than a
+  // continuous motion. ease-in keeps the shrink visible for the full
+  // duration instead.
+  transition: grid-template-rows 0.32s ease-in, opacity 0.32s ease-in;
+}
+
+.task-item:hover .task-item__hover-reveal,
+.subtask:hover .task-item__hover-reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 0.32s ease-out, opacity 0.32s ease-out;
+}
+
+.task-item__hover-reveal-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .task-item__subtasks {
   display: flex;
   flex-direction: column;
