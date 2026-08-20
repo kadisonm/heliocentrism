@@ -43,6 +43,10 @@ type TaskItemHandlers = {
   // Which one of this task's subtasks (if any) has its own toolbar shown.
   activeSubtaskId?: string | null;
   onSubtaskRowClick?: (subtaskId: string, position: FloatingToolbarPosition) => void;
+  // Opens the quick-edit modal for this task's Stage list. Task-only —
+  // subtasks share their parent's `stages` array rather than having their
+  // own, so there's nothing for a subtask-level equivalent to edit.
+  onEditStages?: (task: Task) => void;
   // Slot for an extra bit of UI rendered next to the title (e.g. the due
   // date badge).
   extra?: ReactNode;
@@ -115,6 +119,7 @@ export function TaskItemView<T extends Task>({
   onRowClick,
   activeSubtaskId,
   onSubtaskRowClick,
+  onEditStages,
   extra,
   renderSubtaskExtra,
   hoverExtra,
@@ -170,8 +175,12 @@ export function TaskItemView<T extends Task>({
               <Badge
                 icon={StageIcon}
                 title={activeStage.name || undefined}
-                ariaLabel={`Status: ${stageAriaLabel(activeStage, task.stage)}`}
+                ariaLabel={`Stage: ${stageAriaLabel(activeStage, task.stage)}`}
                 color={activeStage.color}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditStages?.(task);
+                }}
               />
             )}
             {extra}

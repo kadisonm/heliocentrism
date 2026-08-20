@@ -3,7 +3,7 @@
 import { Calendar, Eye, EyeOff, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
-import { isTaskDone } from '../../../lib/taskCascade';
+import { clampTaskStages, isTaskDone } from '../../../lib/taskCascade';
 import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/taskRepeat';
 import type { Subtask, Task, TaskList } from '../../../lib/types';
 import Badge from '../../common/Badge';
@@ -18,6 +18,7 @@ import SubtaskModal from './SubtaskModal';
 import TaskListSwitcher from './TaskListSwitcher';
 import TaskModal from './TaskModal';
 import TaskRepeatModal from './TaskRepeatModal';
+import TaskStagesModal from './TaskStagesModal';
 import { useTaskLists } from './useTaskLists';
 
 type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
@@ -205,6 +206,9 @@ export default function TaskListWidget() {
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
   const [repeatTarget, setRepeatTarget] = useState<EditTarget | null>(null);
   const [dueTarget, setDueTarget] = useState<EditTarget | null>(null);
+  // Task-only (see TaskItem.tsx's onEditStages) — subtasks share their
+  // parent's `stages` array, so there's no subtask variant of this target.
+  const [stagesTarget, setStagesTarget] = useState<Task | null>(null);
   const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
   const [activeToolbar, setActiveToolbar] = useState<ActiveToolbar | null>(null);
   const [listPendingDelete, setListPendingDelete] = useState<TaskList | null>(null);
@@ -423,6 +427,7 @@ export default function TaskListWidget() {
                           onReorderSubtasks={(taskId, activeId, overId) =>
                             reorderSubtasks(activeList.id, taskId, activeId, overId)
                           }
+                          onEditStages={setStagesTarget}
                           extra={
                             <>
                               {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
@@ -462,6 +467,7 @@ export default function TaskListWidget() {
                         onSubtaskRowClick={(subtaskId, position) =>
                           toggleSubtaskToolbar(task.id, subtaskId, position)
                         }
+                        onEditStages={setStagesTarget}
                         extra={
                           <>
                             {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
@@ -549,6 +555,23 @@ export default function TaskListWidget() {
             updateSubtask(activeList.id, dueTarget.taskId, dueTarget.subtask.id, { due });
           }
           setDueTarget(null);
+        }}
+      />
+
+      <TaskStagesModal
+        key={`stages-${stagesTarget?.id ?? 'idle'}`}
+        isOpen={stagesTarget !== null}
+        stages={stagesTarget?.stages ?? []}
+        onClose={() => setStagesTarget(null)}
+        onSubmit={(stages) => {
+          if (!activeList || !stagesTarget) return;
+          // clampTaskStages re-derives the task's own stage AND every
+          // subtask's stage against the new (possibly shorter) list —
+          // stages are shared with subtasks (see TaskItem.tsx), so a
+          // shrink here can otherwise leave a stage index pointing past
+          // the end of the array.
+          updateTask(activeList.id, clampTaskStages({ ...stagesTarget, stages }));
+          setStagesTarget(null);
         }}
       />
 
