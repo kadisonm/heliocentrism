@@ -23,7 +23,7 @@
 
 .badge--none {
   background: color-mix(in srgb, var(--muted) 20%, transparent);
-  color: var(--text);
+  color: var(--muted);
 }
 
 .badge--accent {

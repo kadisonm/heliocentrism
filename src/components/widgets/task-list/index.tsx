@@ -22,6 +22,15 @@ import { useTaskLists } from './useTaskLists';
 
 type TaskModalState = { mode: 'add' } | { mode: 'edit'; task: Task };
 type SubtaskModalState = { taskId: string; subtask: Subtask | null }; // null = adding
+// Which task or subtask a repeat/due quick-edit modal is currently open
+// for — shared by both TaskRepeatModal and TaskDueModal, which work on a
+// plain value rather than a Task, so this is what routes their onSubmit to
+// updateTask vs updateSubtask.
+type EditTarget = { type: 'task'; task: Task } | { type: 'subtask'; taskId: string; subtask: Subtask };
+
+function editTargetId(target: EditTarget): string {
+  return target.type === 'task' ? target.task.id : target.subtask.id;
+}
 // Drives AddTaskListModal — 'add' seeds the name field (e.g. from the
 // switcher's search box), 'edit' pre-fills it from an existing list.
 type ListModalState = { mode: 'add'; seedName: string } | { mode: 'edit'; list: TaskList };
@@ -66,7 +75,7 @@ function renderRepeatBadge(task: Task, onClick: () => void) {
   );
 }
 
-function renderSubtaskDueBadge(subtask: Subtask) {
+function renderSubtaskDueBadge(subtask: Subtask, onClick: () => void) {
   if (!subtask.due) return undefined;
   return (
     <Badge
@@ -74,15 +83,15 @@ function renderSubtaskDueBadge(subtask: Subtask) {
       title={formatDue(subtask.due)}
       ariaLabel={`Due ${formatDueFull(subtask.due)}`}
       color={dueBadgeColor(getDueUrgency(subtask.due))}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
     />
   );
 }
 
-// Read-only counterpart to renderRepeatBadge — no onClick, so Badge renders
-// a plain span rather than a button. Editing a subtask's repeat happens
-// through its own toolbar's Edit button (opens SubtaskModal), not by
-// clicking this badge.
-function renderSubtaskRepeatBadge(subtask: Subtask) {
+function renderSubtaskRepeatBadge(subtask: Subtask, onClick: () => void) {
   if (!subtask.repeat) return undefined;
   return (
     <Badge
@@ -90,15 +99,24 @@ function renderSubtaskRepeatBadge(subtask: Subtask) {
       title={formatNextOccurrence(subtask.repeat)}
       ariaLabel={`Repeats ${formatNextOccurrenceFull(subtask.repeat)}`}
       color="muted"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
     />
   );
 }
 
-function renderSubtaskExtra(subtask: Subtask) {
+function renderSubtaskExtra(
+  subtask: Subtask,
+  taskId: string,
+  onEditRepeat: (target: EditTarget) => void,
+  onEditDue: (target: EditTarget) => void
+) {
   return (
     <>
-      {renderSubtaskRepeatBadge(subtask)}
-      {renderSubtaskDueBadge(subtask)}
+      {renderSubtaskRepeatBadge(subtask, () => onEditRepeat({ type: 'subtask', taskId, subtask }))}
+      {renderSubtaskDueBadge(subtask, () => onEditDue({ type: 'subtask', taskId, subtask }))}
     </>
   );
 }
@@ -124,8 +142,8 @@ export default function TaskListWidget() {
   const { widget, onUpdate } = useWidgetContext();
   const selectedListId = widget.selectedListId;
   const [modalState, setModalState] = useState<TaskModalState | null>(null);
-  const [repeatModalTask, setRepeatModalTask] = useState<Task | null>(null);
-  const [dueModalTask, setDueModalTask] = useState<Task | null>(null);
+  const [repeatTarget, setRepeatTarget] = useState<EditTarget | null>(null);
+  const [dueTarget, setDueTarget] = useState<EditTarget | null>(null);
   const [subtaskModalState, setSubtaskModalState] = useState<SubtaskModalState | null>(null);
   const [activeToolbar, setActiveToolbar] = useState<ActiveToolbar | null>(null);
   const [listPendingDelete, setListPendingDelete] = useState<TaskList | null>(null);
@@ -346,11 +364,13 @@ export default function TaskListWidget() {
                           }
                           extra={
                             <>
-                              {renderRepeatBadge(task, () => setRepeatModalTask(task))}
-                              {renderDueBadge(task, () => setDueModalTask(task))}
+                              {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
+                              {renderDueBadge(task, () => setDueTarget({ type: 'task', task }))}
                             </>
                           }
-                          renderSubtaskExtra={renderSubtaskExtra}
+                          renderSubtaskExtra={(subtask) =>
+                            renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
+                          }
                           overlay
                         />
                       ) : null;
@@ -379,11 +399,13 @@ export default function TaskListWidget() {
                         }
                         extra={
                           <>
-                            {renderRepeatBadge(task, () => setRepeatModalTask(task))}
-                            {renderDueBadge(task, () => setDueModalTask(task))}
+                            {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
+                            {renderDueBadge(task, () => setDueTarget({ type: 'task', task }))}
                           </>
                         }
-                        renderSubtaskExtra={renderSubtaskExtra}
+                        renderSubtaskExtra={(subtask) =>
+                          renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
+                        }
                       />
                     ))}
                   </SortableTaskList>
@@ -430,24 +452,34 @@ export default function TaskListWidget() {
       />
 
       <TaskRepeatModal
-        key={`repeat-${repeatModalTask?.id ?? 'idle'}`}
-        isOpen={repeatModalTask !== null}
-        task={repeatModalTask}
-        onClose={() => setRepeatModalTask(null)}
-        onSubmit={(task) => {
-          if (activeList) updateTask(activeList.id, task);
-          setRepeatModalTask(null);
+        key={`repeat-${repeatTarget ? editTargetId(repeatTarget) : 'idle'}`}
+        isOpen={repeatTarget !== null}
+        repeat={repeatTarget ? (repeatTarget.type === 'task' ? repeatTarget.task.repeat : repeatTarget.subtask.repeat) : undefined}
+        onClose={() => setRepeatTarget(null)}
+        onSubmit={(repeat) => {
+          if (!activeList || !repeatTarget) return;
+          if (repeatTarget.type === 'task') {
+            updateTask(activeList.id, { ...repeatTarget.task, repeat });
+          } else {
+            updateSubtask(activeList.id, repeatTarget.taskId, repeatTarget.subtask.id, { repeat });
+          }
+          setRepeatTarget(null);
         }}
       />
 
       <TaskDueModal
-        key={`due-${dueModalTask?.id ?? 'idle'}`}
-        isOpen={dueModalTask !== null}
-        task={dueModalTask}
-        onClose={() => setDueModalTask(null)}
-        onSubmit={(task) => {
-          if (activeList) updateTask(activeList.id, task);
-          setDueModalTask(null);
+        key={`due-${dueTarget ? editTargetId(dueTarget) : 'idle'}`}
+        isOpen={dueTarget !== null}
+        due={dueTarget ? (dueTarget.type === 'task' ? dueTarget.task.due : dueTarget.subtask.due) : ''}
+        onClose={() => setDueTarget(null)}
+        onSubmit={(due) => {
+          if (!activeList || !dueTarget) return;
+          if (dueTarget.type === 'task') {
+            updateTask(activeList.id, { ...dueTarget.task, due });
+          } else {
+            updateSubtask(activeList.id, dueTarget.taskId, dueTarget.subtask.id, { due });
+          }
+          setDueTarget(null);
         }}
       />
 

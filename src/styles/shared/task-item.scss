@@ -100,76 +100,61 @@
   color: var(--background);
 }
 
+// A single gap here (rather than each child declaring its own margin-top)
+// is deliberate: title/description/footer have different font sizes and
+// line-heights (badges aren't text-driven at all), so equal margin-top
+// values on each don't actually read as equal gaps — the line-height
+// leading baked into each element's own box differs. One gap value on the
+// shared parent is the one place that's guaranteed to apply uniformly.
 .task-item__content {
   flex: 1;
   min-width: 0;
-}
-
-.task-item__header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-
-  // Wrap mode can grow the title to multiple lines — top-align the row
-  // instead of vertically centering the due/status badges against it.
-  &.task-item__header--wrap {
-    align-items: flex-start;
-  }
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .task-item__title {
-  flex: 1;
-  min-width: 0;
   margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text);
   line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 
   &.is-done {
     color: var(--muted);
     text-decoration: line-through;
   }
-
-  &.task-item__title--wrap {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-  }
-}
-
-.task-item__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
-
-  // A slim widget doesn't have room for repeat/due/status side by side
-  // without squeezing the title — stack them instead, still anchored to
-  // the same top-right corner.
-  @container widget-content (max-width: 340px) {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.3rem;
-  }
 }
 
 .task-item__description {
-  margin: 0.3rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.4;
+}
+
+// Badges/extras (due date, repeat, status) — sits below the title/
+// description as its own row rather than beside the title, so a long
+// wrapped title never clips or crowds them. Shared by both the task
+// (task-item__content) and subtask (subtask__content) contexts — spacing
+// above this comes entirely from those parents' own `gap`, not from here.
+.task-item__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .task-item__subtasks {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  margin-top: 0.5rem;
+  // .task-item__content's own gap (0.3rem) already applies above this —
+  // this tops it up to the larger 0.5rem this nested list deliberately
+  // wants, to read as a step down in hierarchy rather than just another row.
+  margin-top: 0.2rem;
   padding-left: 0.75rem;
   border-left: 2px solid var(--border);
 }
@@ -177,7 +162,9 @@
 .subtask {
   position: relative;
   display: flex;
-  align-items: center;
+  // A wrapped title can grow to multiple lines — top-align instead of
+  // vertically centering the toggle against it.
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.2rem 0.35rem;
   border-radius: 0.5rem;
@@ -212,15 +199,20 @@
   }
 }
 
-.subtask__title {
+.subtask__content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  // Same reasoning as .task-item__content above.
+  gap: 0.3rem;
+}
+
+.subtask__title {
   margin: 0;
   font-size: 0.875rem;
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 
   &.is-done {
     color: var(--muted);

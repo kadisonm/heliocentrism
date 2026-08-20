@@ -3,7 +3,6 @@ import type {
   PomodoroSettings,
   StagePreset,
   TaskList,
-  TaskTitleOverflow,
   ThemeSettings,
 } from './types';
 
@@ -28,8 +27,6 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   mode: 'system',
 };
 
-export const DEFAULT_TASK_TITLE_OVERFLOW: TaskTitleOverflow = 'wrap';
-
 // User-saved stage presets start empty — the built-in Normal/Kanban presets
 // are pure code constants (src/lib/taskCascade.ts) and never stored here.
 export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
@@ -38,14 +35,12 @@ export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
 export type AppSettings = {
   pomodoro: PomodoroSettings;
   theme: ThemeSettings;
-  taskTitleOverflow: TaskTitleOverflow;
   customStagePresets: StagePreset[];
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pomodoro: DEFAULT_POMODORO_SETTINGS,
   theme: DEFAULT_THEME_SETTINGS,
-  taskTitleOverflow: DEFAULT_TASK_TITLE_OVERFLOW,
   customStagePresets: DEFAULT_CUSTOM_STAGE_PRESETS,
 };
 

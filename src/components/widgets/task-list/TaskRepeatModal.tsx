@@ -1,28 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import type { Task, TaskRepeat } from '../../../lib/types';
+import type { TaskRepeat } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorModal from '../../shared/editor/EditorModal';
 import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
 
 type TaskRepeatModalProps = {
   isOpen: boolean;
-  task: Task | null; // null while closed
+  repeat: TaskRepeat | undefined; // current value, whether editing a task's or a subtask's
   onClose: () => void;
-  onSubmit: (task: Task) => void;
+  onSubmit: (repeat: TaskRepeat | undefined) => void;
 };
 
-// A focused quick-edit surface for just a task's repeat schedule, opened by
-// clicking its clock badge — the same EditorRepeatFields used inline in
-// TaskModal, so both entry points edit the exact same data with no
+// A focused quick-edit surface for just a repeat schedule, opened by
+// clicking a clock badge — works on the plain value rather than a Task, so
+// the same modal serves both a task's and a subtask's repeat (mirrors
+// TaskDueModal). Reuses the same EditorRepeatFields used inline in
+// TaskModal, so every entry point edits the exact same data with no
 // duplicated fields/logic.
-export default function TaskRepeatModal({ isOpen, task, onClose, onSubmit }: TaskRepeatModalProps) {
-  const [draftRepeat, setDraftRepeat] = useState<TaskRepeat | undefined>(task?.repeat);
+export default function TaskRepeatModal({ isOpen, repeat, onClose, onSubmit }: TaskRepeatModalProps) {
+  const [draftRepeat, setDraftRepeat] = useState<TaskRepeat | undefined>(repeat);
 
   const handleSubmit = () => {
-    if (!task) return;
-    onSubmit({ ...task, repeat: draftRepeat });
+    onSubmit(draftRepeat);
   };
 
   return (

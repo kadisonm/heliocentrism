@@ -8,7 +8,6 @@ import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import Badge from '../../common/Badge';
 import type { FloatingToolbarPosition } from './FloatingToolbar';
 import SortableTaskList from './SortableTaskList';
-import { useSettings } from './useSettings';
 
 function stageAriaLabel(stageDef: TaskStageDef, index: number): string {
   return stageDef.name || `stage ${index + 1}`;
@@ -120,8 +119,6 @@ export function TaskItemView<T extends Task>({
   const activeStage = task.stages[task.stage];
   const nextStage = task.stages[nextIndex];
   const StageIcon = getTaskStageIcon(activeStage.icon);
-  const { settings } = useSettings();
-  const isWrap = settings.taskTitleOverflow === 'wrap';
 
   return (
     <div
@@ -150,15 +147,14 @@ export function TaskItemView<T extends Task>({
       </button>
 
       <div className="task-item__content">
-        <div className={`task-item__header ${isWrap ? 'task-item__header--wrap' : ''}`}>
-          <p
-            className={`task-item__title ${isTaskDone(task) ? 'is-done' : ''} ${isWrap ? 'task-item__title--wrap' : ''}`}
-          >
-            {task.title}
-          </p>
+        <p className={`task-item__title ${isTaskDone(task) ? 'is-done' : ''}`}>
+          {task.title}
+        </p>
 
-          <div className="task-item__header-actions">
-            {extra}
+        {task.description && <p className="task-item__description">{task.description}</p>}
+
+        {(extra || !isBlankStage(activeStage)) && (
+          <div className="task-item__footer">
             {!isBlankStage(activeStage) && (
               <Badge
                 icon={StageIcon}
@@ -167,10 +163,9 @@ export function TaskItemView<T extends Task>({
                 color={activeStage.color}
               />
             )}
+            {extra}
           </div>
-        </div>
-
-        {task.description && <p className="task-item__description">{task.description}</p>}
+        )}
 
         {task.subtasks.length > 0 &&
           (overlay ? (
@@ -316,10 +311,12 @@ function SubtaskRowView({
       >
         {SubtaskStageIcon && createElement(SubtaskStageIcon, { size: 12 })}
       </button>
-      <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
-        {subtask.title}
-      </p>
-      <div className="task-item__header-actions">{extra}</div>
+      <div className="subtask__content">
+        <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
+          {subtask.title}
+        </p>
+        {extra && <div className="task-item__footer">{extra}</div>}
+      </div>
     </div>
   );
 }

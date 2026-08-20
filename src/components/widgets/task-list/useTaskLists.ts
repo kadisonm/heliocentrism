@@ -326,7 +326,7 @@ function updateSubtask(
   listId: string,
   taskId: string,
   subtaskId: string,
-  patch: { title: string; due: string; repeat?: TaskRepeat }
+  patch: Partial<Pick<Subtask, 'title' | 'due' | 'repeat'>>
 ) {
   const now = new Date().toISOString();
   updateList(listId, (list) => ({

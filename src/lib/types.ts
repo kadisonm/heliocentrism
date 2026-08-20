@@ -103,10 +103,6 @@ export type ThemeSettings = {
   mode: ThemeMode;
 };
 
-// Whether a task's title truncates with an ellipsis or wraps onto multiple
-// lines — a global display preference, not tied to any one widget.
-export type TaskTitleOverflow = 'truncate' | 'wrap';
-
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
 export type PhotoWidgetConfig = {
