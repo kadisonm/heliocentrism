@@ -172,7 +172,16 @@
   transition: grid-template-rows 0.32s ease-in, opacity 0.32s ease-in;
 }
 
-.task-item:hover .task-item__hover-reveal,
+// The task-level rule is scoped with child combinators down to the
+// task's OWN footer rather than a plain descendant selector: :hover on
+// .task-item is also true while the pointer is over any of its nested
+// subtasks (hovering a descendant counts as hovering the ancestor), and a
+// plain ".task-item:hover .task-item__hover-reveal" would then match
+// EVERY subtask's reveal too — not just the one under the cursor — since
+// a descendant selector doesn't care which element actually has :hover,
+// only that some ancestor does. .subtask reveals don't need the same
+// scoping since subtasks are siblings, not nested in each other.
+.task-item:hover > .task-item__content > .task-item__footer > .task-item__hover-reveal,
 .subtask:hover .task-item__hover-reveal {
   grid-template-rows: 1fr;
   opacity: 1;
@@ -187,6 +196,27 @@
   overflow: hidden;
 }
 
+// Used to line .task-item__subtasks' indent guide (border-left, below)
+// up with the MIDDLE of the parent .task-toggle circle, and the subtask
+// rows' own .task-toggle back out to the same left edge as the parent's
+// title/description/badges (.task-item__content) — see the margin-left/
+// padding-left comments below for the full derivation, walked in
+// concrete px at a 16px root to make sure the two account for every
+// offset along the way. Two things this got wrong before landing here:
+// an earlier version silently dropped $subtask-left-padding from the
+// padding-left side, landing the subtask's own toggle 0.35rem left of
+// where it should be; a later version pointed the guide's LEFT EDGE at
+// the toggle's center, when it's the guide's own MIDPOINT (half its
+// border-width further right) that needs to land there. Verified against
+// an actual browser render (Firefox headless, pixel-inspected), not just
+// worked out on paper — the math looked right on paper the first two
+// times too. Local to this one alignment; not meant as general-purpose
+// tokens.
+$task-toggle-width: 1.25rem; // .task-toggle, below
+$task-item-gap: 0.75rem; // .task-item, below — space between .task-toggle and .task-item__content
+$task-item-subtasks-border-width: 2px; // this element's own border-left
+$subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-toggle, below
+
 .task-item__subtasks {
   display: flex;
   flex-direction: column;
@@ -195,8 +225,30 @@
   // this tops it up to the larger 0.5rem this nested list deliberately
   // wants, to read as a step down in hierarchy rather than just another row.
   margin-top: 0.2rem;
-  padding-left: 0.75rem;
-  border-left: 2px solid var(--border);
+  // .task-item__subtasks starts out aligned with .task-item__content
+  // ($task-toggle-width + $task-item-gap from .task-item's own content
+  // edge, since .task-item__content is .task-toggle's flex sibling: at
+  // 16px root that's 20px + 12px = 32px). Pull it back left by half the
+  // toggle's width plus the row gap (10px + 12px = 22px), landing the
+  // guide's OWN left edge at 32-22=10px — the toggle's horizontal
+  // center — then one more half-border-width (1px) on top of that, so
+  // it's the 2px-wide guide's MIDPOINT (not its left edge) that ends up
+  // at the toggle's center: 9px, so the guide spans [9,11] and its
+  // midpoint is exactly 10px.
+  margin-left: calc(-1 * (#{$task-toggle-width} / 2 + #{$task-item-gap}) - #{$task-item-subtasks-border-width} / 2);
+  // Closes the gap back up from the guide's new left edge (9px) to
+  // where the subtask rows' own .task-toggle needs to land: the same
+  // 32px left edge as .task-item__content (title/description/badges)
+  // above. That's 23px, minus the guide's own border-width (2px, since
+  // the border comes before this padding starts) and .subtask's OWN
+  // left padding (5.6px at 16px root, since that's what actually pushes
+  // ITS .task-toggle in from .subtask's edge) — 23px - 2px - 5.6px =
+  // 15.4px (0.9625rem).
+  padding-left: calc(
+    #{$task-toggle-width} / 2 + #{$task-item-gap} + #{$task-item-subtasks-border-width} / 2 -
+      #{$task-item-subtasks-border-width} - #{$subtask-left-padding}
+  );
+  border-left: $task-item-subtasks-border-width solid var(--border);
 }
 
 .subtask {
@@ -206,13 +258,42 @@
   // vertically centering the toggle against it.
   align-items: flex-start;
   gap: 0.5rem;
-  padding: 0.2rem 0.35rem;
+  // 0.2rem more than the row actually wants (0.2rem 0.35rem), paired with
+  // an equal-and-opposite negative margin below. The padding grows this
+  // row's box outward by 0.2rem top/bottom — half of .task-item__subtasks'
+  // 0.4rem gap — and the negative margin pulls it back so the content
+  // renders at the same position as before and the flex `gap` math still
+  // nets out to the same 0.4rem between adjacent rows' original edges.
+  // Net effect: each row's hoverable/paintable box now reaches exactly to
+  // the midpoint of the gap above and below it, so two adjacent rows'
+  // boxes meet with no dead pixels between them — the cursor is always
+  // "inside" one row or the other while crossing what still LOOKS like an
+  // empty gap (nothing is painted there at rest, since the background
+  // only appears on :hover), which is what stops the flicker of a
+  // subtask's hover ending and the next one's starting a beat later as
+  // the pointer crosses between them.
+  padding: 0.4rem 0.35rem;
+  margin: -0.2rem 0;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
     background: var(--panel-soft);
+  }
+
+  // The first/last row has no neighbor on that side to meet halfway, so
+  // giving it the same treatment there would just pull it 0.2rem into the
+  // surrounding whitespace (task-item__subtasks' own margin-top, or the
+  // bottom of the whole subtasks block) instead of into another gap.
+  &:first-child {
+    margin-top: 0;
+    padding-top: 0.2rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0.2rem;
   }
 
   // Click-driven "selected" state — see .task-item--active above, same
