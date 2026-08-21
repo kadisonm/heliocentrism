@@ -1,13 +1,13 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Pilcrow } from 'lucide-react';
+import { EllipsisVertical, Pilcrow } from 'lucide-react';
 import { createElement, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
 import { getTaskStageIcon } from '../../../lib/taskStageIcons';
 import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import Badge from '../../common/Badge';
-import type { FloatingToolbarPosition } from './FloatingToolbar';
+import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import SortableTaskList from './SortableTaskList';
 
 // Click-to-edit text used for both task/subtask title and description —
@@ -152,7 +152,7 @@ function getStagePosition(stage: number, stagesLength: number): 'start' | 'middl
   return 'middle';
 }
 
-function clickPosition(event: MouseEvent): FloatingToolbarPosition {
+function clickPosition(event: MouseEvent): ContextMenuPosition {
   return { x: event.clientX, y: event.clientY };
 }
 
@@ -160,15 +160,16 @@ type TaskItemHandlers = {
   onToggle: (id: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onReorderSubtasks?: (taskId: string, activeId: string, overId: string) => void;
-  // Whether THIS task's own toolbar should be shown — click-driven (not
-  // hover). The caller (index.tsx) owns the actual toolbar UI, rendered as
-  // a floating popup anchored to the click position this reports, not
-  // inside this component.
+  // Whether THIS task's own "..." context menu should be shown — driven
+  // by clicking the hover-revealed menu button (task-item__menu-button,
+  // below), not the row itself. The caller (index.tsx) owns the actual
+  // menu UI, rendered as a floating popup anchored to the click position
+  // this reports, not inside this component.
   isActive?: boolean;
-  onRowClick?: (position: FloatingToolbarPosition) => void;
-  // Which one of this task's subtasks (if any) has its own toolbar shown.
+  onRowClick?: (position: ContextMenuPosition) => void;
+  // Which one of this task's subtasks (if any) has its own menu shown.
   activeSubtaskId?: string | null;
-  onSubtaskRowClick?: (subtaskId: string, position: FloatingToolbarPosition) => void;
+  onSubtaskRowClick?: (subtaskId: string, position: ContextMenuPosition) => void;
   // Opens the quick-edit modal for this task's Stage list. Task-only —
   // subtasks share their parent's `stages` array rather than having their
   // own, so there's nothing for a subtask-level equivalent to edit.
@@ -274,10 +275,6 @@ export function TaskItemView<T extends Task>({
       ref={dragRef}
       style={dragStyle}
       className={`task-item ${isPlaceholder ? 'task-item--placeholder' : ''} ${isActive ? 'task-item--active' : ''}`}
-      onClick={(event: MouseEvent) => {
-        event.stopPropagation();
-        onRowClick?.(clickPosition(event));
-      }}
       {...dragAttributes}
       {...dragListeners}
     >
@@ -387,6 +384,21 @@ export function TaskItemView<T extends Task>({
             </SortableTaskList>
           ))}
       </div>
+
+      {!overlay && (
+        <button
+          type="button"
+          className="task-item__toolbar-button task-item__menu-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRowClick?.(clickPosition(event));
+          }}
+          title="More actions"
+          aria-label={`More actions for ${task.title}`}
+        >
+          <EllipsisVertical size={14} />
+        </button>
+      )}
     </div>
   );
 }
@@ -405,7 +417,7 @@ function SubtaskRow({
   stages: TaskStageDef[];
   onToggle: () => void;
   isActive?: boolean;
-  onRowClick: (position: FloatingToolbarPosition) => void;
+  onRowClick: (position: ContextMenuPosition) => void;
   onUpdateSubtask?: (patch: Partial<Pick<Subtask, 'title' | 'description'>>) => void;
   extra?: ReactNode;
   hoverExtra?: ReactNode;
@@ -443,7 +455,7 @@ type SubtaskRowViewProps = DragBindings & {
   stages: TaskStageDef[];
   onToggle: () => void;
   isActive?: boolean;
-  onRowClick: (position: FloatingToolbarPosition) => void;
+  onRowClick: (position: ContextMenuPosition) => void;
   onUpdateSubtask?: (patch: Partial<Pick<Subtask, 'title' | 'description'>>) => void;
   extra?: ReactNode;
   hoverExtra?: ReactNode;
@@ -473,10 +485,6 @@ function SubtaskRowView({
       ref={dragRef}
       style={dragStyle}
       className={`subtask ${isPlaceholder ? 'subtask--placeholder' : ''} ${isActive ? 'subtask--active' : ''}`}
-      onClick={(event: MouseEvent) => {
-        event.stopPropagation();
-        onRowClick(clickPosition(event));
-      }}
       {...dragAttributes}
       {...dragListeners}
     >
@@ -522,6 +530,19 @@ function SubtaskRowView({
           </div>
         )}
       </div>
+
+      <button
+        type="button"
+        className="task-item__toolbar-button task-item__menu-button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRowClick(clickPosition(event));
+        }}
+        title="More actions"
+        aria-label={`More actions for ${subtask.title}`}
+      >
+        <EllipsisVertical size={14} />
+      </button>
     </div>
   );
 }

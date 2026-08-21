@@ -11,9 +11,10 @@ import EditorRepeatFields from '../../shared/editor/EditorRepeatFields';
 import EditorStagesField from '../../shared/editor/EditorStagesField';
 import EditorSubtaskList from '../../shared/editor/EditorSubtaskList';
 
+// Add-only — editing an existing task's title/description happens inline
+// now, and stage/due/repeat each have their own dedicated badge.
 type TaskModalProps = {
   isOpen: boolean;
-  task: Task | null; // null while creating a new task
   onClose: () => void;
   // createdAt/updatedAt/completedAt are (re)stamped by useTaskLists.
   onSubmit: (task: Task) => void;
@@ -34,9 +35,8 @@ function createDraftTask(): Task {
   };
 }
 
-export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModalProps) {
-  const [draft, setDraft] = useState<Task>(() => task ?? createDraftTask());
-  const isEditing = task !== null;
+export default function TaskModal({ isOpen, onClose, onSubmit }: TaskModalProps) {
+  const [draft, setDraft] = useState<Task>(createDraftTask);
 
   const updateDraft = <K extends keyof Task>(field: K, value: Task[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -78,15 +78,9 @@ export default function TaskModal({ isOpen, task, onClose, onSubmit }: TaskModal
   return (
     <EditorModal
       isOpen={isOpen}
-      title={isEditing ? 'Edit Task' : 'Add Task'}
+      title="Add Task"
       onClose={onClose}
-      actions={
-        <EditorActions
-          onCancel={onClose}
-          onSave={handleSubmit}
-          saveLabel={isEditing ? 'Save' : 'Add Task'}
-        />
-      }
+      actions={<EditorActions onCancel={onClose} onSave={handleSubmit} saveLabel="Add Task" />}
     >
       <EditorField label="Title">
         <input

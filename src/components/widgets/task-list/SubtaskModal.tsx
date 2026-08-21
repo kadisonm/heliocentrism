@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Subtask, TaskRepeat } from '../../../lib/types';
+import type { TaskRepeat } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorDueField from '../../shared/editor/EditorDueField';
 import EditorField from '../../shared/editor/EditorField';
@@ -15,22 +15,20 @@ export type SubtaskFormValues = {
   repeat?: TaskRepeat;
 };
 
+// Add-only — editing an existing subtask's title/description happens
+// inline now, and due/repeat each have their own dedicated badge.
 type SubtaskModalProps = {
   isOpen: boolean;
-  subtask: Subtask | null; // non-null while editing — read for initial values only
   onClose: () => void;
   onSubmit: (values: SubtaskFormValues) => void;
 };
 
-function createDraftValues(subtask: Subtask | null): SubtaskFormValues {
-  return subtask
-    ? { title: subtask.title, description: subtask.description, due: subtask.due, repeat: subtask.repeat }
-    : { title: '', description: '', due: '', repeat: undefined };
+function createDraftValues(): SubtaskFormValues {
+  return { title: '', description: '', due: '', repeat: undefined };
 }
 
-export default function SubtaskModal({ isOpen, subtask, onClose, onSubmit }: SubtaskModalProps) {
-  const [draft, setDraft] = useState<SubtaskFormValues>(() => createDraftValues(subtask));
-  const isEditing = subtask !== null;
+export default function SubtaskModal({ isOpen, onClose, onSubmit }: SubtaskModalProps) {
+  const [draft, setDraft] = useState<SubtaskFormValues>(createDraftValues);
 
   const updateDraft = <K extends keyof SubtaskFormValues>(field: K, value: SubtaskFormValues[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -45,15 +43,9 @@ export default function SubtaskModal({ isOpen, subtask, onClose, onSubmit }: Sub
   return (
     <EditorModal
       isOpen={isOpen}
-      title={isEditing ? 'Edit Subtask' : 'Add Subtask'}
+      title="Add Subtask"
       onClose={onClose}
-      actions={
-        <EditorActions
-          onCancel={onClose}
-          onSave={handleSubmit}
-          saveLabel={isEditing ? 'Save' : 'Add Subtask'}
-        />
-      }
+      actions={<EditorActions onCancel={onClose} onSave={handleSubmit} saveLabel="Add Subtask" />}
     >
       <EditorField label="Title">
         <input

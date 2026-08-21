@@ -7,16 +7,19 @@
   background: var(--panel-soft);
   border-radius: 0.85rem;
   padding: 0.75rem;
-  cursor: pointer;
+  // Not `pointer` — the row itself has no click action anymore (see
+  // task-item__menu-button below); only specific things inside it
+  // (toggle, badges, editable text, the menu button) are interactive.
+  cursor: default;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
     background: var(--panel-strong);
   }
 
-  // Click-driven "selected" state (toggled in TaskItem.tsx) — its floating
-  // toolbar (see .floating-toolbar) is a separate portaled popup, not
-  // anchored inside this card, so all this needs to do is lighten the row.
+  // Click-driven "selected" state (toggled in TaskItem.tsx) — its context
+  // menu (see .context-menu) is a separate portaled popup, not anchored
+  // inside this card, so all this needs to do is lighten the row.
   &.task-item--active {
     background: var(--panel-strong);
   }
@@ -392,7 +395,8 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
   padding: 0.4rem 0.35rem;
   margin: -0.2rem 0;
   border-radius: 0.5rem;
-  cursor: pointer;
+  // See .task-item's own comment on why not `pointer`.
+  cursor: default;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
@@ -459,23 +463,11 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
   }
 }
 
-// A context-menu-style popup, portaled to document.body by FloatingToolbar
-// and positioned via inline style (its `left`/`bottom` set to the click
-// point, so it opens upward-and-rightward with its bottom-left corner
-// pinned to the cursor) — not anchored inside any particular row.
-.floating-toolbar {
-  position: fixed;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem;
-  border: 1px solid var(--border);
-  background: var(--panel-strong);
-  border-radius: 0.6rem;
-  box-shadow: 0 4px 12px var(--shadow);
-  z-index: 1000;
-}
-
+// The hover-revealed "..." trigger inside each task/subtask row that
+// opens its context menu (see ContextMenu/MenuItem in
+// components/common/context-menu — the popup itself and its items are
+// fully generic now, styled in styles/common/context-menu.scss, not
+// here).
 .task-item__toolbar-button {
   display: inline-flex;
   align-items: center;
@@ -494,9 +486,22 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
     background: var(--accent-soft);
     color: var(--text);
   }
+}
 
-  &.task-item__toolbar-button--danger:hover {
-    background: color-mix(in srgb, var(--error) 16%, transparent);
-    color: var(--error);
-  }
+// Adds the hover-reveal on top of .task-item__toolbar-button's own
+// icon-button styling, for the "..." trigger specifically. Also forced
+// visible via .task-item--active/.subtask--active (isActive in
+// TaskItem.tsx) so it doesn't disappear out from under an already-open
+// menu the moment the pointer leaves the row for the (separately
+// portaled) ContextMenu popup itself.
+.task-item__menu-button {
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.task-item:hover > .task-item__menu-button,
+.subtask:hover > .task-item__menu-button,
+.task-item--active > .task-item__menu-button,
+.subtask--active > .task-item__menu-button {
+  opacity: 1;
 }

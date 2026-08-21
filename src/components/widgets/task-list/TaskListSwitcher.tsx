@@ -28,7 +28,7 @@ type TaskListSwitcherProps = {
 // A search-filterable replacement for the old plain <select>, styled as a
 // real bordered trigger (matching every other <select>/input in the app)
 // with a portaled dropdown panel — the app's first custom popover/combobox.
-// Portaled to document.body for the same reason Modal and FloatingToolbar
+// Portaled to document.body for the same reason Modal and ContextMenu
 // are: react-grid-layout positions widgets via CSS `transform`, which traps
 // position: fixed descendants inside the widget's box otherwise.
 export default function TaskListSwitcher({
