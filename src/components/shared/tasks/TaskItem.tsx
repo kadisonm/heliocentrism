@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { createElement } from 'react';
+import { Pilcrow } from 'lucide-react';
+import { createElement, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
 import { getTaskStageIcon } from '../../../lib/taskStageIcons';
@@ -8,6 +9,131 @@ import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import Badge from '../../common/Badge';
 import type { FloatingToolbarPosition } from './FloatingToolbar';
 import SortableTaskList from './SortableTaskList';
+
+// Click-to-edit text used for both task/subtask title and description —
+// `value`'s own display className is passed in (already carrying e.g.
+// `is-done`) so the trigger/input inherit it, rather than this component
+// owning any title/description-specific styling itself. Always edits via
+// a <textarea> (not <input>), for two reasons: it can actually show
+// wrapped multi-line text while typing (unlike an <input>, which never
+// wraps regardless of width), and Shift+Enter needs somewhere to put a
+// real newline character, which a single-line <input> can't hold at all.
+type InlineEditableFieldProps = {
+  value: string;
+  // Shown (in place of an empty value) when not editing; also what makes
+  // an empty field clickable to start editing at all, since a genuinely
+  // empty <button> would have nothing to click on.
+  placeholder?: string;
+  className: string;
+  ariaLabel: string;
+  // Title can't be blanked (there's nothing sensible to fall back to
+  // mid-list); description can, since that's exactly what brings the
+  // placeholder back.
+  allowEmpty?: boolean;
+  // Description-only: the Pilcrow icon shown before the placeholder.
+  // Only ever appears alongside the placeholder itself (empty value, not
+  // editing) — never once there's real content, and never while editing
+  // (see the isPlaceholder check below, which the editing branch doesn't
+  // have access to at all).
+  showPlaceholderIcon?: boolean;
+  onCommit: (value: string) => void;
+};
+
+function InlineEditableField({
+  value,
+  placeholder,
+  className,
+  ariaLabel,
+  allowEmpty = false,
+  showPlaceholderIcon = false,
+  onCommit,
+}: InlineEditableFieldProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const commit = () => {
+    setIsEditing(false);
+    const trimmed = draft.trim();
+    if (!trimmed && !allowEmpty) return; // silently keep the old value rather than blank it
+    if (trimmed !== value) onCommit(trimmed);
+  };
+
+  // A <textarea> never resizes itself — this re-measures its content
+  // height (collapsing to 'auto' first so shrinking a line back out
+  // actually registers, not just growth) on every keystroke and right
+  // when edit mode opens, so all of the text is visible while typing
+  // instead of scrolling inside a fixed one-line box.
+  useEffect(() => {
+    if (!isEditing) return;
+    const node = textareaRef.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+  }, [isEditing, draft]);
+
+  if (isEditing) {
+    return (
+      <textarea
+        ref={textareaRef}
+        className={`${className} task-item__editable-input`}
+        value={draft}
+        aria-label={ariaLabel}
+        rows={1}
+        autoFocus
+        onFocus={(event) => event.target.select()}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            commit();
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            setDraft(value);
+            setIsEditing(false);
+          }
+          // Shift+Enter falls through to the textarea's own default
+          // behavior and inserts a real newline.
+        }}
+      />
+    );
+  }
+
+  const isPlaceholder = !value && placeholder !== undefined;
+  const showIcon = isPlaceholder && showPlaceholderIcon;
+
+  const trigger = (
+    <button
+      type="button"
+      className={`${className} task-item__editable-trigger ${isPlaceholder ? 'task-item__editable-trigger--placeholder' : ''} ${showIcon ? 'task-item__editable-trigger--with-icon' : ''}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        setDraft(value);
+        setIsEditing(true);
+      }}
+    >
+      {/* Part of the button itself (not a separate sibling) so clicking
+          the icon starts editing too, same as clicking the text does. */}
+      {showIcon && <Pilcrow size={12} className="task-item__description-icon" />}
+      {isPlaceholder ? placeholder : value}
+    </button>
+  );
+
+  if (!showIcon) return trigger;
+
+  // Appears and disappears together with the rest of the trigger, using
+  // the same grid-template-rows height-collapse the due/repeat ghost
+  // badges use (see .task-item__hover-reveal) — nothing here the rest of
+  // the time, rather than reserving space for a placeholder that isn't
+  // shown.
+  return (
+    <div className="task-item__description-reveal">
+      <div className="task-item__description-reveal-inner">{trigger}</div>
+    </div>
+  );
+}
 
 function stageAriaLabel(stageDef: TaskStageDef, index: number): string {
   return stageDef.name || `stage ${index + 1}`;
@@ -47,6 +173,11 @@ type TaskItemHandlers = {
   // subtasks share their parent's `stages` array rather than having their
   // own, so there's nothing for a subtask-level equivalent to edit.
   onEditStages?: (task: Task) => void;
+  // Commits an inline title/description edit — takes the whole task since
+  // the caller's updateTask replaces it wholesale (there's no patch-based
+  // task updater, unlike updateSubtask below).
+  onUpdateTask?: (task: Task) => void;
+  onUpdateSubtask?: (taskId: string, subtaskId: string, patch: Partial<Pick<Subtask, 'title' | 'description'>>) => void;
   // Slot for an extra bit of UI rendered next to the title (e.g. the due
   // date badge).
   extra?: ReactNode;
@@ -120,6 +251,8 @@ export function TaskItemView<T extends Task>({
   activeSubtaskId,
   onSubtaskRowClick,
   onEditStages,
+  onUpdateTask,
+  onUpdateSubtask,
   extra,
   renderSubtaskExtra,
   hoverExtra,
@@ -163,11 +296,22 @@ export function TaskItemView<T extends Task>({
       </button>
 
       <div className="task-item__content">
-        <p className={`task-item__title ${isTaskDone(task) ? 'is-done' : ''}`}>
-          {task.title}
-        </p>
+        <InlineEditableField
+          value={task.title}
+          className={`task-item__title ${isTaskDone(task) ? 'is-done' : ''}`}
+          ariaLabel={`Edit title for ${task.title}`}
+          onCommit={(title) => onUpdateTask?.({ ...task, title })}
+        />
 
-        {task.description && <p className="task-item__description">{task.description}</p>}
+        <InlineEditableField
+          value={task.description ?? ''}
+          placeholder="Description..."
+          allowEmpty
+          showPlaceholderIcon
+          className="task-item__description"
+          ariaLabel={`Edit description for ${task.title}`}
+          onCommit={(description) => onUpdateTask?.({ ...task, description })}
+        />
 
         {(extra || !isBlankStage(activeStage) || hoverExtra) && (
           <div className="task-item__footer">
@@ -234,6 +378,7 @@ export function TaskItemView<T extends Task>({
                     onToggle={() => onToggleSubtask?.(task.id, subtask.id)}
                     isActive={activeSubtaskId === subtask.id}
                     onRowClick={(position) => onSubtaskRowClick?.(subtask.id, position)}
+                    onUpdateSubtask={(patch) => onUpdateSubtask?.(task.id, subtask.id, patch)}
                     extra={renderSubtaskExtra?.(subtask)}
                     hoverExtra={renderSubtaskHoverExtra?.(subtask)}
                   />
@@ -252,6 +397,7 @@ function SubtaskRow({
   onToggle,
   isActive,
   onRowClick,
+  onUpdateSubtask,
   extra,
   hoverExtra,
 }: {
@@ -260,6 +406,7 @@ function SubtaskRow({
   onToggle: () => void;
   isActive?: boolean;
   onRowClick: (position: FloatingToolbarPosition) => void;
+  onUpdateSubtask?: (patch: Partial<Pick<Subtask, 'title' | 'description'>>) => void;
   extra?: ReactNode;
   hoverExtra?: ReactNode;
 }) {
@@ -279,6 +426,7 @@ function SubtaskRow({
       onToggle={onToggle}
       isActive={isActive}
       onRowClick={onRowClick}
+      onUpdateSubtask={onUpdateSubtask}
       extra={extra}
       hoverExtra={hoverExtra}
       isPlaceholder={isDragging}
@@ -296,6 +444,7 @@ type SubtaskRowViewProps = DragBindings & {
   onToggle: () => void;
   isActive?: boolean;
   onRowClick: (position: FloatingToolbarPosition) => void;
+  onUpdateSubtask?: (patch: Partial<Pick<Subtask, 'title' | 'description'>>) => void;
   extra?: ReactNode;
   hoverExtra?: ReactNode;
 };
@@ -306,6 +455,7 @@ function SubtaskRowView({
   onToggle,
   isActive,
   onRowClick,
+  onUpdateSubtask,
   extra,
   hoverExtra,
   dragRef,
@@ -345,10 +495,22 @@ function SubtaskRowView({
         {SubtaskStageIcon && createElement(SubtaskStageIcon, { size: 12 })}
       </button>
       <div className="subtask__content">
-        <p className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}>
-          {subtask.title}
-        </p>
-        {subtask.description && <p className="task-item__description">{subtask.description}</p>}
+        <InlineEditableField
+          value={subtask.title}
+          className={`subtask__title ${isTaskDone({ stage: subtask.stage, stages }) ? 'is-done' : ''}`}
+          ariaLabel={`Edit title for ${subtask.title}`}
+          onCommit={(title) => onUpdateSubtask?.({ title })}
+        />
+
+        <InlineEditableField
+          value={subtask.description ?? ''}
+          placeholder="Description..."
+          allowEmpty
+          showPlaceholderIcon
+          className="task-item__description"
+          ariaLabel={`Edit description for ${subtask.title}`}
+          onCommit={(description) => onUpdateSubtask?.({ description })}
+        />
         {(extra || hoverExtra) && (
           <div className="task-item__footer">
             {extra}

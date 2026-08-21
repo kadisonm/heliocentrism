@@ -254,10 +254,21 @@ export default function TaskListWidget() {
     return found ?? taskLists[0] ?? null;
   }, [taskLists, selectedListId]);
 
-  const visibleTasks = useMemo(
-    () => (activeList ? activeList.tasks.filter((task) => showCompleted || !isTaskDone(task)) : []),
-    [activeList, showCompleted]
-  );
+  // "Hide completed" applies at both levels: a done task drops out
+  // entirely, and a not-done task keeps its own done subtasks hidden too
+  // — each task object here is otherwise passed straight through to
+  // TaskItem, so filtering `subtasks` here is what actually keeps them
+  // out of the rendered list (and the drag-reorder id set, which is
+  // derived from these same `subtasks` arrays inside TaskItem).
+  const visibleTasks = useMemo(() => {
+    if (!activeList) return [];
+    const tasks = activeList.tasks.filter((task) => showCompleted || !isTaskDone(task));
+    if (showCompleted) return tasks;
+    return tasks.map((task) => ({
+      ...task,
+      subtasks: task.subtasks.filter((subtask) => !isTaskDone({ stage: subtask.stage, stages: task.stages })),
+    }));
+  }, [activeList, showCompleted]);
 
   // The one floating toolbar popup — its buttons depend on whether a task
   // or a subtask is active, looked up fresh from activeList by id (rather
@@ -468,6 +479,10 @@ export default function TaskListWidget() {
                           toggleSubtaskToolbar(task.id, subtaskId, position)
                         }
                         onEditStages={setStagesTarget}
+                        onUpdateTask={(updatedTask) => updateTask(activeList.id, updatedTask)}
+                        onUpdateSubtask={(taskId, subtaskId, patch) =>
+                          updateSubtask(activeList.id, taskId, subtaskId, patch)
+                        }
                         extra={
                           <>
                             {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}

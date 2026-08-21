@@ -120,7 +120,11 @@
   font-weight: 500;
   color: var(--text);
   line-height: 1.4;
-  white-space: normal;
+  // pre-wrap (not plain `normal`): still wraps long lines the same way,
+  // but also renders an embedded "\n" (Shift+Enter — see
+  // InlineEditableField in TaskItem.tsx) as an actual line break instead
+  // of collapsing it to a space.
+  white-space: pre-wrap;
 
   &.is-done {
     color: var(--muted);
@@ -133,6 +137,119 @@
   font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+// Applied alongside .task-item__title/.task-item__description/
+// .subtask__title (see InlineEditableField in TaskItem.tsx) — resets the
+// <button>/<input> chrome those elements pick up so the click-to-edit
+// trigger reads as plain text until it's actually clicked, and the
+// active <input> stays visually anchored in place rather than jumping
+// around inside the row. Deliberately does NOT set font/color: that
+// would (at equal specificity, same file, declared after) override
+// .task-item__title/.task-item__description's own font-size/color —
+// exactly the bug that made the description briefly render at the same
+// size/color as the title. base.scss's blanket `button, input, select {
+// font: inherit; }` already resets the button's own UA font, and author
+// rules always beat UA ones for color regardless of order, so nothing
+// here needs to touch either property at all.
+.task-item__editable-trigger {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: text;
+  border-radius: 0.25rem;
+}
+
+// The empty-description placeholder — same trigger, just styled to read
+// as a hint rather than real content so it's obviously not something the
+// task actually has yet.
+.task-item__editable-trigger--placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+// Only applied alongside --placeholder, and only when showPlaceholderIcon
+// is set — lays the Pilcrow icon (now a child of this same button, not a
+// separate sibling, so clicking it also starts editing) out next to the
+// placeholder text. Every other use of .task-item__editable-trigger has
+// no icon, so this is kept as an opt-in modifier rather than baked into
+// the base rule — display:block there already renders a single text
+// child identically, with none of flex's edge cases around how a lone
+// item without an explicit basis wraps.
+.task-item__editable-trigger--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+// The active <textarea> — deliberately as close to invisible-chrome as
+// the trigger button above: no background, no border, no padding shift.
+// The only visible difference from the resting state is the text color,
+// which is the one thing that's supposed to change while editing.
+// font-family is the one property genuinely worth resetting here (a
+// <textarea>'s own UA default is often a different family entirely, e.g.
+// monospace, and unlike .task-item__editable-trigger — a <button>,
+// already covered by base.scss's blanket `button, input, select { font:
+// inherit; }` — nothing resets that for <textarea> elsewhere); font-size
+// and everything else is deliberately left alone so
+// .task-item__title/.task-item__description's own values keep applying
+// exactly as they do outside of editing.
+.task-item__editable-input {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  // The "white border" this was fixing wasn't actually a border — it was
+  // the browser's default focus ring, which every <textarea> gets on
+  // focus (and this is always focused the moment it mounts, via
+  // autoFocus in TaskItem.tsx) regardless of `border` being none.
+  outline: none;
+  padding: 0;
+  margin: 0;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+  color: var(--text);
+}
+
+// The Pilcrow icon shown before an empty description's "Description..."
+// placeholder — see InlineEditableField's showPlaceholderIcon. Never
+// shown once there's real content, and never while editing.
+.task-item__description-icon {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+// Empty description: icon + "Description..." placeholder appear and
+// disappear TOGETHER, using the same grid-template-rows height-collapse
+// technique as the due/repeat ghost badges (.task-item__hover-reveal,
+// below) — there's no real content here the rest of the time, so unlike
+// the icon-reveal above, this reserves no space until hovered. Scoped
+// the same way as .task-item__hover-reveal's task-level rule, with
+// child combinators down to its own direct parent — hovering a subtask
+// shouldn't also reveal the PARENT task's own description placeholder.
+.task-item__description-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-in;
+}
+
+.task-item:hover > .task-item__content > .task-item__description-reveal,
+.subtask:hover > .subtask__content > .task-item__description-reveal {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+
+// Just one child now (the trigger button, icon and all — see
+// InlineEditableField), so no flex/gap needed here; only the sizing
+// properties the grid-template-rows collapse above actually needs.
+.task-item__description-reveal-inner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 // Badges/extras (due date, repeat, stage) — sits below the title/
@@ -169,7 +286,7 @@
   // imperceptibly after that, which reads as an abrupt snap rather than a
   // continuous motion. ease-in keeps the shrink visible for the full
   // duration instead.
-  transition: grid-template-rows 0.32s ease-in, opacity 0.32s ease-in;
+  transition: grid-template-rows 0.2s ease-in, opacity 0.2s ease-in;
 }
 
 // The task-level rule is scoped with child combinators down to the
@@ -185,7 +302,7 @@
 .subtask:hover .task-item__hover-reveal {
   grid-template-rows: 1fr;
   opacity: 1;
-  transition: grid-template-rows 0.32s ease-out, opacity 0.32s ease-out;
+  transition: grid-template-rows 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .task-item__hover-reveal-inner {
@@ -333,7 +450,8 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
   margin: 0;
   font-size: 0.875rem;
   color: var(--text);
-  white-space: normal;
+  // See .task-item__title's own comment on why pre-wrap, not normal.
+  white-space: pre-wrap;
 
   &.is-done {
     color: var(--muted);
