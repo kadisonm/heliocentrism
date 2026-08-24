@@ -8,12 +8,16 @@ import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu'
 import { toContextMenuPosition } from './contextMenuPosition';
 import InlineEditableField from './InlineEditableField';
 import { isBlankStage, stageAriaLabel } from './taskStageDisplay';
-import { type DragBindings } from './useSortableDragBindings';
 
 // One row, shared by both a task and its subtasks — the only real
 // differences are the outer class prefix and that a subtask never shows a
 // Stage badge or nests children of its own (both driven by `variant`).
-type TaskRowProps = DragBindings & {
+type TaskRowProps = {
+  // dnd-kit v7 manages the drag transform/transition AND the placeholder/
+  // floating-clone visuals entirely on its own (see [data-dnd-dragging]
+  // and [data-dnd-placeholder] in task-item.scss) — this component only
+  // needs to hand it the ref (see useTaskSortable.ts).
+  dragRef?: (element: Element | null) => void;
   variant: 'task' | 'subtask';
   title: string;
   description?: string;
@@ -63,10 +67,6 @@ export default function TaskRow({
   onEnterEditMode,
   children,
   dragRef,
-  dragStyle,
-  dragAttributes,
-  dragListeners,
-  isPlaceholder,
 }: TaskRowProps) {
   const rootClass = variant === 'task' ? 'task-item' : 'subtask';
   const contentClass = variant === 'task' ? 'task-item__content' : 'subtask__content';
@@ -77,8 +77,7 @@ export default function TaskRow({
   return (
     <div
       ref={dragRef}
-      style={dragStyle}
-      className={`${rootClass} ${isPlaceholder ? `${rootClass}--placeholder` : ''} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''}`}
+      className={`${rootClass} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''}`}
       // Clicking anywhere on the row enters edit mode — every interactive
       // child below (toggle, badges, the inline title/description
       // triggers, the menu button) already stopPropagation()s its own
@@ -97,8 +96,6 @@ export default function TaskRow({
         event.stopPropagation();
         onEnterEditMode?.();
       }}
-      {...dragAttributes}
-      {...dragListeners}
     >
       <button
         type="button"

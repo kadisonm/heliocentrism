@@ -1,6 +1,6 @@
 'use client';
 
-import { useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/react';
 import { Eye, EyeOff, Layers, Plus, RefreshCw, Calendar, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
@@ -10,8 +10,7 @@ import ConfirmDialog from '../../common/ConfirmDialog';
 import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import MenuItem from '../../common/context-menu/MenuItem';
 import SortableTask from '../../shared/tasks/SortableTask';
-import SortableTaskList from '../../shared/tasks/SortableTaskList';
-import { listContainerId, useTaskDrag } from '../../shared/tasks/useTaskDrag';
+import { TASK_TYPE } from '../../shared/tasks/taskSortableTypes';
 import AddTaskListModal from './AddTaskListModal';
 import TaskDueModal from './TaskDueModal';
 import { editTargetId, type EditTarget } from './editTarget';
@@ -144,16 +143,14 @@ export default function TaskListWidget() {
 
   // Registered even with zero tasks (or no list at all) so this widget is
   // still a valid cross-widget drop target — see TaskDragProvider, which
-  // owns the single shared DndContext every Task List widget instance's
-  // rows and containers register into.
-  const listContainerIdValue = activeList ? listContainerId(activeList.id) : undefined;
-  const { setNodeRef: setListDropRef } = useDroppable({
-    id: listContainerIdValue ?? 'list:none',
-    data: activeList ? { type: 'list', listId: activeList.id } : undefined,
+  // owns the single shared DragDropProvider every Task List widget
+  // instance's rows and containers register into.
+  const { ref: setListDropRef } = useDroppable({
+    id: activeList?.id ?? 'no-list',
+    type: TASK_TYPE,
+    accept: TASK_TYPE,
     disabled: !activeList,
   });
-  const dragState = useTaskDrag();
-  const isListDropTarget = listContainerIdValue !== undefined && dragState.previewContainerId === listContainerIdValue && dragState.isValidDrop;
 
   // "Hide completed" applies at both levels: a done task drops out
   // entirely, and a not-done task keeps its own done subtasks hidden.
@@ -166,6 +163,18 @@ export default function TaskListWidget() {
       .filter((task) => task.parentId === activeList.id && (showCompleted || !isTaskDone(task)))
       .sort((a, b) => a.order - b.order);
   }, [tasks, activeList, showCompleted]);
+
+  // A done task is excluded from the live sortable arrangement entirely
+  // (see useTaskLists.ts's groupedTaskIds), regardless of "show
+  // completed" — so its dense sortable `index` comes from the not-done
+  // set alone, independent of what's actually rendered right now.
+  const taskIndexById = useMemo(() => {
+    if (!activeList) return new Map<string, number>();
+    const notDone = tasks
+      .filter((task) => task.parentId === activeList.id && !isTaskDone(task))
+      .sort((a, b) => a.order - b.order);
+    return new Map(notDone.map((task, index) => [task.id, index]));
+  }, [tasks, activeList]);
 
   const subtasksByTaskId = useMemo(() => {
     const map = new Map<string, Subtask[]>();
@@ -325,10 +334,7 @@ export default function TaskListWidget() {
 
           <div className="widget-sections">
             {!isLoading && (
-              <div
-                className={`widget-list${isListDropTarget ? ' widget-list--drop-target' : ''}`}
-                ref={setListDropRef}
-              >
+              <div className="widget-list" ref={setListDropRef}>
                 {!activeList ? (
                   <div className="task-list-empty">
                     <p className="widget-empty">No lists yet</p>
@@ -343,11 +349,12 @@ export default function TaskListWidget() {
                     </button>
                   </div>
                 ) : visibleTasks.length > 0 ? (
-                  <SortableTaskList containerId={listContainerId(activeList.id)} ids={visibleTasks.map((task) => task.id)}>
+                  <>
                     {visibleTasks.map((task) => (
                       <SortableTask
                         key={task.id}
                         task={task}
+                        index={taskIndexById.get(task.id) ?? 0}
                         subtasks={subtasksByTaskId.get(task.id) ?? []}
                         onToggle={(id) => updateTaskStage(id)}
                         onToggleSubtask={(subtaskId) => updateSubtaskStage(subtaskId)}
@@ -375,7 +382,7 @@ export default function TaskListWidget() {
                         }
                       />
                     ))}
-                  </SortableTaskList>
+                  </>
                 ) : (
                   <p className="widget-empty">No tasks</p>
                 )}

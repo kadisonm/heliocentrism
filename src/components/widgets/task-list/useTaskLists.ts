@@ -1,12 +1,16 @@
 'use client';
 
+import type { DragEndEvent, DragOverEvent } from '@dnd-kit/react';
+import { isSortable } from '@dnd-kit/react/sortable';
+import { move } from '@dnd-kit/helpers';
 import { useEffect, useSyncExternalStore } from 'react';
 import { DEFAULT_SUBTASKS, DEFAULT_TASKS, DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readSubtasks, readTaskLists, readTasks, writeSubtasks, writeTaskLists, writeTasks } from '../../../lib/firebaseSync';
-import { nextOrder, reorderByOrder } from '../../../lib/reorder';
+import { nextOrder } from '../../../lib/reorder';
 import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
 import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
 import type { Subtask, Task, TaskList, TaskRepeat, TaskStageDef } from '../../../lib/types';
+import { subtasksZoneId } from '../../shared/tasks/taskSortableTypes';
 
 // Module-level singleton — every widget instance shares the same in-memory
 // copy, one Firestore writer. Three parallel flat arrays rather than one
@@ -297,26 +301,76 @@ function addTask(listId: string, taskDraft: TaskDraft, subtaskDrafts: SubtaskDra
   commit();
 }
 
-function reorderTasks(listId: string, activeId: string, overId: string) {
-  const siblings = tasks.filter((task) => task.parentId === listId);
-  const reordered = reorderByOrder(siblings, activeId, overId);
-  const reorderedById = new Map(reordered.map((task) => [task.id, task]));
-  tasks = tasks.map((task) => reorderedById.get(task.id) ?? task);
-  commit();
+// Not-done tasks grouped by list id and ordered — the shape
+// @dnd-kit/helpers' move() expects. A done task is never draggable and
+// never a drop target (see index.tsx rendering it as a plain, non-sortable
+// row when shown) — excluding it here, unconditionally, keeps every
+// task's sortable `index` prop consistent regardless of which widget(s)
+// currently have "show completed" on, since that's a per-widget display
+// setting this data layer otherwise has no way to reconcile across them.
+function groupedTaskIds(): Record<string, string[]> {
+  const grouped: Record<string, string[]> = {};
+  for (const list of taskLists) grouped[list.id] = [];
+  for (const task of [...tasks].sort((a, b) => a.order - b.order)) {
+    if (isTaskDone(task)) continue;
+    (grouped[task.parentId] ??= []).push(task.id);
+  }
+  return grouped;
 }
 
-// Cross-list/cross-widget reparent — flips parentId and appends at the end
-// of the new list's own tasks. Dragging to a specific position within the
-// new list is a reorderTasks call right after (see TaskDragProvider).
-function moveTask(taskId: string, newListId: string) {
-  const task = tasks.find((t) => t.id === taskId);
-  if (!task || task.parentId === newListId) return;
+// Applies a new list->taskIds arrangement back onto the flat `tasks` array
+// (order/parentId). Done tasks are left exactly as they were — see
+// groupedTaskIds.
+function applyTaskGroups(grouped: Record<string, string[]>) {
   const now = new Date().toISOString();
-  const newSiblings = tasks.filter((t) => t.parentId === newListId);
-  tasks = tasks.map((t) =>
-    t.id === taskId ? { ...t, parentId: newListId, order: nextOrder(newSiblings), updatedAt: now } : t
-  );
-  commit();
+  const included = new Set(Object.values(grouped).flat());
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const next: Task[] = [];
+
+  for (const [listId, ids] of Object.entries(grouped)) {
+    ids.forEach((id, order) => {
+      const task = byId.get(id);
+      if (!task) return;
+      next.push(task.parentId === listId && task.order === order ? task : { ...task, parentId: listId, order, updatedAt: now });
+    });
+  }
+  for (const task of tasks) if (!included.has(task.id)) next.push(task);
+  tasks = next;
+}
+
+let taskDragSnapshot: Task[] | null = null;
+
+function beginTaskDrag() {
+  taskDragSnapshot = tasks;
+}
+
+// Reparents a task into its hovered list the moment it crosses into one —
+// but ONLY then. Same-list reordering needs nothing here at all (dnd-kit's
+// OptimisticSortingPlugin animates that live, client-side, no app-state
+// change needed) — calling move()+notify() on every dragover regardless
+// fans a re-render out to every widget 60+ times a second, which is what
+// actually read as jitter. Final position is captured once, at drop.
+function applyTaskDragOver(event: DragOverEvent) {
+  console.count('dragover-event');
+  const source = event.operation.source;
+  if (!isSortable(source)) return;
+  const currentTask = tasks.find((t) => t.id === source.id);
+  if (!currentTask || currentTask.parentId === source.group) return;
+  applyTaskGroups(move(groupedTaskIds(), event));
+  console.count('applyTaskDragOver-notify');
+  notify();
+}
+
+function endTaskDrag(event: DragEndEvent) {
+  if (event.canceled) {
+    if (taskDragSnapshot) tasks = taskDragSnapshot;
+    notify();
+    taskDragSnapshot = null;
+    return;
+  }
+  applyTaskGroups(move(groupedTaskIds(), event));
+  persist();
+  taskDragSnapshot = null;
 }
 
 // Does not re-derive the parent's stage from its subtasks (via
@@ -366,11 +420,47 @@ function deleteSubtask(subtaskId: string) {
   commit();
 }
 
-function reorderSubtasks(taskId: string, activeId: string, overId: string) {
-  const siblings = subtasks.filter((s) => s.parentId === taskId);
-  const reordered = reorderByOrder(siblings, activeId, overId);
-  const reorderedById = new Map(reordered.map((s) => [s.id, s]));
-  subtasks = subtasks.map((s) => reorderedById.get(s.id) ?? s);
+// Not-done subtasks grouped by parent task id — mirrors groupedTaskIds/
+// applyTaskGroups above, same reasoning (a done subtask is shown as a
+// plain, non-sortable row and never reindexed). Subtasks never cross
+// tasks (see the per-task sortable `type` in SubtaskSortableRow, which
+// makes a different task's subtask area an invalid target at the dnd-kit
+// level), so this only ever runs once, at drop — not live on every
+// dragover the way groupedTaskIds is.
+function groupedSubtaskIds(): Record<string, string[]> {
+  const grouped: Record<string, string[]> = {};
+  const stagesByTaskId = new Map(tasks.map((t) => [t.id, t.stages]));
+  for (const task of tasks) grouped[subtasksZoneId(task.id)] = [];
+  for (const subtask of [...subtasks].sort((a, b) => a.order - b.order)) {
+    const stages = stagesByTaskId.get(subtask.parentId);
+    if (!stages || isTaskDone({ stage: subtask.stage, stages })) continue;
+    (grouped[subtasksZoneId(subtask.parentId)] ??= []).push(subtask.id);
+  }
+  return grouped;
+}
+
+function applySubtaskGroups(grouped: Record<string, string[]>) {
+  const included = new Set(Object.values(grouped).flat());
+  const byId = new Map(subtasks.map((s) => [s.id, s]));
+  const taskIdByZone = new Map(tasks.map((t) => [subtasksZoneId(t.id), t.id]));
+  const next: Subtask[] = [];
+
+  for (const [zoneId, ids] of Object.entries(grouped)) {
+    const taskId = taskIdByZone.get(zoneId);
+    if (!taskId) continue;
+    ids.forEach((id, order) => {
+      const subtask = byId.get(id);
+      if (!subtask) return;
+      next.push(subtask.parentId === taskId && subtask.order === order ? subtask : { ...subtask, parentId: taskId, order });
+    });
+  }
+  for (const subtask of subtasks) if (!included.has(subtask.id)) next.push(subtask);
+  subtasks = next;
+}
+
+function commitSubtaskDragEnd(event: DragEndEvent) {
+  if (event.canceled) return;
+  applySubtaskGroups(move(groupedSubtaskIds(), event));
   commit();
 }
 
@@ -424,8 +514,9 @@ export function useTaskLists() {
     addSubtask,
     updateSubtask,
     deleteSubtask,
-    reorderTasks,
-    reorderSubtasks,
-    moveTask,
+    beginTaskDrag,
+    applyTaskDragOver,
+    endTaskDrag,
+    commitSubtaskDragEnd,
   };
 }

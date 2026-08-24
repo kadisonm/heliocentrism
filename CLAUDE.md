@@ -12,3 +12,6 @@ Avoid duplicate code.
 
 Where possible write something once that is open for extension but closed for modification.
 
+Aim for one line comments where possible. Try to be brief and concise with comments. Avoid leaving comments longer than 4 lines.
+
+Shorten any extremely long comments you find to match the above description.

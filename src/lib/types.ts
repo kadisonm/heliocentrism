@@ -16,7 +16,7 @@ export type TaskStageDef = {
 export type Subtask = {
   id: string;
   parentId: string; // a Task id — always. Nothing can point to a Subtask's own id as a parent, so this is a leaf.
-  order: number; // sibling order among other subtasks sharing this parentId — see reorderByOrder
+  order: number; // sibling order among other subtasks sharing this parentId — see useTaskLists.ts
   title: string;
   description?: string;
   stage: number; // index into the PARENT Task's `stages` — no list of its own
@@ -56,7 +56,7 @@ export type TaskRepeat = {
 export type Task = {
   id: string;
   parentId: string; // a TaskList id — always
-  order: number; // sibling order among other tasks sharing this parentId — see reorderByOrder
+  order: number; // sibling order among other tasks sharing this parentId — see useTaskLists.ts
   title: string;
   description?: string;
   stage: number; // index into `stages`

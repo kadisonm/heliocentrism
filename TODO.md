@@ -9,15 +9,15 @@
 - Allow widgets to be placed anywhere without gravity
 
 ## Tasks
-- Update task dates to show the due date as 'today' 'tomorrow' 'yesterday' 'in x days'
 - Fix tasks minimum stage not being updated
 - Make it so when dragging tasks it has a grey filter
-- Fix task badge placement
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
-- Move the task names setting to the task list settings
-- Refactor the task list dropdown and management
-- Subtasks should be able to edit the name of them and include a description
-- Make subtasks follow the same wrap/truncate rule as normal tasks
+- Hide task stages badge for normal tasks (setting)
+- Popup should switch sides if it is going to go off the screen
+- Fix task slightly shrinking and regrowing whenever it is reordered over another task
+- Fix all the css files having really long comments
+- Fix the task changing state when it gets dragged to another list
+- Fix the leg when dragging a task between two lists really fast (I think it is because the component is being rebuilt everytime it swaps tasks?)
 
 ---
 

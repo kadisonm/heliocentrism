@@ -1,13 +1,14 @@
-import { useDroppable } from '@dnd-kit/core';
+'use client';
+
+import { useDragOperation, useDroppable } from '@dnd-kit/react';
 import type { ReactNode } from 'react';
 import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
 import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
-import SortableTaskList from './SortableTaskList';
+import { subtaskType, subtasksZoneId } from './taskSortableTypes';
 import { getStagePosition, stageAriaLabel } from './taskStageDisplay';
 import TaskRow from './TaskRow';
-import { subtasksContainerId, useTaskDrag } from './useTaskDrag';
-import { useSortableDragBindings, type DragBindings } from './useSortableDragBindings';
+import { useTaskSortable } from './useTaskSortable';
 
 export type TaskParentHandlers = {
   onToggle: (id: string) => void;
@@ -35,18 +36,14 @@ export type TaskParentHandlers = {
   onSubtaskEnterEditMode?: (subtaskId: string) => void;
 };
 
-type TaskParentProps<T extends Task> = TaskParentHandlers &
-  DragBindings & {
-    task: T;
-    // Subtasks live in their own flat store now (see useTaskLists.ts) — the
-    // caller filters+sorts the ones belonging to this task and passes them
-    // in, the same way it already supplies extra/editExtra per task.
-    subtasks: Subtask[];
-    // True only for the floating DragOverlay copy — subtasks render as
-    // plain rows instead of a nested sortable list, so a drag in progress
-    // never has a second DndContext live under the pointer.
-    overlay?: boolean;
-  };
+type TaskParentProps<T extends Task> = TaskParentHandlers & {
+  task: T;
+  // Subtasks live in their own flat store now (see useTaskLists.ts) — the
+  // caller filters+sorts the ones belonging to this task and passes them
+  // in, the same way it already supplies extra/editExtra per task.
+  subtasks: Subtask[];
+  dragRef?: (element: Element | null) => void;
+};
 
 export function subtaskProps(subtask: Subtask, stages: TaskStageDef[]) {
   const stageDef = stages[subtask.stage];
@@ -63,53 +60,32 @@ export function subtaskProps(subtask: Subtask, stages: TaskStageDef[]) {
   };
 }
 
-// Plain (non-sortable) render — used for the whole-task drag overlay's
-// static subtask list, for an individual subtask's own drag overlay, and
-// (via TaskDragProvider, which has no rendering context of its own to
-// delegate to) the shared DragOverlay's copy of whichever subtask is
-// currently being dragged.
-export function SubtaskOverlayRow({
-  subtask,
-  stages,
-  extra,
-  editExtra,
-}: {
-  subtask: Subtask;
-  stages: TaskStageDef[];
-  extra?: ReactNode;
-  editExtra?: ReactNode;
-}) {
-  return (
-    <TaskRow
-      {...subtaskProps(subtask, stages)}
-      onToggleStage={() => {}}
-      onCommitTitle={() => {}}
-      onCommitDescription={() => {}}
-      onRowClick={() => {}}
-      extra={extra}
-      editExtra={editExtra}
-    />
-  );
-}
-
+// A done subtask is excluded from the live sortable arrangement entirely
+// (see useTaskLists.ts's groupedSubtaskIds) — `disabled` keeps it a fixed,
+// non-draggable, non-drop-target row while every other handler stays live.
 function SubtaskSortableRow({
   subtask,
+  index,
   stages,
   handlers,
 }: {
   subtask: Subtask;
+  index: number;
   stages: TaskStageDef[];
   handlers: TaskParentHandlers;
 }) {
-  const dragBindings = useSortableDragBindings(subtask.id, {
-    type: 'subtask',
-    subtaskId: subtask.id,
-    parentTaskId: subtask.parentId,
+  const done = isTaskDone({ stage: subtask.stage, stages });
+  const { dragRef } = useTaskSortable({
+    id: subtask.id,
+    index: done ? 0 : index,
+    group: subtasksZoneId(subtask.parentId),
+    type: subtaskType(subtask.parentId),
+    disabled: done,
   });
   return (
     <TaskRow
       {...subtaskProps(subtask, stages)}
-      {...dragBindings}
+      dragRef={dragRef}
       onToggleStage={() => handlers.onToggleSubtask?.(subtask.id)}
       onCommitTitle={(title) => handlers.onUpdateSubtask?.(subtask.id, { title })}
       onCommitDescription={(description) => handlers.onUpdateSubtask?.(subtask.id, { description })}
@@ -147,47 +123,30 @@ export default function TaskParent<T extends Task>({
   editingSubtaskId,
   onSubtaskEnterEditMode,
   dragRef,
-  dragStyle,
-  dragAttributes,
-  dragListeners,
-  isPlaceholder,
-  overlay,
 }: TaskParentProps<T>) {
   const nextIndex = getNextStageIndex(task.stage, task.stages.length);
   const activeStage = task.stages[task.stage];
   const nextStage = task.stages[nextIndex];
 
   // Always registered (even with zero subtasks) so dropping one of this
-  // task's OWN subtasks into otherwise-empty space (the only remaining
-  // valid drop here — see TaskDragProvider's resolution table: a subtask
-  // can only reorder within its OWN parent, and a task can never nest
-  // under another) still has something to hit-test against. The floating
-  // DragOverlay copy (see TaskDragProvider) renders this SAME task a
-  // second time while the real row stays mounted (just hidden — see
-  // .task-item--placeholder) — disabled alone isn't enough to make that
-  // safe, since dnd-kit still tracks a disabled droppable's id; giving the
-  // overlay copy its own distinct id avoids two simultaneous registrations
-  // of the same one.
-  const containerId = subtasksContainerId(task.id);
-  const droppableId = overlay ? `overlay:${containerId}` : containerId;
-  const { setNodeRef: setSubtasksDropRef } = useDroppable({
-    id: droppableId,
-    data: { type: 'subtasks', taskId: task.id },
-    disabled: overlay,
+  // task's own subtasks into otherwise-empty space still has something to
+  // hit-test against — an empty zone has no rows of its own to register a
+  // sortable against.
+  const { ref: setSubtasksDropRef } = useDroppable({
+    id: subtasksZoneId(task.id),
+    type: subtaskType(task.id),
+    accept: subtaskType(task.id),
   });
-  const dragState = useTaskDrag();
+
   // An empty subtasks zone has no content to hold it open (see
   // .task-item__subtasks:empty in task-item.scss) — it only takes up any
   // space at all while a drag that could ACTUALLY land here is in
   // progress, so a task with no subtasks stays perfectly invisible at
-  // rest, exactly like before this container existed. Scoped to a subtask
-  // drag whose OWN parent is this task specifically — a task being
-  // dragged, or a subtask belonging to some OTHER task, can never validly
-  // drop here, so this container has no business waking up (and inviting
-  // a drop) for either.
-  const isDropTargetCandidate =
-    dragState.activeType === 'subtask' && (dragState.activeRecord as Subtask | null)?.parentId === task.id;
-  const isSubtaskDropTarget = dragState.previewContainerId === containerId && dragState.isValidDrop;
+  // rest. Scoped to a subtask drag whose OWN parent is this task
+  // specifically — a task, or a subtask belonging to some OTHER task, can
+  // never validly drop here (see taskSortableTypes.ts's per-task type).
+  const { source } = useDragOperation();
+  const isDropTargetCandidate = source?.type === subtaskType(task.id);
 
   const handlers: TaskParentHandlers = {
     onToggle,
@@ -209,6 +168,8 @@ export default function TaskParent<T extends Task>({
     onSubtaskEnterEditMode,
   };
 
+  let notDoneIndex = 0;
+
   return (
     <TaskRow
       variant="task"
@@ -226,49 +187,26 @@ export default function TaskParent<T extends Task>({
       onStageBadgeClick={() => onEditStages?.(task)}
       isActive={isActive}
       onRowClick={onRowClick}
-      showMenuButton={!overlay}
       extra={extra}
       editExtra={editExtra}
       isEditingRow={isEditingRow}
       onEnterEditMode={onEnterEditMode}
       dragRef={dragRef}
-      dragStyle={dragStyle}
-      dragAttributes={dragAttributes}
-      dragListeners={dragListeners}
-      isPlaceholder={isPlaceholder}
     >
-      {overlay
-        ? subtasks.length > 0 && (
-            <div className="task-item__subtasks">
-              {subtasks.map((subtask) => (
-                <SubtaskOverlayRow
-                  key={subtask.id}
-                  subtask={subtask}
-                  stages={task.stages}
-                  extra={renderSubtaskExtra?.(subtask)}
-                  editExtra={renderSubtaskEditExtra?.(subtask)}
-                />
-              ))}
-            </div>
-          )
-        : (
-          <SortableTaskList containerId={containerId} ids={subtasks.map((subtask) => subtask.id)}>
-            <div
-              ref={setSubtasksDropRef}
-              className={[
-                'task-item__subtasks',
-                isDropTargetCandidate && 'task-item__subtasks--droppable',
-                isSubtaskDropTarget && 'task-item__subtasks--drop-target',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {subtasks.map((subtask) => (
-                <SubtaskSortableRow key={subtask.id} subtask={subtask} stages={task.stages} handlers={handlers} />
-              ))}
-            </div>
-          </SortableTaskList>
-        )}
+      <div
+        ref={setSubtasksDropRef}
+        className={['task-item__subtasks', isDropTargetCandidate && 'task-item__subtasks--droppable'].filter(Boolean).join(' ')}
+      >
+        {subtasks.map((subtask) => (
+          <SubtaskSortableRow
+            key={subtask.id}
+            subtask={subtask}
+            index={isTaskDone({ stage: subtask.stage, stages: task.stages }) ? 0 : notDoneIndex++}
+            stages={task.stages}
+            handlers={handlers}
+          />
+        ))}
+      </div>
     </TaskRow>
   );
 }
