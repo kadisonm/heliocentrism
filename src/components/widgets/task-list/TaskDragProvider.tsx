@@ -5,8 +5,10 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -59,6 +61,24 @@ function resolveOverItemId(over: Over): string | null {
   const data = over.data.current as TaskDragData | undefined;
   return data && (data.type === 'task' || data.type === 'subtask') ? String(over.id) : null;
 }
+
+// closestCenter alone measures every droppable/sortable rect on the WHOLE
+// dashboard by raw center-distance — with a single shared DndContext
+// spanning every widget (see this component's own comment below), a
+// dragged row near the edge of its own list can end up momentarily
+// "closer" to a row in a neighboring widget than to its actual neighbor,
+// flipping `over` to a different SortableContext for a frame and back.
+// Each flip resets that context's own FLIP animation, which is what reads
+// as a sibling "jumping" into place instead of sliding smoothly out of
+// the way. pointerWithin checks literal containment instead — resolving
+// to whichever droppable the pointer is actually inside first removes
+// that ambiguity; closestCenter is kept only as a fallback for the gap
+// between rows (or past the last one), where nothing literally contains
+// the pointer yet.
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : closestCenter(args);
+};
 
 function overlayExtraForTask(task: Task) {
   return (
@@ -124,8 +144,17 @@ export default function TaskDragProvider({ children }: { children: ReactNode }) 
         ? container.type === 'list'
         : container.type === 'subtasks' && container.taskId === activeData.parentTaskId;
 
+    const originContainerId =
+      activeData.type === 'task' ? listContainerId(activeData.listId) : subtasksContainerId(activeData.parentTaskId);
     const containerId = container.type === 'list' ? listContainerId(container.listId) : subtasksContainerId(container.taskId);
-    setDragPreview(containerId, isValid);
+
+    // Only worth highlighting a container when landing there would
+    // actually move the item somewhere new — hovering back over its own
+    // current container is just ordinary reordering (unrestricted, for
+    // both tasks and subtasks), which has nothing to preview. A subtask's
+    // own container is now its ONLY ever-valid target (see isValid above),
+    // so this also means a subtask drag never highlights anything at all.
+    setDragPreview(containerId === originContainerId ? null : containerId, isValid);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -201,7 +230,7 @@ export default function TaskDragProvider({ children }: { children: ReactNode }) 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
