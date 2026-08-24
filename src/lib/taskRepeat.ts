@@ -194,15 +194,23 @@ export function resetSubtaskState(subtask: Subtask, now: Date = new Date()): Sub
 // also clearing each subtask's own completedAt and advancing its own due
 // if it has its own repeat — see resetSubtaskState), and due (if set)
 // catches up to the current cycle. repeat itself (anchor included) is left
-// completely untouched — the schedule's phase never moves.
-export function resetRepeatingTask(task: Task, now: Date = new Date()): Task {
+// completely untouched — the schedule's phase never moves. `subtasks` must
+// already be filtered to this task's own children (parentId === task.id) —
+// subtasks no longer live inline on `task`, so the caller owns finding them.
+export function resetRepeatingTask(
+  task: Task,
+  subtasks: Subtask[],
+  now: Date = new Date()
+): { task: Task; subtasks: Subtask[] } {
   return {
-    ...task,
-    stage: 0,
-    completedAt: null,
-    subtasks: task.subtasks.map((subtask) => resetSubtaskState(subtask, now)),
-    due: task.due && task.repeat ? advanceDueDate(task.due, task.repeat, now) : task.due,
-    updatedAt: now.toISOString(),
+    task: {
+      ...task,
+      stage: 0,
+      completedAt: null,
+      due: task.due && task.repeat ? advanceDueDate(task.due, task.repeat, now) : task.due,
+      updatedAt: now.toISOString(),
+    },
+    subtasks: subtasks.map((subtask) => resetSubtaskState(subtask, now)),
   };
 }
 
@@ -214,19 +222,25 @@ export function resetRepeatingTask(task: Task, now: Date = new Date()): Task {
 // this AFTER any parent-level resetRepeatingTask has already run for this
 // task on the same tick — shouldResetSubtask's isTaskDone gate then
 // naturally skips any subtask the blanket reset just touched, since it's
-// no longer "done" at stage 0.
-export function resetDueSubtasks(task: Task, now: Date = new Date()): { task: Task; changed: boolean } {
+// no longer "done" at stage 0. `subtasks` must already be filtered to this
+// task's own children.
+export function resetDueSubtasks(
+  task: Task,
+  subtasks: Subtask[],
+  now: Date = new Date()
+): { task: Task; subtasks: Subtask[]; changed: boolean } {
   let changed = false;
-  const subtasks = task.subtasks.map((subtask) => {
+  const nextSubtasks = subtasks.map((subtask) => {
     if (!shouldResetSubtask(subtask, task.stages, now)) return subtask;
     changed = true;
     return resetSubtaskState(subtask, now);
   });
 
-  if (!changed) return { task, changed: false };
+  if (!changed) return { task, subtasks, changed: false };
 
   return {
-    task: { ...task, subtasks, stage: deriveStageFromSubtasks(subtasks, task.stage), updatedAt: now.toISOString() },
+    task: { ...task, stage: deriveStageFromSubtasks(nextSubtasks, task.stage), updatedAt: now.toISOString() },
+    subtasks: nextSubtasks,
     changed: true,
   };
 }

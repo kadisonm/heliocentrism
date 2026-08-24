@@ -5,6 +5,7 @@ import Grid from '../../components/grid/Grid';
 import GridStatusBar from '../../components/grid/GridStatusBar';
 import { useGridState } from '../../components/grid/useGridState';
 import { useDeviceTier } from '../../components/grid/useDeviceTier';
+import TaskDragProvider from '../../components/widgets/task-list/TaskDragProvider';
 import type { DashboardBreakpoint } from '../../lib/types';
 
 export default function DashboardPage() {
@@ -37,16 +38,18 @@ export default function DashboardPage() {
     <div className="dashboard-wrapper">
       <div className="dashboard-container">
         {!dashboard.isLoading && (
-          <Grid
-            breakpoints={dashboard.breakpoints}
-            isEditMode={isEditMode}
-            activeBreakpoint={activeBreakpoint}
-            deviceTier={deviceTier}
-            onLayoutChange={dashboard.setLayout}
-            onUpdateWidget={dashboard.updateWidget}
-            onRemoveWidget={dashboard.removeWidget}
-            onWidgetHeightChange={dashboard.setWidgetHeight}
-          />
+          <TaskDragProvider>
+            <Grid
+              breakpoints={dashboard.breakpoints}
+              isEditMode={isEditMode}
+              activeBreakpoint={activeBreakpoint}
+              deviceTier={deviceTier}
+              onLayoutChange={dashboard.setLayout}
+              onUpdateWidget={dashboard.updateWidget}
+              onRemoveWidget={dashboard.removeWidget}
+              onWidgetHeightChange={dashboard.setWidgetHeight}
+            />
+          </TaskDragProvider>
         )}
       </div>
 

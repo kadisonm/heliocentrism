@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { applyTheme, cacheTheme } from '../../lib/theme';
-import { useSettings } from '../shared/tasks/useSettings';
+import { useSettings } from '../shared/settings/useSettings';
 
 // Renders nothing — mounted once in layout.tsx to keep the DOM theme
 // attributes (set synchronously pre-paint by the inline script, see

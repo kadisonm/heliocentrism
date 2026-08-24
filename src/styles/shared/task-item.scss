@@ -17,7 +17,7 @@
     background: var(--panel-strong);
   }
 
-  // Click-driven "selected" state (toggled in TaskItem.tsx) — its context
+  // Click-driven "selected" state (toggled in TaskRow.tsx) — its context
   // menu (see .context-menu) is a separate portaled popup, not anchored
   // inside this card, so all this needs to do is lighten the row.
   &.task-item--active {
@@ -117,6 +117,26 @@
   gap: 0.3rem;
 }
 
+// Lines the title textarea's first line up with .task-toggle's own
+// vertical center (rather than its top) — both are flex siblings on a
+// flex-start-aligned row (see .task-item/.subtask), so without this
+// they'd otherwise share the same top edge instead. Deliberately NOT
+// align-items: center on the row itself — a wrapped multi-line title, or
+// a task's footer badges, would then drag the whole row's (and the
+// toggle's) center down with them; this only moves the FIRST line, which
+// is all that should ever track the toggle. .task-toggle's own center
+// sits margin-top (0.15rem) + half its height (1.25rem / 2 = 0.625rem) =
+// 0.775rem below the shared start line; .task-item__title/.subtask__title
+// (same font-size and line-height, see .subtask__title's own comment)'s
+// first line is centered within its own line-height (1.4 x 0.875rem
+// font-size = 1.225rem), i.e. 0.6125rem below THIS element's own top,
+// which has no offset of its own. The remaining 0.1625rem gap between
+// those two numbers is made up here.
+.task-item__content,
+.subtask__content {
+  margin-top: 0.1625rem;
+}
+
 .task-item__title {
   margin: 0;
   font-size: 0.875rem;
@@ -125,8 +145,8 @@
   line-height: 1.4;
   // pre-wrap (not plain `normal`): still wraps long lines the same way,
   // but also renders an embedded "\n" (Shift+Enter — see
-  // InlineEditableField in TaskItem.tsx) as an actual line break instead
-  // of collapsing it to a space.
+  // InlineEditableField.tsx) as an actual line break instead of
+  // collapsing it to a space.
   white-space: pre-wrap;
 
   &.is-done {
@@ -144,115 +164,129 @@
 }
 
 // Applied alongside .task-item__title/.task-item__description/
-// .subtask__title (see InlineEditableField in TaskItem.tsx) — resets the
-// <button>/<input> chrome those elements pick up so the click-to-edit
-// trigger reads as plain text until it's actually clicked, and the
-// active <input> stays visually anchored in place rather than jumping
-// around inside the row. Deliberately does NOT set font/color: that
-// would (at equal specificity, same file, declared after) override
-// .task-item__title/.task-item__description's own font-size/color —
+// .subtask__title (see InlineEditableField.tsx) — the single <textarea>
+// used for a title/description's whole lifespan, both at rest (readOnly)
+// and while actively being edited, so this resets its chrome for BOTH
+// states at once rather than needing a separate resting-<button>/
+// active-<textarea> pair. Stays visually anchored in place with no
+// padding/margin shift between the two states. Deliberately does NOT set
+// color: that would (at equal specificity, same file, declared after)
+// override .task-item__title/.task-item__description's own color —
 // exactly the bug that made the description briefly render at the same
-// size/color as the title. base.scss's blanket `button, input, select {
-// font: inherit; }` already resets the button's own UA font, and author
-// rules always beat UA ones for color regardless of order, so nothing
-// here needs to touch either property at all.
+// color as the title. Author rules always beat UA defaults regardless of
+// declaration order, so nothing here needs to touch that property at all.
+// font-family DOES need resetting explicitly — base.scss's blanket
+// `button, input, select { font: inherit; }` doesn't cover <textarea>,
+// whose own UA default is often a different family entirely (e.g.
+// monospace).
 .task-item__editable-trigger {
   display: block;
   width: 100%;
   background: none;
   border: none;
-  padding: 0;
-  text-align: left;
-  cursor: text;
-  border-radius: 0.25rem;
-}
-
-// The empty-description placeholder — same trigger, just styled to read
-// as a hint rather than real content so it's obviously not something the
-// task actually has yet.
-.task-item__editable-trigger--placeholder {
-  color: var(--muted);
-  font-style: italic;
-}
-
-// Only applied alongside --placeholder, and only when showPlaceholderIcon
-// is set — lays the Pilcrow icon (now a child of this same button, not a
-// separate sibling, so clicking it also starts editing) out next to the
-// placeholder text. Every other use of .task-item__editable-trigger has
-// no icon, so this is kept as an opt-in modifier rather than baked into
-// the base rule — display:block there already renders a single text
-// child identically, with none of flex's edge cases around how a lone
-// item without an explicit basis wraps.
-.task-item__editable-trigger--with-icon {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-// The active <textarea> — deliberately as close to invisible-chrome as
-// the trigger button above: no background, no border, no padding shift.
-// The only visible difference from the resting state is the text color,
-// which is the one thing that's supposed to change while editing.
-// font-family is the one property genuinely worth resetting here (a
-// <textarea>'s own UA default is often a different family entirely, e.g.
-// monospace, and unlike .task-item__editable-trigger — a <button>,
-// already covered by base.scss's blanket `button, input, select { font:
-// inherit; }` — nothing resets that for <textarea> elsewhere); font-size
-// and everything else is deliberately left alone so
-// .task-item__title/.task-item__description's own values keep applying
-// exactly as they do outside of editing.
-.task-item__editable-input {
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
-  // The "white border" this was fixing wasn't actually a border — it was
-  // the browser's default focus ring, which every <textarea> gets on
-  // focus (and this is always focused the moment it mounts, via
-  // autoFocus in TaskItem.tsx) regardless of `border` being none.
+  // Not just for the active state — a readOnly <textarea> can still pick
+  // up a focus ring for one frame between being clicked and this flipping
+  // to editable, and this rules that out regardless of which state it's in.
   outline: none;
   padding: 0;
   margin: 0;
   resize: none;
   overflow: hidden;
+  text-align: left;
+  cursor: text;
+  border-radius: 0.25rem;
   font-family: inherit;
-  color: var(--text);
+  // Native auto-sizing — on a supporting browser (Chromium 123+, and
+  // increasingly others) this makes the height ALWAYS match the actual
+  // rendered content with zero JS involved, so it can never go stale the
+  // way a one-off scrollHeight measurement in InlineEditableField.tsx can
+  // (e.g. if it ran before a web font finished swapping in, or before the
+  // element settled at its final width). Unrecognized properties are
+  // ignored by browsers that don't support this yet, so this is purely
+  // additive — the JS measurement stays in place underneath it as the
+  // fallback for those.
+  field-sizing: content;
+}
+
+// The empty-description placeholder — same trigger, just styled to read
+// as a hint rather than real content so it's obviously not something the
+// task actually has yet. Only ever applied at rest (see
+// InlineEditableField's isPlaceholder) — never while actively editing,
+// even if the draft is momentarily empty.
+.task-item__editable-trigger--placeholder {
+  color: var(--muted);
+  font-style: italic;
 }
 
 // The Pilcrow icon shown before an empty description's "Description..."
 // placeholder — see InlineEditableField's showPlaceholderIcon. Never
-// shown once there's real content, and never while editing.
+// shown once there's real content, and never while editing. A <textarea>
+// can only ever hold plain text, so this sits beside it (see
+// .task-item__description-reveal-inner below) rather than inside it —
+// its own click also starts editing, matching the field itself.
 .task-item__description-icon {
   flex-shrink: 0;
   color: var(--muted);
+  cursor: text;
 }
 
-// Empty description: icon + "Description..." placeholder appear and
-// disappear TOGETHER, using the same grid-template-rows height-collapse
-// technique as the due/repeat ghost badges (.task-item__hover-reveal,
-// below) — there's no real content here the rest of the time, so unlike
-// the icon-reveal above, this reserves no space until hovered. Scoped
-// the same way as .task-item__hover-reveal's task-level rule, with
-// child combinators down to its own direct parent — hovering a subtask
-// shouldn't also reveal the PARENT task's own description placeholder.
+// Wraps a description field ALWAYS (see InlineEditableField — any field
+// that can show a placeholder icon renders this wrapper in every state,
+// never conditionally, so its own root element type never changes across
+// a re-render). Collapsed by default: an EMPTY description reserves no
+// space until the row enters edit mode (.task-item--editing/
+// .subtask--editing, toggled in TaskRow.tsx by clicking the title/
+// description/a badge — see isEditingRow), deliberately NOT :hover so it
+// doesn't flash in on every mouseover. A description that actually HAS
+// content instead gets the --visible modifier below, unconditionally
+// expanded regardless of edit mode. Animates both the grid row's height
+// and opacity together, reading as a downward wipe rather than an instant
+// pop. This DOES resize the widget's content while it's mid-transition —
+// WidgetShell's auto-expand ResizeObserver now waits for the size to
+// actually settle (see its own debounce comment) instead of reacting to
+// every intermediate frame, so it no longer fights this. Scoped with
+// child combinators down to its own direct parent so a subtask entering
+// edit mode doesn't also reveal the PARENT task's own description
+// placeholder.
+// margin-top: -0.3rem while collapsed cancels out the 0.3rem `gap`
+// .task-item__content/.subtask__content still reserves in FRONT of this
+// element even though it's rendered at 0 height — flex `gap` inserts
+// space between every adjacent pair of items regardless of whether one
+// collapsed to nothing, so without this, an empty description still
+// leaves a dead 0.3rem gap below the title that the row can't shrink
+// past. Animated alongside grid-template-rows/opacity so growing/
+// shrinking still reads as one smooth motion, not a jump.
 .task-item__description-reveal {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.2s ease-in;
+  opacity: 0;
+  margin-top: -0.3rem;
+  transition: grid-template-rows 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
 }
 
-.task-item:hover > .task-item__content > .task-item__description-reveal,
-.subtask:hover > .subtask__content > .task-item__description-reveal {
+.task-item__description-reveal--visible {
   grid-template-rows: 1fr;
-  transition: grid-template-rows 0.2s ease-out;
+  opacity: 1;
+  margin-top: 0;
 }
 
-// Just one child now (the trigger button, icon and all — see
-// InlineEditableField), so no flex/gap needed here; only the sizing
-// properties the grid-template-rows collapse above actually needs.
+.task-item--editing > .task-item__content > .task-item__description-reveal,
+.subtask--editing > .subtask__content > .task-item__description-reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0;
+}
+
+// Holds the Pilcrow icon + the textarea side by side when the icon is
+// showing (see InlineEditableField) — the icon's flex layout lives here
+// rather than as a separate opt-in modifier on the trigger itself, since
+// this wrapper is only ever used for a field that can show one.
 .task-item__description-reveal-inner {
   overflow: hidden;
   min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 // Badges/extras (due date, repeat, stage) — sits below the title/
@@ -268,49 +302,67 @@
 }
 
 // Wraps the "Set due date"/"Set repeat" placeholders (task-item__footer's
-// last children). Always in the DOM — reveal is driven purely by :hover
-// below, not by mounting/unmounting from React. A JS-timed unmount (tried
-// first, staged mount + a fixed-delay unmount; then refined to wait for a
-// `transitionend` event instead of a guessed delay) kept beating the
-// visible animation to the finish, snapping the last bit of the collapse
-// instead of animating it — CSS driving both the transition and the
-// visibility off the same :hover state can't drift out of sync with
-// itself the way a separate JS trigger could.
-//
-// grid-template-rows (not height: auto) is what makes 0 -> content-height
-// animatable at all — plain `height` can't transition to/from `auto`.
-.task-item__hover-reveal {
+// last children). Always in the DOM — reveal is driven purely by the row's
+// edit-mode class (.task-item--editing/.subtask--editing, toggled in
+// TaskRow.tsx — see isEditingRow) below, not by mounting/unmounting from
+// React. Named for WHAT it reveals (the footer's ghost placeholder
+// badges), not HOW — matches the `editExtra` prop name it renders
+// (TaskRow.tsx): clicking anywhere on the row to enter edit mode is what
+// reveals it, not :hover.
+// Animates like .task-item__description-reveal above — see its comment
+// for why height animation is safe here now.
+.task-item__footer-reveal {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  // Collapsing (this resting state, applied whenever the row isn't
-  // hovered) uses ease-in rather than ease-out: ease-out front-loads most
-  // of the visible shrink into the first ~100ms and trails off almost
-  // imperceptibly after that, which reads as an abrupt snap rather than a
-  // continuous motion. ease-in keeps the shrink visible for the full
-  // duration instead.
-  transition: grid-template-rows 0.2s ease-in, opacity 0.2s ease-in;
+  transition: grid-template-rows 0.2s ease, opacity 0.2s ease;
 }
 
 // The task-level rule is scoped with child combinators down to the
-// task's OWN footer rather than a plain descendant selector: :hover on
-// .task-item is also true while the pointer is over any of its nested
-// subtasks (hovering a descendant counts as hovering the ancestor), and a
-// plain ".task-item:hover .task-item__hover-reveal" would then match
-// EVERY subtask's reveal too — not just the one under the cursor — since
-// a descendant selector doesn't care which element actually has :hover,
-// only that some ancestor does. .subtask reveals don't need the same
-// scoping since subtasks are siblings, not nested in each other.
-.task-item:hover > .task-item__content > .task-item__footer > .task-item__hover-reveal,
-.subtask:hover .task-item__hover-reveal {
+// task's OWN footer rather than a plain descendant selector: .task-item
+// being in edit mode says nothing about which nested subtask (if any) is
+// also being edited, and a plain ".task-item--editing .task-item__footer-
+// reveal" would match EVERY subtask's reveal too — not just the one
+// actually being edited — since a descendant selector doesn't care which
+// element the class is actually on, only that some ancestor has it.
+// .subtask reveals don't need the same scoping since subtasks are
+// siblings, not nested in each other.
+.task-item--editing > .task-item__content > .task-item__footer > .task-item__footer-reveal,
+.subtask--editing .task-item__footer-reveal {
   grid-template-rows: 1fr;
   opacity: 1;
-  transition: grid-template-rows 0.2s ease-out, opacity 0.2s ease-out;
 }
 
-.task-item__hover-reveal-inner {
+// Same dead-gap problem as .task-item__description-reveal above, one
+// level up: .task-item__footer only exists in the DOM at all once it has
+// SOMETHING to show (extra/showStageBadgeNow/editExtra — see
+// TaskRow.tsx), but a subtask with no due date/repeat set and no Stage
+// badge (subtasks never show one) has nothing in there except this
+// collapsed reveal — :only-child excludes any row where a real,
+// persistent badge (`extra`) sits alongside it, since THOSE rows'
+// footers genuinely have visible height and the preceding gap is real.
+// Reset to 0 while editing, same as the reveal's own grid-template-rows/
+// opacity above, since the footer has real height then too.
+.task-item__footer:has(> .task-item__footer-reveal:only-child) {
+  margin-top: -0.3rem;
+  transition: margin-top 0.2s ease;
+}
+
+.task-item--editing > .task-item__content > .task-item__footer:has(> .task-item__footer-reveal:only-child),
+.subtask--editing > .subtask__content > .task-item__footer:has(> .task-item__footer-reveal:only-child) {
+  margin-top: 0;
+}
+
+// flex-wrap: wrap — without it, a footer too narrow to fit both ghost
+// badges on one line doesn't wrap them onto a second the way
+// .task-item__footer itself already does; it just overflows and gets cut
+// off by this element's own overflow: hidden (needed for the
+// grid-template-rows collapse animation above to have something to clip
+// during the transition).
+.task-item__footer-reveal-inner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
   min-height: 0;
   overflow: hidden;
@@ -333,9 +385,11 @@
 // times too. Local to this one alignment; not meant as general-purpose
 // tokens.
 $task-toggle-width: 1.25rem; // .task-toggle, below
-$task-item-gap: 0.75rem; // .task-item, below — space between .task-toggle and .task-item__content
+$task-item-gap: 0.75rem; // .task-item, below — space between .task-toggle/.task-item__content/.task-item__menu-button
 $task-item-subtasks-border-width: 2px; // this element's own border-left
-$subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-toggle, below
+$subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-toggle, below — also reused as its right inset
+$subtask-gap: 0.5rem; // .subtask's own `gap`, below — deliberately tighter than $task-item-gap
+$menu-button-width: 1.5rem; // .task-item__toolbar-button, below
 
 .task-item__subtasks {
   display: flex;
@@ -369,30 +423,96 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
       #{$task-item-subtasks-border-width} - #{$subtask-left-padding}
   );
   border-left: $task-item-subtasks-border-width solid var(--border);
+  // Extends this container's own right edge outward — WITHOUT widening
+  // .subtask__content (still flex: 1, so its width still matches
+  // .task-item__content's) — so a subtask row's own "..." button can line
+  // up with .task-item's, while still fitting entirely INSIDE this
+  // container rather than overflowing past it (an earlier version pushed
+  // each .subtask row's own right edge out individually instead, via a
+  // negative margin-right on .subtask itself — which did land the button
+  // correctly, but meant every row's hoverable box stuck out past this
+  // container's own right edge, which read as the subtask list not
+  // actually fitting inside its box). Left alone (margin-right: 0), this
+  // container's right edge stops at .task-item__content's own right edge
+  // (flex `stretch`'s default width: auto/margin-right: 0 behavior) —
+  // short of where .task-item's own menu button actually sits, which is
+  // $task-item-gap past ITS OWN $task-item-gap gap to .task-item__content
+  // plus its own $menu-button-width. Pushing this container's right edge
+  // out by exactly that much (a subtask row's own right padding + the
+  // button's width + the gap it sits behind — see
+  // .subtask > .task-item__menu-button below, which tops up .subtask's
+  // tighter $subtask-gap to match) closes the difference: the button,
+  // inset by that same padding from a row that now fills this container
+  // edge-to-edge, lands in the same place .task-item's does.
+  margin-right: calc(-1 * (#{$subtask-left-padding} + #{$menu-button-width} + #{$task-item-gap}));
+
+  // Now always in the DOM (even for a task with zero subtasks — see
+  // TaskParent.tsx), so dropping one of this task's OWN subtasks into
+  // otherwise-empty space still has something to hit-test against (see
+  // TaskDragProvider — a task can never nest under another, and a subtask
+  // can only ever reorder within its own parent). Collapses to nothing
+  // when there's no real content, so an ordinary subtask-less task still
+  // looks exactly like it did before this container existed.
+  // margin-top: -0.3rem (not plain 0) for the same reason as
+  // .task-item__description-reveal/.task-item__footer-reveal above: this
+  // element's OWN box collapsing to nothing doesn't stop
+  // .task-item__content's `gap` from still reserving space in front of
+  // it — this is the one place that gap shows up for a TASK but not a
+  // subtask, since only a task row has this trailing children slot at
+  // all (a subtask can't nest further).
+  &:empty {
+    margin-top: -0.3rem;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    border: none;
+    min-height: 0;
+  }
+}
+
+// While a drag that could ACTUALLY land here is in progress — one of
+// THIS task's own subtasks, not necessarily hovering it yet (see
+// TaskParent.tsx's isDropTargetCandidate) — an otherwise-empty zone gets
+// just enough height to actually be hoverable — a zero-size element can
+// never become a dnd-kit collision target in the first place. Declared
+// after the :empty rule above (same specificity either way) so this
+// min-height wins.
+.task-item__subtasks--droppable:empty {
+  min-height: 0.6rem;
+}
+
+// The one specific container currently being hovered as a valid drop
+// target (previewContainerId in useTaskDrag.ts) — task-level equivalent is
+// .widget-list--drop-target, in widgets/shared.scss.
+.task-item__subtasks--drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  border-radius: 0.4rem;
 }
 
 .subtask {
   position: relative;
   display: flex;
   // A wrapped title can grow to multiple lines — top-align instead of
-  // vertically centering the toggle against it.
+  // vertically centering the toggle against it (see .task-item__content's
+  // own comment on the first-line-to-toggle-center offset this pairs with).
   align-items: flex-start;
-  gap: 0.5rem;
-  // 0.2rem more than the row actually wants (0.2rem 0.35rem), paired with
-  // an equal-and-opposite negative margin below. The padding grows this
-  // row's box outward by 0.2rem top/bottom — half of .task-item__subtasks'
-  // 0.4rem gap — and the negative margin pulls it back so the content
-  // renders at the same position as before and the flex `gap` math still
-  // nets out to the same 0.4rem between adjacent rows' original edges.
-  // Net effect: each row's hoverable/paintable box now reaches exactly to
-  // the midpoint of the gap above and below it, so two adjacent rows'
-  // boxes meet with no dead pixels between them — the cursor is always
-  // "inside" one row or the other while crossing what still LOOKS like an
-  // empty gap (nothing is painted there at rest, since the background
-  // only appears on :hover), which is what stops the flicker of a
-  // subtask's hover ending and the next one's starting a beat later as
-  // the pointer crosses between them.
-  padding: 0.4rem 0.35rem;
+  gap: $subtask-gap;
+  // 0.2rem more than the row actually wants (0.2rem #{$subtask-left-padding}
+  // on both sides), paired with an equal-and-opposite negative margin
+  // below. The padding grows this row's box outward by 0.2rem top/bottom —
+  // half of .task-item__subtasks' 0.4rem gap — and the negative margin
+  // pulls it back so the content renders at the same position as before
+  // and the flex `gap` math still nets out to the same 0.4rem between
+  // adjacent rows' original edges. Net effect: each row's hoverable/
+  // paintable box now reaches exactly to the midpoint of the gap above and
+  // below it, so two adjacent rows' boxes meet with no dead pixels between
+  // them — the cursor is always "inside" one row or the other while
+  // crossing what still LOOKS like an empty gap (nothing is painted there
+  // at rest, since the background only appears on :hover), which is what
+  // stops the flicker of a subtask's hover ending and the next one's
+  // starting a beat later as the pointer crosses between them.
+  padding: 0.4rem $subtask-left-padding;
   margin: -0.2rem 0;
   border-radius: 0.5rem;
   // See .task-item's own comment on why not `pointer`.
@@ -401,20 +521,6 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
 
   &:hover {
     background: var(--panel-soft);
-  }
-
-  // The first/last row has no neighbor on that side to meet halfway, so
-  // giving it the same treatment there would just pull it 0.2rem into the
-  // surrounding whitespace (task-item__subtasks' own margin-top, or the
-  // bottom of the whole subtasks block) instead of into another gap.
-  &:first-child {
-    margin-top: 0;
-    padding-top: 0.2rem;
-  }
-
-  &:last-child {
-    margin-bottom: 0;
-    padding-bottom: 0.2rem;
   }
 
   // Click-driven "selected" state — see .task-item--active above, same
@@ -454,6 +560,10 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
   margin: 0;
   font-size: 0.875rem;
   color: var(--text);
+  // Matches .task-item__title's own line-height — .subtask__content's
+  // vertical-centering offset above assumes this exact value, not
+  // whatever line-height would otherwise be inherited.
+  line-height: 1.4;
   // See .task-item__title's own comment on why pre-wrap, not normal.
   white-space: pre-wrap;
 
@@ -491,7 +601,7 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
 // Adds the hover-reveal on top of .task-item__toolbar-button's own
 // icon-button styling, for the "..." trigger specifically. Also forced
 // visible via .task-item--active/.subtask--active (isActive in
-// TaskItem.tsx) so it doesn't disappear out from under an already-open
+// TaskRow.tsx) so it doesn't disappear out from under an already-open
 // menu the moment the pointer leaves the row for the (separately
 // portaled) ContextMenu popup itself.
 .task-item__menu-button {
@@ -504,4 +614,13 @@ $subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-to
 .task-item--active > .task-item__menu-button,
 .subtask--active > .task-item__menu-button {
   opacity: 1;
+}
+
+// Tops up .subtask's own tighter $subtask-gap to $task-item-gap for just
+// this one edge, to match the real gap .task-item__menu-button sits
+// behind on a TASK row — see .task-item__subtasks' own margin-right
+// derivation above, which depends on this exact gap to land the button
+// in the right place.
+.subtask > .task-item__menu-button {
+  margin-left: calc(#{$task-item-gap} - #{$subtask-gap});
 }

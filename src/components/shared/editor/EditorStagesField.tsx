@@ -4,7 +4,7 @@ import { createElement, useState } from 'react';
 import { BUILT_IN_STAGE_PRESETS } from '../../../lib/taskCascade';
 import { getTaskStageIcon } from '../../../lib/taskStageIcons';
 import type { StageColor, StagePreset, TaskStageDef } from '../../../lib/types';
-import { useSettings } from '../tasks/useSettings';
+import { useSettings } from '../settings/useSettings';
 import EditorField from './EditorField';
 import EditorIconPicker from './EditorIconPicker';
 

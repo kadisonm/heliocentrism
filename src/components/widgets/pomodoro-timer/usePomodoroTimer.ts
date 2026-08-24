@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { getSettingsSnapshot, useSettings } from '../../shared/tasks/useSettings';
+import { getSettingsSnapshot, useSettings } from '../../shared/settings/useSettings';
 
 export type PomodoroPhase = 'study' | 'break';
 

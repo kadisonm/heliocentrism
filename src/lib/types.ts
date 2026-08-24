@@ -15,6 +15,8 @@ export type TaskStageDef = {
 
 export type Subtask = {
   id: string;
+  parentId: string; // a Task id — always. Nothing can point to a Subtask's own id as a parent, so this is a leaf.
+  order: number; // sibling order among other subtasks sharing this parentId — see reorderByOrder
   title: string;
   description?: string;
   stage: number; // index into the PARENT Task's `stages` — no list of its own
@@ -53,11 +55,12 @@ export type TaskRepeat = {
 
 export type Task = {
   id: string;
+  parentId: string; // a TaskList id — always
+  order: number; // sibling order among other tasks sharing this parentId — see reorderByOrder
   title: string;
   description?: string;
   stage: number; // index into `stages`
   stages: TaskStageDef[]; // always length >= 2; [0] = start, [last] = complete
-  subtasks: Subtask[];
   due: string;
   repeat?: TaskRepeat; // undefined = task does not repeat
   createdAt: string; // ISO 8601
@@ -66,11 +69,12 @@ export type Task = {
 };
 
 // A named collection of tasks — the Task List widget can switch between
-// several of these, each with its own independent set of tasks.
+// several of these, each with its own independent set of tasks. The tasks
+// themselves live in their own flat store (see useTaskLists.ts), each
+// pointing back here via Task.parentId, rather than nesting inside this type.
 export type TaskList = {
   id: string;
   name: string;
-  tasks: Task[];
 };
 
 export type FirebaseConfig = {
