@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from './data';
 import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type { DashboardState, FirebaseConfig, SyncStatus, TaskList } from './types';
+import type { DashboardState, FirebaseConfig, Subtask, SyncStatus, Task, TaskList } from './types';
 
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
@@ -339,6 +339,74 @@ export async function writeTaskLists(taskLists: TaskList[]): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error writing task lists to Firestore:', error);
+    return false;
+  }
+}
+
+export async function readTasks(): Promise<Task[] | null> {
+  try {
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
+
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return Array.isArray(doc.data?.tasks) ? doc.data.tasks : null;
+  } catch (error) {
+    console.error('Error reading tasks from Firestore:', error);
+    return null;
+  }
+}
+
+export async function writeTasks(tasks: Task[]): Promise<boolean> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return false;
+
+  try {
+    const data: Pick<AppData, 'tasks'> = { tasks };
+    await setDoc(
+      docRef,
+      {
+        data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error writing tasks to Firestore:', error);
+    return false;
+  }
+}
+
+export async function readSubtasks(): Promise<Subtask[] | null> {
+  try {
+    const snapshot = await getAuthenticatedSnapshot();
+    if (!snapshot || !snapshot.exists()) return null;
+
+    const doc = snapshot.data() as { data?: Partial<AppData> };
+    return Array.isArray(doc.data?.subtasks) ? doc.data.subtasks : null;
+  } catch (error) {
+    console.error('Error reading subtasks from Firestore:', error);
+    return null;
+  }
+}
+
+export async function writeSubtasks(subtasks: Subtask[]): Promise<boolean> {
+  const docRef = await getAuthenticatedDocRef();
+  if (!docRef) return false;
+
+  try {
+    const data: Pick<AppData, 'subtasks'> = { subtasks };
+    await setDoc(
+      docRef,
+      {
+        data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error writing subtasks to Firestore:', error);
     return false;
   }
 }

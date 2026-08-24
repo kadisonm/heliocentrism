@@ -15,6 +15,20 @@ import { findWidgetDefinition } from '../../lib/widgetRegistry';
 
 const ALL_BREAKPOINTS: DashboardBreakpoint[] = ['desktop', 'tablet', 'mobile'];
 
+// Item-for-item comparison on just the fields that actually affect
+// position/size — ignores array order (GridLayout doesn't guarantee it's
+// stable) and any extra fields react-grid-layout attaches internally
+// (e.g. `moved`), which aren't meaningful for "did anything really change."
+function layoutsEqual(a: Layout, b: Layout): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  const byId = new Map(a.map((item) => [item.i, item]));
+  return b.every((item) => {
+    const prev = byId.get(item.i);
+    return !!prev && prev.x === item.x && prev.y === item.y && prev.w === item.w && prev.h === item.h;
+  });
+}
+
 // Handles both shapes this predates:
 //  - the original: one flat widget list shared across every breakpoint,
 //    with only the per-breakpoint layout differing.
@@ -170,11 +184,27 @@ export function useGridState() {
     []
   );
 
+  // Bails out (returns the SAME `current` reference) when the incoming
+  // layout is item-for-item identical to what's already stored — this
+  // matters because GridLayout can call onLayoutChange reporting a layout
+  // that hasn't actually changed, most often while crossing a
+  // breakpoint's column-count change (e.g. desktop's 12 cols -> tablet's
+  // 8), where it re-validates every item's position/size against the new
+  // grid and reports back regardless of whether anything moved. Without
+  // this guard, that "no-op" notification still produces a brand new
+  // `breakpoints` object every time, which re-derives a new `layout` array
+  // reference for Grid.tsx's own `layout` useMemo, which GridLayout then
+  // treats as a fresh prop worth re-validating all over again — an
+  // infinite ping-pong between this state and GridLayout's own internal
+  // layout-prop sync (surfaced as React's "Maximum update depth exceeded").
   const setLayout = useCallback((breakpoint: DashboardBreakpoint, layout: Layout) => {
-    setBreakpoints((current) => ({
-      ...current,
-      [breakpoint]: { ...current[breakpoint], layout },
-    }));
+    setBreakpoints((current) => {
+      if (layoutsEqual(current[breakpoint].layout, layout)) return current;
+      return {
+        ...current,
+        [breakpoint]: { ...current[breakpoint], layout },
+      };
+    });
   }, []);
 
   // Called continuously by WidgetShell's ResizeObserver while a widget's

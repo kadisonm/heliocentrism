@@ -2,12 +2,16 @@ import type {
   DashboardState,
   PomodoroSettings,
   StagePreset,
+  Subtask,
+  Task,
   TaskList,
   ThemeSettings,
 } from './types';
 
 // User task defaults should start empty.
 export const DEFAULT_TASK_LISTS: TaskList[] = [];
+export const DEFAULT_TASKS: Task[] = [];
+export const DEFAULT_SUBTASKS: Subtask[] = [];
 
 export const DEFAULT_DASHBOARD: DashboardState = {
   breakpoints: {
@@ -47,12 +51,16 @@ export const DEFAULT_SETTINGS: AppSettings = {
 // Shape of the synced Firebase document, nested under a `data` field.
 export type AppData = {
   taskLists: TaskList[];
+  tasks: Task[];
+  subtasks: Subtask[];
   dashboard: DashboardState;
   settings: AppSettings;
 };
 
 export const DEFAULT_DATA: AppData = {
   taskLists: DEFAULT_TASK_LISTS,
+  tasks: DEFAULT_TASKS,
+  subtasks: DEFAULT_SUBTASKS,
   dashboard: DEFAULT_DASHBOARD,
   settings: DEFAULT_SETTINGS,
 };

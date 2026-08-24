@@ -7,11 +7,17 @@ import EditorDueField from './EditorDueField';
 import EditorField from './EditorField';
 import EditorRepeatFields from './EditorRepeatFields';
 
+// A subtask that doesn't belong to a real parent Task yet — used while
+// TaskModal's "add task" form is still just a draft (its own parent task
+// doesn't exist until submission, so there's no Task id or sibling order to
+// assign).
+export type SubtaskDraft = Omit<Subtask, 'parentId' | 'order'>;
+
 type EditorSubtaskListProps = {
-  subtasks: Subtask[];
+  subtasks: SubtaskDraft[];
   onAdd: (title: string) => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, patch: Partial<Subtask>) => void;
+  onUpdate: (id: string, patch: Partial<SubtaskDraft>) => void;
 };
 
 export default function EditorSubtaskList({ subtasks, onAdd, onRemove, onUpdate }: EditorSubtaskListProps) {

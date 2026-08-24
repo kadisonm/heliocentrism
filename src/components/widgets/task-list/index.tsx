@@ -1,243 +1,129 @@
 'use client';
 
-import { Calendar, Eye, EyeOff, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { Eye, EyeOff, Layers, Plus, RefreshCw, Calendar, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
-import { clampTaskStages, isTaskDone } from '../../../lib/taskCascade';
-import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/taskRepeat';
+import { isTaskDone } from '../../../lib/taskCascade';
 import type { Subtask, Task, TaskList } from '../../../lib/types';
-import Badge from '../../common/Badge';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import MenuItem from '../../common/context-menu/MenuItem';
+import SortableTask from '../../shared/tasks/SortableTask';
 import SortableTaskList from '../../shared/tasks/SortableTaskList';
-import TaskItem, { TaskItemView } from '../../shared/tasks/TaskItem';
+import { listContainerId, useTaskDrag } from '../../shared/tasks/useTaskDrag';
 import AddTaskListModal from './AddTaskListModal';
 import TaskDueModal from './TaskDueModal';
-import { dueBadgeColor, formatDue, formatDueFull, getDueUrgency } from './dueDate';
+import { editTargetId, type EditTarget } from './editTarget';
 import SubtaskModal from './SubtaskModal';
+import {
+  renderDueBadge,
+  renderRepeatBadge,
+  renderSubtaskExtra,
+  renderSubtaskEditExtra,
+  renderTaskEditExtra,
+} from './taskBadges';
 import TaskListSwitcher from './TaskListSwitcher';
 import TaskModal from './TaskModal';
 import TaskRepeatModal from './TaskRepeatModal';
 import TaskStagesModal from './TaskStagesModal';
 import { useTaskLists } from './useTaskLists';
 
-// Which task or subtask a repeat/due quick-edit modal is currently open
-// for — shared by both TaskRepeatModal and TaskDueModal, which work on a
-// plain value rather than a Task, so this is what routes their onSubmit to
-// updateTask vs updateSubtask.
-type EditTarget = { type: 'task'; task: Task } | { type: 'subtask'; taskId: string; subtask: Subtask };
-
-function editTargetId(target: EditTarget): string {
-  return target.type === 'task' ? target.task.id : target.subtask.id;
-}
-// Drives AddTaskListModal — 'add' seeds the name field (e.g. from the
-// switcher's search box), 'edit' pre-fills it from an existing list.
+// Drives AddTaskListModal — 'add' seeds the name field, 'edit' pre-fills it
+// from an existing list.
 type ListModalState = { mode: 'add'; seedName: string } | { mode: 'edit'; list: TaskList };
-// Which single task/subtask row currently has its "..." context menu
-// open — click-driven (the row's hover-revealed menu button), not hover
-// itself. At most one at a time; both the task and subtask rows
-// stopPropagation() on click so only a genuine outside click reaches the
-// document-level listener that clears this. `position` is where the menu
-// anchors (its top-left corner at the click).
+
+// Which single task/subtask row currently has its "..." context menu open
+// — at most one at a time; both row types stopPropagation() on click so
+// only a genuine outside click reaches the document listener that clears
+// this. `position` anchors the menu's top-left corner. A subtask's own id
+// is enough to look it up directly in the flat subtasks store, so unlike
+// EditTarget's task-scoped variant there's no need to also carry a taskId.
 type ActiveMenu =
   | { type: 'task'; taskId: string; position: ContextMenuPosition }
-  | { type: 'subtask'; taskId: string; subtaskId: string; position: ContextMenuPosition };
+  | { type: 'subtask'; subtaskId: string; position: ContextMenuPosition };
 
-function renderDueBadge(task: Task, onClick: () => void) {
-  if (!task.due) return undefined;
-  return (
-    <Badge
-      icon={Calendar}
-      title={formatDue(task.due)}
-      ariaLabel={`Due ${formatDueFull(task.due)}`}
-      color={dueBadgeColor(getDueUrgency(task.due))}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderRepeatBadge(task: Task, onClick: () => void) {
-  if (!task.repeat) return undefined;
-  return (
-    <Badge
-      icon={RefreshCw}
-      title={formatNextOccurrence(task.repeat)}
-      ariaLabel={`Repeats ${formatNextOccurrenceFull(task.repeat)}`}
-      color="muted"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSubtaskDueBadge(subtask: Subtask, onClick: () => void) {
-  if (!subtask.due) return undefined;
-  return (
-    <Badge
-      icon={Calendar}
-      title={formatDue(subtask.due)}
-      ariaLabel={`Due ${formatDueFull(subtask.due)}`}
-      color={dueBadgeColor(getDueUrgency(subtask.due))}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSubtaskRepeatBadge(subtask: Subtask, onClick: () => void) {
-  if (!subtask.repeat) return undefined;
-  return (
-    <Badge
-      icon={RefreshCw}
-      title={formatNextOccurrence(subtask.repeat)}
-      ariaLabel={`Repeats ${formatNextOccurrenceFull(subtask.repeat)}`}
-      color="muted"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSubtaskExtra(
-  subtask: Subtask,
-  taskId: string,
-  onEditRepeat: (target: EditTarget) => void,
-  onEditDue: (target: EditTarget) => void
-) {
-  return (
-    <>
-      {renderSubtaskRepeatBadge(subtask, () => onEditRepeat({ type: 'subtask', taskId, subtask }))}
-      {renderSubtaskDueBadge(subtask, () => onEditDue({ type: 'subtask', taskId, subtask }))}
-    </>
-  );
-}
-
-// "Set due date"/"Set repeat" placeholders — only ever passed as
-// `hoverExtra`/`renderSubtaskHoverExtra`, which TaskItem only mounts while
-// the row is hovered, so these never render for a task/subtask that
-// already has the field set.
-function renderSetDueBadge(onClick: () => void) {
-  return (
-    <Badge
-      icon={Calendar}
-      title="Set due date"
-      ariaLabel="Set due date"
-      className="badge--ghost"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSetRepeatBadge(onClick: () => void) {
-  return (
-    <Badge
-      icon={RefreshCw}
-      title="Set repeat"
-      ariaLabel="Set repeat"
-      className="badge--ghost"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderTaskHoverExtra(
-  task: Task,
-  onEditRepeat: (target: EditTarget) => void,
-  onEditDue: (target: EditTarget) => void
-) {
-  return (
-    <>
-      {!task.repeat && renderSetRepeatBadge(() => onEditRepeat({ type: 'task', task }))}
-      {!task.due && renderSetDueBadge(() => onEditDue({ type: 'task', task }))}
-    </>
-  );
-}
-
-function renderSubtaskHoverExtra(
-  subtask: Subtask,
-  taskId: string,
-  onEditRepeat: (target: EditTarget) => void,
-  onEditDue: (target: EditTarget) => void
-) {
-  return (
-    <>
-      {!subtask.repeat && renderSetRepeatBadge(() => onEditRepeat({ type: 'subtask', taskId, subtask }))}
-      {!subtask.due && renderSetDueBadge(() => onEditDue({ type: 'subtask', taskId, subtask }))}
-    </>
-  );
-}
+// Which single task/subtask row is in "edit mode" — entered by clicking its
+// title/description, or any of its badges (see TaskRow.tsx's isEditingRow).
+// Drives whether the "Set due date"/"Set repeat" ghost badges and an empty
+// description's placeholder are revealed, rather than that being
+// hover-driven.
+type EditingRow = { type: 'task'; taskId: string } | { type: 'subtask'; taskId: string; subtaskId: string };
 
 export default function TaskListWidget() {
   const {
     taskLists,
+    tasks,
+    subtasks,
     isLoading,
     createList,
     renameList,
     deleteList,
     addTask,
+    updateTask,
+    updateTaskStages,
     updateTaskStage,
     updateSubtaskStage,
-    updateTask,
     deleteTask,
     addSubtask,
     updateSubtask,
     deleteSubtask,
-    reorderTasks,
-    reorderSubtasks,
   } = useTaskLists();
   const { widget, onUpdate } = useWidgetContext();
   const selectedListId = widget.selectedListId;
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [repeatTarget, setRepeatTarget] = useState<EditTarget | null>(null);
   const [dueTarget, setDueTarget] = useState<EditTarget | null>(null);
-  // Task-only (see TaskItem.tsx's onEditStages) — subtasks share their
-  // parent's `stages` array, so there's no subtask variant of this target.
+  // Task-only — subtasks share their parent's `stages` array.
   const [stagesTarget, setStagesTarget] = useState<Task | null>(null);
-  // Which task the "Add subtask" menu item is currently adding to — null
-  // means the modal is closed. Add-only (see SubtaskModal.tsx); editing
-  // an existing subtask's title/description happens inline now, and
-  // due/repeat each have their own badge.
+  // Which task the "Add subtask" menu item is adding to — null means closed.
   const [subtaskModalTaskId, setSubtaskModalTaskId] = useState<string | null>(null);
   const [activeMenu, setActiveMenu] = useState<ActiveMenu | null>(null);
+  const [editingRow, setEditingRow] = useState<EditingRow | null>(null);
   const [listPendingDelete, setListPendingDelete] = useState<TaskList | null>(null);
   const showCompleted = widget.showCompleted ?? false;
   const [listModalState, setListModalState] = useState<ListModalState | null>(null);
 
-  // A click anywhere NOT inside a task/subtask row or the context menu
-  // itself is an "outside" click — close whatever menu is open. Uses DOM
-  // containment (event.target.closest(...)) rather than relying on each
-  // row's onClick calling stopPropagation() to prevent this listener from
-  // ever seeing an "inside" click — dnd-kit's own PointerSensor registers
-  // its own document-level click listener for its internal press/tap
-  // handling, and empirically that interaction meant stopPropagation()
-  // alone did not reliably keep a same-click "inside" event from also
-  // reaching this one. Containment-checking here sidesteps that entirely,
-  // regardless of the exact propagation-order cause.
+  // A click outside any task/subtask row, the context menu, or an open
+  // quick-edit modal (portaled to document.body, so DOM containment is what
+  // catches it, not a ref) closes the menu and drops edit mode. Uses
+  // event.target.closest() rather than relying on stopPropagation() alone —
+  // dnd-kit's PointerSensor has its own document click listener that can
+  // still see an "inside" click even when the row's own handler stopped it.
   useEffect(() => {
     const handleDocumentClick = (event: globalThis.MouseEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest('.task-item, .subtask, .context-menu')) return;
+      if (target?.closest('.task-item, .subtask, .context-menu, .editor-overlay, .settings-overlay')) return;
       setActiveMenu(null);
+      setEditingRow(null);
     };
     document.addEventListener('click', handleDocumentClick);
     return () => document.removeEventListener('click', handleDocumentClick);
   }, []);
+
+  // Wraps setRepeatTarget/setDueTarget/setStagesTarget so opening any of
+  // these quick-edit modals also switches that row into edit mode, not just
+  // the field actually clicked.
+  const editRepeat = (target: EditTarget) => {
+    setRepeatTarget(target);
+    setEditingRow(
+      target.type === 'task'
+        ? { type: 'task', taskId: target.task.id }
+        : { type: 'subtask', taskId: target.subtask.parentId, subtaskId: target.subtask.id }
+    );
+  };
+  const editDue = (target: EditTarget) => {
+    setDueTarget(target);
+    setEditingRow(
+      target.type === 'task'
+        ? { type: 'task', taskId: target.task.id }
+        : { type: 'subtask', taskId: target.subtask.parentId, subtaskId: target.subtask.id }
+    );
+  };
+  const editStages = (task: Task) => {
+    setStagesTarget(task);
+    setEditingRow({ type: 'task', taskId: task.id });
+  };
 
   const toggleTaskMenu = (taskId: string, position: ContextMenuPosition) => {
     setActiveMenu((current) =>
@@ -245,11 +131,9 @@ export default function TaskListWidget() {
     );
   };
 
-  const toggleSubtaskMenu = (taskId: string, subtaskId: string, position: ContextMenuPosition) => {
+  const toggleSubtaskMenu = (subtaskId: string, position: ContextMenuPosition) => {
     setActiveMenu((current) =>
-      current?.type === 'subtask' && current.taskId === taskId && current.subtaskId === subtaskId
-        ? null
-        : { type: 'subtask', taskId, subtaskId, position }
+      current?.type === 'subtask' && current.subtaskId === subtaskId ? null : { type: 'subtask', subtaskId, position }
     );
   };
 
@@ -258,34 +142,61 @@ export default function TaskListWidget() {
     return found ?? taskLists[0] ?? null;
   }, [taskLists, selectedListId]);
 
+  // Registered even with zero tasks (or no list at all) so this widget is
+  // still a valid cross-widget drop target — see TaskDragProvider, which
+  // owns the single shared DndContext every Task List widget instance's
+  // rows and containers register into.
+  const listContainerIdValue = activeList ? listContainerId(activeList.id) : undefined;
+  const { setNodeRef: setListDropRef } = useDroppable({
+    id: listContainerIdValue ?? 'list:none',
+    data: activeList ? { type: 'list', listId: activeList.id } : undefined,
+    disabled: !activeList,
+  });
+  const dragState = useTaskDrag();
+  const isListDropTarget = listContainerIdValue !== undefined && dragState.previewContainerId === listContainerIdValue && dragState.isValidDrop;
+
   // "Hide completed" applies at both levels: a done task drops out
-  // entirely, and a not-done task keeps its own done subtasks hidden too
-  // — each task object here is otherwise passed straight through to
-  // TaskItem, so filtering `subtasks` here is what actually keeps them
-  // out of the rendered list (and the drag-reorder id set, which is
-  // derived from these same `subtasks` arrays inside TaskItem).
+  // entirely, and a not-done task keeps its own done subtasks hidden.
+  // Tasks/subtasks live in their own flat stores now (see useTaskLists.ts)
+  // rather than nested inside the list/task — filter by parentId, and sort
+  // by `order` since array position no longer implies it.
   const visibleTasks = useMemo(() => {
     if (!activeList) return [];
-    const tasks = activeList.tasks.filter((task) => showCompleted || !isTaskDone(task));
-    if (showCompleted) return tasks;
-    return tasks.map((task) => ({
-      ...task,
-      subtasks: task.subtasks.filter((subtask) => !isTaskDone({ stage: subtask.stage, stages: task.stages })),
-    }));
-  }, [activeList, showCompleted]);
+    return tasks
+      .filter((task) => task.parentId === activeList.id && (showCompleted || !isTaskDone(task)))
+      .sort((a, b) => a.order - b.order);
+  }, [tasks, activeList, showCompleted]);
+
+  const subtasksByTaskId = useMemo(() => {
+    const map = new Map<string, Subtask[]>();
+    for (const task of visibleTasks) {
+      map.set(
+        task.id,
+        subtasks
+          .filter((subtask) => subtask.parentId === task.id && (showCompleted || !isTaskDone({ stage: subtask.stage, stages: task.stages })))
+          .sort((a, b) => a.order - b.order)
+      );
+    }
+    return map;
+  }, [subtasks, visibleTasks, showCompleted]);
+
+  // Scoped globally rather than per-task: subtask ids are unique, so a
+  // subtask row compares its own id against this directly (see
+  // TaskParent.tsx's SubtaskSortableRow) — no need to also gate on which
+  // task currently owns the open menu.
+  const activeSubtaskId = activeMenu?.type === 'subtask' ? activeMenu.subtaskId : null;
+  const editingSubtaskId = editingRow?.type === 'subtask' ? editingRow.subtaskId : null;
 
   // The one "..." context menu popup — its items depend on whether a task
-  // or a subtask is active, looked up fresh from activeList by id (rather
-  // than storing the object itself) so it never goes stale. Opened by the
-  // hover-revealed menu button on each row (see task-item__menu-button in
-  // TaskItem.tsx) — Edit isn't offered here since title/description edit
-  // inline now, and stage/due/repeat each already have their own badge.
+  // or a subtask is active, looked up fresh from the flat stores by id so
+  // it never goes stale.
   function renderActiveMenu() {
-    if (!activeMenu || !activeList) return null;
-    const activeTask = activeList.tasks.find((t) => t.id === activeMenu.taskId);
-    if (!activeTask) return null;
+    if (!activeMenu) return null;
 
     if (activeMenu.type === 'task') {
+      const activeTask = tasks.find((t) => t.id === activeMenu.taskId);
+      if (!activeTask) return null;
+
       return (
         <ContextMenu position={activeMenu.position}>
           <MenuItem
@@ -297,11 +208,35 @@ export default function TaskListWidget() {
             }}
           />
           <MenuItem
+            icon={Layers}
+            label="Change stages"
+            onClick={() => {
+              editStages(activeTask);
+              setActiveMenu(null);
+            }}
+          />
+          <MenuItem
+            icon={RefreshCw}
+            label="Set repeat"
+            onClick={() => {
+              editRepeat({ type: 'task', task: activeTask });
+              setActiveMenu(null);
+            }}
+          />
+          <MenuItem
+            icon={Calendar}
+            label="Set due date"
+            onClick={() => {
+              editDue({ type: 'task', task: activeTask });
+              setActiveMenu(null);
+            }}
+          />
+          <MenuItem
             icon={Trash2}
             label="Delete task"
             color="error"
             onClick={() => {
-              deleteTask(activeList.id, activeTask.id);
+              deleteTask(activeTask.id);
               setActiveMenu(null);
             }}
           />
@@ -309,17 +244,33 @@ export default function TaskListWidget() {
       );
     }
 
-    const activeSubtask = activeTask.subtasks.find((s) => s.id === activeMenu.subtaskId);
+    const activeSubtask = subtasks.find((s) => s.id === activeMenu.subtaskId);
     if (!activeSubtask) return null;
 
     return (
       <ContextMenu position={activeMenu.position}>
         <MenuItem
+          icon={RefreshCw}
+          label="Set repeat"
+          onClick={() => {
+            editRepeat({ type: 'subtask', subtask: activeSubtask });
+            setActiveMenu(null);
+          }}
+        />
+        <MenuItem
+          icon={Calendar}
+          label="Set due date"
+          onClick={() => {
+            editDue({ type: 'subtask', subtask: activeSubtask });
+            setActiveMenu(null);
+          }}
+        />
+        <MenuItem
           icon={Trash2}
           label="Delete subtask"
           color="error"
           onClick={() => {
-            deleteSubtask(activeList.id, activeTask.id, activeSubtask.id);
+            deleteSubtask(activeSubtask.id);
             setActiveMenu(null);
           }}
         />
@@ -374,7 +325,10 @@ export default function TaskListWidget() {
 
           <div className="widget-sections">
             {!isLoading && (
-              <div className="widget-list">
+              <div
+                className={`widget-list${isListDropTarget ? ' widget-list--drop-target' : ''}`}
+                ref={setListDropRef}
+              >
                 {!activeList ? (
                   <div className="task-list-empty">
                     <p className="widget-empty">No lists yet</p>
@@ -389,85 +343,35 @@ export default function TaskListWidget() {
                     </button>
                   </div>
                 ) : visibleTasks.length > 0 ? (
-                  <SortableTaskList
-                    ids={visibleTasks.map((task) => task.id)}
-                    onReorder={(activeId, overId) =>
-                      reorderTasks(
-                        activeList.id,
-                        (task) => showCompleted || !isTaskDone(task),
-                        activeId,
-                        overId
-                      )
-                    }
-                    renderOverlay={(activeId) => {
-                      const task = visibleTasks.find((t) => t.id === activeId);
-                      return task ? (
-                        <TaskItemView
-                          task={task}
-                          onToggle={(id) => updateTaskStage(activeList.id, id)}
-                          onToggleSubtask={(taskId, subtaskId) =>
-                            updateSubtaskStage(activeList.id, taskId, subtaskId)
-                          }
-                          onReorderSubtasks={(taskId, activeId, overId) =>
-                            reorderSubtasks(activeList.id, taskId, activeId, overId)
-                          }
-                          onEditStages={setStagesTarget}
-                          extra={
-                            <>
-                              {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
-                              {renderDueBadge(task, () => setDueTarget({ type: 'task', task }))}
-                            </>
-                          }
-                          renderSubtaskExtra={(subtask) =>
-                            renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
-                          }
-                          hoverExtra={renderTaskHoverExtra(task, setRepeatTarget, setDueTarget)}
-                          renderSubtaskHoverExtra={(subtask) =>
-                            renderSubtaskHoverExtra(subtask, task.id, setRepeatTarget, setDueTarget)
-                          }
-                          overlay
-                        />
-                      ) : null;
-                    }}
-                  >
+                  <SortableTaskList containerId={listContainerId(activeList.id)} ids={visibleTasks.map((task) => task.id)}>
                     {visibleTasks.map((task) => (
-                      <TaskItem
+                      <SortableTask
                         key={task.id}
                         task={task}
-                        onToggle={(id) => updateTaskStage(activeList.id, id)}
-                        onToggleSubtask={(taskId, subtaskId) =>
-                          updateSubtaskStage(activeList.id, taskId, subtaskId)
-                        }
-                        onReorderSubtasks={(taskId, activeId, overId) =>
-                          reorderSubtasks(activeList.id, taskId, activeId, overId)
-                        }
+                        subtasks={subtasksByTaskId.get(task.id) ?? []}
+                        onToggle={(id) => updateTaskStage(id)}
+                        onToggleSubtask={(subtaskId) => updateSubtaskStage(subtaskId)}
                         isActive={activeMenu?.type === 'task' && activeMenu.taskId === task.id}
                         onRowClick={(position) => toggleTaskMenu(task.id, position)}
-                        activeSubtaskId={
-                          activeMenu?.type === 'subtask' && activeMenu.taskId === task.id
-                            ? activeMenu.subtaskId
-                            : null
-                        }
-                        onSubtaskRowClick={(subtaskId, position) =>
-                          toggleSubtaskMenu(task.id, subtaskId, position)
-                        }
-                        onEditStages={setStagesTarget}
-                        onUpdateTask={(updatedTask) => updateTask(activeList.id, updatedTask)}
-                        onUpdateSubtask={(taskId, subtaskId, patch) =>
-                          updateSubtask(activeList.id, taskId, subtaskId, patch)
-                        }
+                        activeSubtaskId={activeSubtaskId}
+                        onSubtaskRowClick={(subtaskId, position) => toggleSubtaskMenu(subtaskId, position)}
+                        onEditStages={editStages}
+                        onUpdateTask={updateTask}
+                        onUpdateSubtask={updateSubtask}
                         extra={
                           <>
-                            {renderRepeatBadge(task, () => setRepeatTarget({ type: 'task', task }))}
-                            {renderDueBadge(task, () => setDueTarget({ type: 'task', task }))}
+                            {renderRepeatBadge(task, () => editRepeat({ type: 'task', task }))}
+                            {renderDueBadge(task, () => editDue({ type: 'task', task }))}
                           </>
                         }
-                        renderSubtaskExtra={(subtask) =>
-                          renderSubtaskExtra(subtask, task.id, setRepeatTarget, setDueTarget)
-                        }
-                        hoverExtra={renderTaskHoverExtra(task, setRepeatTarget, setDueTarget)}
-                        renderSubtaskHoverExtra={(subtask) =>
-                          renderSubtaskHoverExtra(subtask, task.id, setRepeatTarget, setDueTarget)
+                        renderSubtaskExtra={(subtask) => renderSubtaskExtra(subtask, editRepeat, editDue)}
+                        editExtra={renderTaskEditExtra(task, editRepeat, editDue)}
+                        renderSubtaskEditExtra={(subtask) => renderSubtaskEditExtra(subtask, editRepeat, editDue)}
+                        isEditingRow={editingRow?.type === 'task' && editingRow.taskId === task.id}
+                        onEnterEditMode={() => setEditingRow({ type: 'task', taskId: task.id })}
+                        editingSubtaskId={editingSubtaskId}
+                        onSubtaskEnterEditMode={(subtaskId) =>
+                          setEditingRow({ type: 'subtask', taskId: task.id, subtaskId })
                         }
                       />
                     ))}
@@ -485,8 +389,8 @@ export default function TaskListWidget() {
         key={isTaskModalOpen ? 'open' : 'closed'}
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
-        onSubmit={(task) => {
-          if (activeList) addTask(activeList.id, task);
+        onSubmit={(task, subtaskDrafts) => {
+          if (activeList) addTask(activeList.id, task, subtaskDrafts);
           setIsTaskModalOpen(false);
         }}
       />
@@ -513,11 +417,11 @@ export default function TaskListWidget() {
         repeat={repeatTarget ? (repeatTarget.type === 'task' ? repeatTarget.task.repeat : repeatTarget.subtask.repeat) : undefined}
         onClose={() => setRepeatTarget(null)}
         onSubmit={(repeat) => {
-          if (!activeList || !repeatTarget) return;
+          if (!repeatTarget) return;
           if (repeatTarget.type === 'task') {
-            updateTask(activeList.id, { ...repeatTarget.task, repeat });
+            updateTask({ ...repeatTarget.task, repeat });
           } else {
-            updateSubtask(activeList.id, repeatTarget.taskId, repeatTarget.subtask.id, { repeat });
+            updateSubtask(repeatTarget.subtask.id, { repeat });
           }
           setRepeatTarget(null);
         }}
@@ -529,11 +433,11 @@ export default function TaskListWidget() {
         due={dueTarget ? (dueTarget.type === 'task' ? dueTarget.task.due : dueTarget.subtask.due) : ''}
         onClose={() => setDueTarget(null)}
         onSubmit={(due) => {
-          if (!activeList || !dueTarget) return;
+          if (!dueTarget) return;
           if (dueTarget.type === 'task') {
-            updateTask(activeList.id, { ...dueTarget.task, due });
+            updateTask({ ...dueTarget.task, due });
           } else {
-            updateSubtask(activeList.id, dueTarget.taskId, dueTarget.subtask.id, { due });
+            updateSubtask(dueTarget.subtask.id, { due });
           }
           setDueTarget(null);
         }}
@@ -545,13 +449,8 @@ export default function TaskListWidget() {
         stages={stagesTarget?.stages ?? []}
         onClose={() => setStagesTarget(null)}
         onSubmit={(stages) => {
-          if (!activeList || !stagesTarget) return;
-          // clampTaskStages re-derives the task's own stage AND every
-          // subtask's stage against the new (possibly shorter) list —
-          // stages are shared with subtasks (see TaskItem.tsx), so a
-          // shrink here can otherwise leave a stage index pointing past
-          // the end of the array.
-          updateTask(activeList.id, clampTaskStages({ ...stagesTarget, stages }));
+          if (!stagesTarget) return;
+          updateTaskStages(stagesTarget.id, stages);
           setStagesTarget(null);
         }}
       />
@@ -561,7 +460,7 @@ export default function TaskListWidget() {
         isOpen={subtaskModalTaskId !== null}
         onClose={() => setSubtaskModalTaskId(null)}
         onSubmit={(values) => {
-          if (activeList && subtaskModalTaskId) addSubtask(activeList.id, subtaskModalTaskId, values);
+          if (subtaskModalTaskId) addSubtask(subtaskModalTaskId, values);
           setSubtaskModalTaskId(null);
         }}
       />

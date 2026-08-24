@@ -57,12 +57,11 @@
 }
 
 // "Set due date"/"Set repeat" placeholders — only ever mounted while the
-// parent row is hovered (see TaskItem.tsx's hoverExtra). A dashed outline
-// (vs. the filled pill the other badge colors use) reads as "not set yet,
-// click to add" rather than as a real value. The enter/exit fade+grow
-// itself lives on the .task-item__hover-reveal wrapper (task-item.scss),
-// not here — a `transition` there can reverse smoothly on hover-out,
-// which a mount-triggered `animation` on the badge itself couldn't.
+// parent row is in edit mode (see TaskRow.tsx's editExtra/isEditingRow).
+// A dashed outline (vs. the filled pill the other badge colors use) reads
+// as "not set yet, click to add" rather than as a real value. The
+// reveal/hide itself lives on the .task-item__footer-reveal wrapper
+// (task-item.scss), not here.
 //
 // `outline`, not `border`: every other badge color has no border, so a
 // real border here would make this badge ~2px taller than its siblings —

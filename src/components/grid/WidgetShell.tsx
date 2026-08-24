@@ -64,30 +64,38 @@ function WidgetShell({
     if (!target) return;
 
     const minH = definition?.minSize.h;
-    let rafId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    // Coalesced through rAF rather than calling onHeightChange straight
-    // from the observer callback — toggling auto-expand on a widget with
-    // others below it can cascade several resize notifications (this
-    // widget growing, then whatever the compaction it triggers pushes
-    // around) before things settle, and reacting to every one of them
-    // synchronously is what was tripping React's update-depth guard.
-    // Only the latest notification in a given frame actually gets applied.
+    // Debounced on a short settle window rather than calling onHeightChange
+    // straight from the observer callback (or coalescing through just one
+    // rAF, which isn't a long enough window — a CSS transition inside the
+    // content, e.g. a task row expanding into edit mode, fires this
+    // observer once per animation frame while it's mid-transition, and a
+    // single-frame coalesce still ends up applying each of those
+    // intermediate heights in turn, fighting the animation instead of
+    // waiting for it to settle). This same debounce is what also coalesces
+    // the cascade of notifications toggling auto-expand on a widget with
+    // others below it can trigger (this widget growing, then whatever
+    // compaction that pushes around) — reacting to every one of them
+    // synchronously is what was originally tripping React's update-depth
+    // guard. 250ms is comfortably past this file's own CSS transitions
+    // (see task-item.scss's .task-item__description-reveal/__footer-reveal,
+    // 0.2s) — only the final, settled height in a burst gets applied.
     const observer = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height;
       if (height === undefined) return;
 
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
         const rows = pxToGridRows(height);
         onHeightChange(widget.id, minH ? Math.max(minH, rows) : rows);
-      });
+      }, 250);
     });
 
     observer.observe(target);
     return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (timeoutId !== null) clearTimeout(timeoutId);
       observer.disconnect();
     };
   }, [isAutoExpand, widget.id, onHeightChange, definition]);

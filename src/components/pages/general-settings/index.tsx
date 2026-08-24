@@ -4,7 +4,7 @@ import type { ThemeMode } from '../../../lib/types';
 import { THEME_PALETTES } from '../../../lib/theme';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
-import { useSettings } from '../../shared/tasks/useSettings';
+import { useSettings } from '../../shared/settings/useSettings';
 
 type GeneralSettingsPanelProps = {
   isOpen: boolean;

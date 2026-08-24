@@ -2,7 +2,7 @@
 
 import type { AppSettings } from '../../../lib/data';
 import Modal from '../../common/Modal';
-import { useSettings } from '../../shared/tasks/useSettings';
+import { useSettings } from '../../shared/settings/useSettings';
 
 type PomodoroSettingsModalProps = {
   isOpen: boolean;
