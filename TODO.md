@@ -6,17 +6,28 @@
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
 
-- Allow widgets to be placed anywhere without gravity
-
 - Refactor all the css files to match a similar structure to the actual tsx files
 
 - When switching pages you can visibly see all the widgets slightly reload as they do a pixel jitter. (and the orbit animation restarts)
+
+- Make it so the pages navigation matches the figma mock
+- Make it so the edit button has a frosted glass effect
+- Make it so that the bottom of the screen has a slight vignette
+- Make it so that the background has a cool simple and optimised space background pattern (with the ability for this background to be changeable in the settings - with a preview)
+
 
 ## Tasks
 - Fix tasks minimum stage not being updated
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
-- Popup should switch sides if it is going to go off the screen
+
+
+only one context menu should be able to be opened at one time
+
+- Make it so clicking and holding when dragging tasks ignores if the user is currently typing in one of the text areas. (But make sure the user can still select without it counting as a drag)
+
+Make it so that adding a new task just adds a blank task to the bottom of the list and remove the old add task modal
+
 
 - Make it use my firestore by default
 

@@ -26,7 +26,7 @@ import { useTaskLists } from './useTaskLists';
 type ListModalState = { mode: 'add'; seedName: string } | { mode: 'edit'; list: TaskList };
 
 // Which single task/subtask row has its "..." context menu open (at most
-// one at a time). `position` anchors the menu's top-left corner.
+// one at a time). `position` is the click point ContextMenu anchors to.
 type ActiveMenu =
   | { type: 'task'; taskId: string; position: ContextMenuPosition }
   | { type: 'subtask'; subtaskId: string; position: ContextMenuPosition };
@@ -215,7 +215,7 @@ export default function TaskListWidget() {
       if (!activeTask) return null;
 
       return (
-        <ContextMenu position={activeMenu.position}>
+        <ContextMenu position={activeMenu.position} onClose={() => setActiveMenu(null)}>
           <MenuItem
             icon={Plus}
             label="Add subtask"
@@ -265,7 +265,7 @@ export default function TaskListWidget() {
     if (!activeSubtask) return null;
 
     return (
-      <ContextMenu position={activeMenu.position}>
+      <ContextMenu position={activeMenu.position} onClose={() => setActiveMenu(null)}>
         <MenuItem
           icon={RefreshCw}
           label="Set repeat"
