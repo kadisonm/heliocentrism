@@ -23,6 +23,7 @@
 - Fix tasks minimum stage not being updated
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
+- Dragging a task on mobile doesnt make the page scroll up with it
 
 
 only one context menu should be able to be opened at one time
