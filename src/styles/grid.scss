@@ -1,19 +1,32 @@
+// Single source of truth for .grid-status-bar/.page-dots' own fixed
+// position below, and for $page-min-height further down (which needs every
+// page panel to reach exactly that far).
+$toolbar-bottom-offset: 1.5rem;
+$toolbar-height: 2.75rem;
+
+// Matches .dashboard-container's own padding-top (see dashboard.scss) — a
+// page's top always sits exactly this far from the viewport.
+$page-top-offset: 2rem;
+
+// Every page panel (active or peeking, real or the blank "new page"
+// placeholder) should be tall enough to reach the toolbar floating near the
+// bottom of the viewport, so it never ends with the toolbar floating over
+// empty space below a short page.
+$page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} - #{$toolbar-height});
+
 .grid-canvas {
   width: 100%;
 }
 
 .grid-preview-frame {
-  // The inline `width` set on this element is the exact pixel width react-grid-layout
-  // was told to use for its column math. Keep box-sizing content-box (overriding the
-  // app-wide border-box reset) so this frame's padding/border don't eat into that width
-  // and desync the grid's math from what's visually available — that mismatch is what
-  // pushed widgets past the right edge.
+  // content-box (overriding the app-wide border-box reset) keeps this frame's
+  // padding from eating into the inline `width` react-grid-layout uses for
+  // its column math.
   box-sizing: content-box;
   margin: 0 auto;
-  border: 1px dashed var(--border);
   border-radius: 1rem;
   padding: 1rem;
-  background: color-mix(in srgb, var(--surface-scrim) 20%, transparent);
+  background: color-mix(in srgb, var(--background-secondary) 20%, transparent);
 }
 
 .grid {
@@ -30,7 +43,7 @@
 
 .react-grid-item {
   &.react-draggable-dragging {
-    box-shadow: 0 12px 30px var(--shadow);
+    box-shadow: 0 12px 30px var(--shadow-modifier);
   }
 
   // Dragging the resize handle sweeps the cursor across the widget's own
@@ -43,13 +56,27 @@
 }
 
 .react-grid-placeholder {
-  background: var(--accent) !important;
+  background: var(--color-accent) !important;
   border-radius: 1rem;
 }
 
+// A cloned stand-in for a widget mid cross-page drag (see Grid.tsx's
+// relocation ghost) — position/size are set imperatively per frame to
+// track the cursor, so only cosmetics belong here. Matches
+// .react-grid-item.react-draggable-dragging's own shadow so the handoff
+// from the native drag is invisible.
+.grid-drag-ghost {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+}
+
 .react-resizable-handle::after {
-  border-right-color: var(--accent) !important;
-  border-bottom-color: var(--accent) !important;
+  border-right-color: var(--color-accent) !important;
+  border-bottom-color: var(--color-accent) !important;
 }
 
 .grid-widget {
@@ -58,8 +85,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--panel-gradient);
-  border: 1px solid var(--border);
+  background: var(--background-primary-alt);
   border-radius: 1rem;
   overflow: hidden;
 }
@@ -70,7 +96,6 @@
 // while editing (positioning/resizing an invisible box would be unusable).
 .grid-widget--transparent {
   background: none;
-  border-color: transparent;
 }
 
 .grid-widget-chrome {
@@ -78,13 +103,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .widget-drag-handle {
   cursor: grab;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 1rem;
   line-height: 1;
   padding: 0.15rem 0.4rem;
@@ -97,7 +121,7 @@
 .grid-widget-settings {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0.15rem 0.4rem;
   border-radius: 0.4rem;
@@ -106,15 +130,15 @@
   transition: all 0.2s ease;
 
   &:hover {
-    color: var(--text);
-    background: var(--accent-soft);
+    color: var(--text-normal);
+    background: var(--background-modifier-accent-soft-hover);
   }
 }
 
 .grid-widget-remove {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 0.85rem;
   padding: 0.15rem 0.4rem;
@@ -122,8 +146,8 @@
   transition: all 0.2s ease;
 
   &:hover {
-    color: var(--text);
-    background: color-mix(in srgb, var(--error) 15%, transparent);
+    color: var(--text-normal);
+    background: var(--background-modifier-error);
   }
 }
 
@@ -142,27 +166,10 @@
     filter: grayscale(0.4);
   }
 
-  // Frees the widget's own content root from the fixed height:100% it
-  // normally stretches to fill, so it renders at its true natural height
-  // instead — WidgetShell measures that via ResizeObserver and feeds it
-  // back as this widget's grid row count. Targets widgets/shared.scss's
-  // shell/content pair by name since that's what every widget declaring
-  // supportsAutoExpand in widgetRegistry.ts is built on.
-  //
-  // height: auto alone doesn't actually free it: this container's
-  // align-items: stretch (the default, left implicit above) overrides an
-  // auto cross-size to fill the line instead of shrinking to content — that
-  // behavior is the opposite of what auto-expand needs, and it's what was
-  // making the measured height never change. align-self: flex-start opts
-  // .widget-content-shell (the direct flex child) out of that stretch so
-  // height: auto can actually mean "shrink to content" here.
-  //
-  // Also drops this container's own overflow: auto — otherwise, whenever
-  // content is briefly taller than the not-yet-caught-up grid cell, a
-  // scrollbar appears and eats into the available width, which can wrap
-  // text onto more lines and make the content taller still, which can
-  // make the scrollbar's presence flip again next measurement — an
-  // oscillation that never settles.
+  // Auto-expand: align-self: flex-start opts the shell out of this flex
+  // container's align-items: stretch so height: auto can shrink to content
+  // for ResizeObserver to measure. overflow: hidden (not auto) avoids a
+  // scrollbar/reflow oscillation that never settles.
   &.grid-widget-body--auto-expand {
     overflow: hidden;
 
@@ -193,16 +200,15 @@
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
-  border: 1px solid var(--border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-scrim) 70%, transparent);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--background-secondary) 70%, transparent);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    color: var(--text);
-    border-color: var(--accent);
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
   }
 
   &:active {
@@ -211,17 +217,13 @@
 }
 
 .grid-widget-auto-expand--active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
 }
 
-// The Spacer widget (components/widgets/spacer) — its own content is just
-// a label identifying it while editing (see .grid-widget--transparent
-// above for the part that actually makes it invisible in view mode: this
-// content sits inside .grid-widget-body, which still dims to 55% opacity
-// like every other widget's body while editing — expected, matches how
-// every other widget looks mid-edit).
+// Spacer widget (components/widgets/spacer): this label only identifies it
+// while editing — .grid-widget--transparent above is what makes it
+// invisible in view mode.
 .spacer-widget {
   width: 100%;
   height: 100%;
@@ -232,7 +234,7 @@
 
 .spacer-widget-label {
   display: none;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -248,23 +250,22 @@
   min-width: 0;
   margin: 0 0.5rem;
   padding: 0.2rem 0.4rem;
-  border: 1px solid var(--border);
   border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--surface-scrim) 35%, transparent);
-  color: var(--text);
+  background: color-mix(in srgb, var(--background-secondary) 35%, transparent);
+  color: var(--text-normal);
   font-size: 0.75rem;
   text-overflow: ellipsis;
   cursor: pointer;
 
   &:hover {
-    border-color: var(--accent);
+    background: var(--background-modifier-hover);
   }
 }
 
 .grid-widget-unknown {
   margin: auto;
   padding: 1rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8rem;
   text-align: center;
 }
@@ -281,16 +282,14 @@
   gap: 0.15rem;
   text-align: left;
   padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--surface-scrim) 35%, transparent);
-  color: var(--text);
+  background: color-mix(in srgb, var(--background-secondary) 35%, transparent);
+  color: var(--text-normal);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--surface-scrim) 55%, transparent);
+    background: color-mix(in srgb, var(--background-secondary) 55%, transparent);
   }
 }
 
@@ -301,7 +300,7 @@
 
 .grid-widget-result-description {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 // Floating edit-mode toggle + breakpoint-tab bar for a Grid instance.
@@ -311,40 +310,32 @@
 .grid-status-bar {
   position: fixed;
   right: 1.5rem;
-  bottom: 1.5rem;
+  bottom: $toolbar-bottom-offset;
   z-index: 500;
   display: flex;
   align-items: stretch;
-  // A fixed height (matching the toggle button below) is the single source
-  // of truth both children are pinned to — without it, the row's height
-  // followed whichever child was tallest, and the toggle (sized to its own
-  // content) didn't cover that full height, leaving slivers of the tab
-  // buttons visible above/below it.
-  height: 2.75rem;
-  background: var(--panel-gradient);
-  border: 1px solid var(--border);
+  // Fixed height (matches the toggle button) is the single source of truth
+  // for both children — without it the toggle didn't cover the row's full
+  // height, leaving slivers of the tab buttons visible.
+  height: $toolbar-height;
+  background: var(--background-primary-alt);
   border-radius: 1rem;
-  box-shadow: 0 12px 30px var(--shadow);
+  box-shadow: 0 12px 30px var(--shadow-modifier);
   // Clipping to the same radius as the border means any child (like the
   // toggle button below) reads as part of one seamless shape instead of
   // a bordered button floating inside a bordered bar.
   overflow: hidden;
 }
 
-// Grid-column animation: 0fr -> 1fr smoothly animates to the content's
-// natural width with no overshoot, unlike animating to/from `auto`. The
-// minmax(0, ...) is required, not decorative — a bare `0fr` track still
-// respects its content's min-content width as an implicit floor, so
-// without it the track never actually reaches zero and a sliver of the
-// collapsed content (the tab buttons) stays visible.
+// 0fr -> 1fr animates smoothly unlike `auto`. minmax(0, ...) is required —
+// a bare `0fr` track still floors at its content's min-content width, so
+// without it the collapsed tab buttons stay slightly visible.
 .grid-status-bar-expand {
   display: grid;
   grid-template-columns: minmax(0, 0fr);
-  // Flex items default to min-width: auto, which sets an implicit floor at
-  // this element's content min-content width — independent of, and not
-  // fixed by, the grid track's own minmax(0, ...) above. Without this, the
-  // browser still reserved room for the (collapsed) tab buttons, letting
-  // them show through behind the toggle button.
+  // Flex items default to min-width: auto (a separate floor from the grid
+  // track's minmax(0, ...) above) — without this override, room stayed
+  // reserved for the collapsed tab buttons behind the toggle.
   min-width: 0;
   transition: grid-template-columns 0.3s ease;
 }
@@ -371,8 +362,8 @@
   padding: 0 0.85rem;
   border: none;
   border-radius: 0;
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: var(--color-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -380,7 +371,7 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--primary) 28%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
   }
 
   &:active {
@@ -394,7 +385,7 @@
   height: 100%;
   border: none;
   background: none;
-  color: var(--text);
+  color: var(--text-normal);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -402,7 +393,7 @@
   transition: background 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, white 10%, transparent);
+    background: var(--background-modifier-hover);
   }
 
   &:active {
@@ -411,10 +402,214 @@
 }
 
 .grid-status-bar-toggle--confirm {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--text-success);
+  background: var(--background-modifier-success);
 
   &:hover {
-    background: color-mix(in srgb, var(--success) 28%, transparent);
+    background: color-mix(in srgb, var(--background-modifier-success) 70%, var(--text-success) 30%);
+  }
+}
+
+// Edit-mode page carousel — the active page plus its immediate real/blank
+// neighbors, all rendered at full (unscaled) size (see Grid.tsx). The
+// viewport clips whatever doesn't fit, so a neighbor mostly slides off
+// the screen with only PAGE_PEEK_SLIVER_PX peeking in at the edge. Outside
+// edit mode none of this renders — the dashboard shows one full-width page.
+.grid-page-viewport {
+  overflow: show;
+  width: 100%;
+
+  // The active page's border is a box-shadow that bleeds a few px outside
+  // its own box (see .grid-page-slot--active.grid-page-slot--editing) so it
+  // never touches the grid's actual size. With align-items: flex-start on
+  // the track, every slot's top edge sits flush against this viewport's own
+  // top edge, leaving no room for that bleed — reserve it only while a
+  // border can actually be showing, so view mode is never affected.
+  &:has(.grid-page-slot--editing) {
+    padding-block: 8px;
+    
+  }
+}
+
+.grid-page-track {
+  display: flex;
+  align-items: flex-start;
+  transition: transform 0.25s ease;
+
+  // Toggled imperatively (see Grid.tsx) around any transform reset that
+  // shouldn't itself animate — settling a slide back to its resting value,
+  // or cutting straight to a non-adjacent page.
+  &.grid-page-track--no-transition {
+    transition: none !important;
+  }
+}
+
+.grid-page-slot--active,
+.grid-page-slot--peek {
+  flex-shrink: 0;
+}
+
+.grid-page-slot--editing {
+  .grid-page-slot--editing {
+    background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
+  }
+  
+  background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
+}
+
+// Shared "resting" outline/corner baseline for both the active and peek
+// variants below — kept CONSTANT (never itself the thing that changes) so a
+// slot can smoothly fade its outline-color in/out across every transition
+// that touches it: entering/exiting edit mode, and — since a page's slot
+// now keeps the same DOM node across a peek<->active role change (see
+// Grid.tsx's page-identity keying) — being promoted from a peeking
+// neighbor to the active page, or demoted back. outline-style/border-radius
+// themselves can't be transitioned (a discrete flip, not an interpolation),
+// so only outline-color ever actually changes value.
+@mixin page-slot-outline-base {
+  border-radius: 1rem;
+  outline: solid 1px transparent;
+}
+
+// Fades the border/panel in rather than having it snap on the instant
+// .grid-page-slot--editing is added (entering edit mode, or this page
+// becoming active mid-slide).
+.grid-page-slot--active {
+  @include page-slot-outline-base;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, outline-color 1s ease;
+}
+
+// The panel-filled, bordered canvas actually being edited — in view mode
+// (no .grid-page-slot--editing) this renders bare, exactly like a normal
+// single page. The border is a box-shadow rather than a real border: a real
+// border+padding would eat into the box's content area, forcing GridPage's
+// gridWidth (see Grid.tsx) to shrink to compensate — visibly resizing every
+// widget the instant edit mode turns on. A box-shadow paints outside the
+// box without changing its size at all, so the grid content never moves.
+// Two stacked shadows carry the gap before the line: the inner one repaints
+// that gap in the page's own background (masking it, since a shadow can't
+// itself be "transparent then opaque"), leaving only the outer ring,
+// offset out past the gap, visible as the border line. This is the one
+// border kept in the whole app — a deliberate, always-visible indicator of
+// which page is being edited — so it stays a literal "white" rather than a
+// themed token that could wash out against a light theme's own background.
+.grid-page-slot--active.grid-page-slot--editing {
+  outline-color: var(--color-accent);
+  min-height: $page-min-height;
+}
+
+.grid-page-slot--peek {
+  @include page-slot-outline-base;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 1s ease;
+}
+
+// A neighbor page peeking in at the screen edge — full size, just mostly
+// clipped by .grid-page-viewport's overflow (or, in view mode, fully
+// off-screen until it slides through). Its content is inert (see
+// .grid-page-slot-content below): clicking anywhere on it navigates there
+// instead of interacting with the widgets underneath. The panel background/
+// hover only apply once it actually has a neighbor to show — an empty
+// reserved slot (no neighbor there) stays invisible. Unstyled in view mode:
+// during a slide it should look like a real page, not a dimmed preview.
+.grid-page-slot--peek.grid-page-slot--editing:has(.grid-page-slot-content) {
+  // Not var(--background-primary-alt): color-mix(in oklch, ..., white ...)
+  // mis-handles white's undefined hue and skews visibly pink here — in srgb
+  // mixes predictably.
+
+  cursor: pointer;
+  min-height: $page-min-height;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 1s ease;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+// Hinted while a drag is being held over this slot's edge (see Grid.tsx's
+// onDrag) — toggled imperatively via classList, not React state, so it
+// doesn't cost a re-render on every drag frame.
+.grid-page-slot--peek.grid-page-slot--armed {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.grid-page-slot-content {
+  pointer-events: none;
+}
+
+// Sized like a real page's panel would be (see $page-min-height) in both the
+// peek preview and once clicked into as the current page, so it never ends
+// with the toolbar floating over empty space below it.
+.grid-blank-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  height: 100%;
+  min-height: $page-min-height;
+  color: var(--text-muted);
+  border-radius: 1rem;
+  font-size: 0.8rem;
+}
+
+.grid-length-warning {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.75rem;
+  background: var(--background-modifier-warning);
+  color: var(--text-warning);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+// Bottom-center page navigation — sibling of .grid-status-bar (see
+// dashboard.scss's padding-bottom, sized to clear both their footprints).
+.page-dots {
+  position: fixed;
+  left: 50%;
+  bottom: $toolbar-bottom-offset;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: $toolbar-height;
+  padding: 0 0.75rem;
+  background: var(--background-primary-alt);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+}
+
+.page-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--text-muted);
+  }
+}
+
+.page-dot--active {
+  width: 1.25rem;
+  background: var(--color-accent);
+
+  &:hover {
+    background: var(--color-accent);
+  }
+}
+
+.page-dot--blank {
+  background: var(--background-modifier-hover);
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
   }
 }

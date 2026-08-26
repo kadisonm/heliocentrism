@@ -3,97 +3,152 @@
 $themes: (
   default: (
     light: (
-      text: oklch(15.11% 0.0306 258.69),
-      background: oklch(93.95% 0.02 267.14),
-      primary: oklch(33.12% 0.1113 261.21),
-      secondary: oklch(70.85% 0.2187 329.8),
-      accent: oklch(72.3% 0.212 58.11),
-      success: oklch(67.096% 0.1678 147.01),
-      warning: oklch(72.3% 0.212 58.11),
-      error: oklch(64.629% 0.2409 32.6),
-      overlay-scrim: oklch(0% 0 0 / 0.5),
-      overlay-shadow: oklch(0% 0 0 / 0.4),
-      panel-gradient: linear-gradient(180deg, oklch(100% 0 0 / 0.98), oklch(98.415% 0.0034 247.79 / 0.99)),
-      surface-scrim: oklch(96.826% 0.0069 247.89),
-      muted-slate: oklch(55.439% 0.0407 257.42),
-      status-caution: oklch(64.607% 0.1943 41.12),
-      status-caution-strong: oklch(70.487% 0.1867 47.6),
-      status-info: oklch(48.82% 0.2172 264.38),
-      status-info-strong: oklch(54.615% 0.2152 262.88),
-      status-info-bg: oklch(62.308% 0.188 259.81)
+      // Extended colors
+      color-white: oklch(98% 0 0),
+      color-black: oklch(12% 0 0),
+      color-red: oklch(52% 0.19 20),
+      color-orange: oklch(58% 0.17 50),
+      color-yellow: oklch(62% 0.15 70),
+      color-green: oklch(52% 0.15 150),
+      color-cyan: oklch(52% 0.11 200),
+      color-blue: oklch(50% 0.17 262),
+      color-purple: oklch(50% 0.19 308.839),
+      color-pink: oklch(58% 0.19 350),
+
+      // Main colors
+      color-primary: var(--color-purple),
+      color-secondary: var(--color-yellow),
+      color-accent: var(--color-blue),
+
+      // Surface colors — page background is the tinted base; each tier
+      // above it trends toward white, same direction dark mode's tiers
+      // trend toward the palette's brightest neutral.
+      background-primary: oklch(93.5% 0.015 267),
+      background-primary-alt: oklch(96.5% 0.01 267),
+      background-secondary: oklch(98.5% 0.006 267),
+      background-secondary-alt: oklch(100% 0 0),
+
+      // Text colors
+      text-normal: oklch(15.11% 0.0306 258.69),
+      text-muted: oklch(40% 0.02 258),
+      text-faint: oklch(55% 0.04 257),
+      text-selection: var(--color-white),
+      text-success: var(--color-green),
+      text-warning: var(--color-yellow),
+      text-error: var(--color-red),
+      text-info: var(--color-cyan),
     ),
     dark: (
-      text: oklch(94.3% 0.02 267.14),
-      background: oklch(15.28% 0.0403 262.87),
-      primary: oklch(75.34% 0.1008 262.59),
-      secondary: oklch(48.3% 0.2059 330.95),
-      accent: oklch(76.8% 0.2413 55.98),
-      success: oklch(75.396% 0.1746 150.22),
-      warning: oklch(76.8% 0.2413 55.98),
-      error: oklch(64.629% 0.2409 32.6),
-      overlay-scrim: oklch(0% 0 0 / 0.5),
-      overlay-shadow: oklch(0% 0 0 / 0.4),
-      panel-gradient: linear-gradient(180deg, oklch(23.123% 0.0334 263.6 / 0.98), oklch(21.008% 0.0318 264.67 / 0.99)),
-      surface-scrim: oklch(20.768% 0.0398 265.75),
-      muted-slate: oklch(71.067% 0.0351 256.78),
-      status-caution: oklch(70.487% 0.1867 47.6),
-      status-caution-strong: oklch(75.764% 0.159 55.94),
-      status-info: oklch(80.907% 0.0956 251.81),
-      status-info-strong: oklch(71.374% 0.1434 254.62),
-      status-info-bg: oklch(62.308% 0.188 259.81)
+      // Extended colors
+      color-white: oklch(90% 0 0),
+      color-black: oklch(10% 0 0),
+      color-red: oklch(75% 0.12656 20),
+      color-orange: oklch(75% 0.12656 50),
+      color-yellow: oklch(75% 0.12656 70),
+      color-green: oklch(75% 0.12656 150),
+      color-cyan: oklch(75% 0.10022 200),
+      color-blue: oklch(75% 0.10022 262),
+      color-purple:oklch(75% 0.16407 308.839),
+      color-pink: oklch(75% 0.16407 350),
+
+      // Main colors
+      color-primary: var(--color-purple),
+      color-secondary: var(--color-yellow),
+      color-accent: var(--color-blue),
+
+      // Surface colors
+      background-primary: oklch(15% 0 0), // Primary background
+      background-primary-alt: oklch(20% 0 0), // For surfaces on top of primary background
+      background-secondary: oklch(28% 0 0), // Secondary background
+      background-secondary-alt: oklch(34% 0 0), // For surfaces on top of secondary background
+
+      // Text colors
+      text-normal: var(--color-white),
+      text-muted: oklch(70% 0 0),
+      text-faint: oklch(60% 0 0),
+      text-selection: var(--color-white),
+      text-success: var(--color-green),
+      text-warning: var(--color-yellow),
+      text-error: var(--color-red),
+      text-info: var(--color-cyan),
     ),
   ),
-  // Official palette: https://catppuccin.com/palette/ — light is Latte,
-  // dark is Mocha. Role mapping follows the style guide at
-  // https://github.com/catppuccin/catppuccin/blob/main/docs/style-guide.md
-  // (Base = main pane, Mantle = secondary/panel pane, Surface0 = raised
-  // surface, Blue = links/highlights, Green/Yellow/Red/Teal = success/
-  // warning/error/info); primary/secondary/status-*-strong beyond that
-  // guidance use Mauve/Pink/Peach/Sapphire/Sky for a consistent identity.
+  // Catppuccin palette (https://catppuccin.com/palette/): light is Latte,
+  // dark is Mocha. Surface tiers deliberately don't follow Catppuccin's own
+  // Surface0/1/Mantle/Crust ramp — those run opposite directions in Latte vs
+  // Mocha, which would make "a card sitting on the page" look inconsistent
+  // between palettes. Instead every palette's tiers trend the same way
+  // (toward that mode's brightest neutral), matching the default palette.
   catppuccin: (
     light: (
-      // Latte — oklch values converted from the hex codes at
-      // https://catppuccin.com/palette/
-      text: oklch(43.547% 0.043 279.33), // #4c4f69
-      background: oklch(95.776% 0.0058 264.53), // #eff1f5
-      primary: oklch(55.467% 0.2503 297.02), // Mauve #8839ef
-      secondary: oklch(72.556% 0.1739 338.43), // Pink #ea76cb
-      accent: oklch(55.862% 0.2255 262.09), // Blue #1e66f5
-      success: oklch(62.504% 0.1772 140.44), // Green #40a02b
-      warning: oklch(71.399% 0.1494 67.78), // Yellow #df8e1d
-      error: oklch(55.047% 0.2155 19.81), // Red #d20f39
-      overlay-scrim: oklch(0% 0 0 / 0.5),
-      overlay-shadow: oklch(0% 0 0 / 0.4),
-      panel-gradient: linear-gradient(180deg, oklch(100% 0 0 / 0.98), oklch(93.346% 0.0087 264.52 / 0.99)), // white -> Mantle #e6e9ef
-      surface-scrim: oklch(85.748% 0.0145 268.48), // Surface0 #ccd0da
-      muted-slate: oklch(70.767% 0.0237 274.6), // Overlay0 #9ca0b0
-      status-caution: oklch(71.399% 0.1494 67.78), // Yellow #df8e1d
-      status-caution-strong: oklch(69.198% 0.2041 42.43), // Peach #fe640b
-      status-info: oklch(60.227% 0.0981 201.1), // Teal #179299
-      status-info-strong: oklch(64.774% 0.1068 212.89), // Sapphire #209fb5
-      status-info-bg: oklch(68.202% 0.1448 235.38) // Sky #04a5e5
+      // Extended colors — Latte swatches, oklch values converted from the
+      // hex codes at https://catppuccin.com/palette/
+      color-white: oklch(99% 0.003 264), // near Base #eff1f5
+      color-black: oklch(20% 0.03 279), // synthetic dark anchor (Latte has no true black)
+      color-red: oklch(55.047% 0.2155 19.81), // #d20f39
+      color-orange: oklch(69.198% 0.2041 42.43), // Peach #fe640b
+      color-yellow: oklch(71.399% 0.1494 67.78), // #df8e1d
+      color-green: oklch(62.504% 0.1772 140.44), // #40a02b
+      color-cyan: oklch(60.227% 0.0981 201.1), // Teal #179299
+      color-blue: oklch(55.862% 0.2255 262.09), // #1e66f5
+      color-purple: oklch(55.467% 0.2503 297.02), // Mauve #8839ef
+      color-pink: oklch(72.556% 0.1739 338.43), // #ea76cb
+
+      // Main colors
+      color-primary: var(--color-purple),
+      color-secondary: var(--color-pink),
+      color-accent: var(--color-blue),
+
+      // Surface colors
+      background-primary: oklch(95.776% 0.0058 264.53), // Base #eff1f5
+      background-primary-alt: oklch(97.5% 0.004 264),
+      background-secondary: oklch(99% 0.002 264),
+      background-secondary-alt: oklch(100% 0 0),
+
+      // Text colors
+      text-normal: oklch(43.547% 0.043 279.33), // #4c4f69
+      text-muted: oklch(55% 0.03 277), // ~Subtext0 #6c6f85
+      text-faint: oklch(70.767% 0.0237 274.6), // Overlay0 #9ca0b0
+      text-selection: var(--color-white),
+      text-success: var(--color-green),
+      text-warning: var(--color-yellow),
+      text-error: var(--color-red),
+      text-info: var(--color-cyan),
     ),
     dark: (
-      // Mocha — oklch values converted from the hex codes at
-      // https://catppuccin.com/palette/
-      text: oklch(87.866% 0.0426 272.28), // #cdd6f4
-      background: oklch(24.287% 0.0304 283.91), // #1e1e2e
-      primary: oklch(78.715% 0.1187 304.77), // Mauve #cba6f7
-      secondary: oklch(87.003% 0.0752 336.3), // Pink #f5c2e7
-      accent: oklch(76.642% 0.1113 259.88), // Blue #89b4fa
-      success: oklch(85.77% 0.1092 142.72), // Green #a6e3a1
-      warning: oklch(91.93% 0.0704 86.53), // Yellow #f9e2af
-      error: oklch(75.559% 0.1297 2.76), // Red #f38ba8
-      overlay-scrim: oklch(0% 0 0 / 0.5),
-      overlay-shadow: oklch(0% 0 0 / 0.4),
-      panel-gradient: linear-gradient(180deg, oklch(32.402% 0.0319 281.98 / 0.98), oklch(21.552% 0.0254 284.06 / 0.99)), // Surface0 -> Mantle #181825
-      surface-scrim: oklch(32.402% 0.0319 281.98), // Surface0 #313244
-      muted-slate: oklch(54.969% 0.0345 277.1), // Overlay0 #6c7086
-      status-caution: oklch(91.93% 0.0704 86.53), // Yellow #f9e2af
-      status-caution-strong: oklch(82.368% 0.1015 52.63), // Peach #fab387
-      status-info: oklch(85.849% 0.0792 182.75), // Teal #94e2d5
-      status-info-strong: oklch(79.065% 0.0965 228.65), // Sapphire #74c7ec
-      status-info-bg: oklch(84.671% 0.0833 210.25) // Sky #89dceb
+      // Extended colors — Mocha swatches, oklch values converted from the
+      // hex codes at https://catppuccin.com/palette/
+      color-white: oklch(95% 0.01 272),
+      color-black: oklch(11% 0.02 284), // ~Crust #11111b
+      color-red: oklch(75.559% 0.1297 2.76), // #f38ba8
+      color-orange: oklch(82.368% 0.1015 52.63), // Peach #fab387
+      color-yellow: oklch(91.93% 0.0704 86.53), // #f9e2af
+      color-green: oklch(85.77% 0.1092 142.72), // #a6e3a1
+      color-cyan: oklch(85.849% 0.0792 182.75), // Teal #94e2d5
+      color-blue: oklch(76.642% 0.1113 259.88), // #89b4fa
+      color-purple: oklch(78.715% 0.1187 304.77), // Mauve #cba6f7
+      color-pink: oklch(87.003% 0.0752 336.3), // #f5c2e7
+
+      // Main colors
+      color-primary: var(--color-purple),
+      color-secondary: var(--color-pink),
+      color-accent: var(--color-blue),
+
+      // Surface colors
+      background-primary: oklch(24.287% 0.0304 283.91), // Base #1e1e2e
+      background-primary-alt: oklch(27.5% 0.03 283),
+      background-secondary: oklch(32.402% 0.0319 281.98), // Surface0 #313244
+      background-secondary-alt: oklch(38% 0.032 280),
+
+      // Text colors
+      text-normal: oklch(87.866% 0.0426 272.28), // #cdd6f4
+      text-muted: oklch(74% 0.035 274), // ~Subtext0 #a6adc8
+      text-faint: oklch(54.969% 0.0345 277.1), // Overlay0 #6c7086
+      text-selection: var(--color-white),
+      text-success: var(--color-green),
+      text-warning: var(--color-yellow),
+      text-error: var(--color-red),
+      text-info: var(--color-cyan),
     ),
   ),
 );
@@ -101,46 +156,91 @@ $themes: (
 @mixin theme-variables($palette: default, $mode: dark) {
   $tokens: map.get($themes, $palette, $mode);
 
-  --text: #{map.get($tokens, text)};
-  --background: #{map.get($tokens, background)};
-  --primary: #{map.get($tokens, primary)};
-  --secondary: #{map.get($tokens, secondary)};
-  --accent: #{map.get($tokens, accent)};
-  --success: #{map.get($tokens, success)};
-  --warning: #{map.get($tokens, warning)};
-  --error: #{map.get($tokens, error)};
+  // Extended colors
+  --color-white: #{map.get($tokens, color-white)};
+  --color-black: #{map.get($tokens, color-black)};
+  --color-red: #{map.get($tokens, color-red)};
+  --color-orange: #{map.get($tokens, color-orange)};
+  --color-yellow: #{map.get($tokens, color-yellow)};
+  --color-green: #{map.get($tokens, color-green)};
+  --color-cyan: #{map.get($tokens, color-cyan)};
+  --color-blue: #{map.get($tokens, color-blue)};
+  --color-purple: #{map.get($tokens, color-purple)};
+  --color-pink: #{map.get($tokens, color-pink)};
 
-  --muted: color-mix(in oklch, var(--text) 65%, transparent);
-  --text-soft: color-mix(in oklch, var(--text) 72%, transparent);
+  // Main colors
+  --color-primary: #{map.get($tokens, color-primary)};
+  --color-secondary: #{map.get($tokens, color-secondary)};
+  --color-accent: #{map.get($tokens, color-accent)};
 
-  --panel: color-mix(in oklch, var(--background) 92%, white 8%);
-  --panel-soft: color-mix(in oklch, var(--background) 88%, var(--primary) 12%);
-  --panel-strong: color-mix(in oklch, var(--background) 82%, var(--primary) 18%);
+  // Surface colors
+  --background-primary: #{map.get($tokens, background-primary)};
+  --background-primary-alt: #{map.get($tokens, background-primary-alt)};
+  --background-secondary: #{map.get($tokens, background-secondary)};
+  --background-secondary-alt: #{map.get($tokens, background-secondary-alt)};
+
+  // Text colors
+  --text-normal: #{map.get($tokens, text-normal)};
+  --text-muted: #{map.get($tokens, text-muted)};
+  --text-faint: #{map.get($tokens, text-faint)};
+  --text-selection: #{map.get($tokens, text-selection)};
+  --text-success: #{map.get($tokens, text-success)};
+  --text-warning: #{map.get($tokens, text-warning)};
+  --text-error: #{map.get($tokens, text-error)};
+  --text-info: #{map.get($tokens, text-info)};
+  
+  --text-accent: var(--color-accent);
+  --text-accent-soft: color-mix(in srgb, var(--color-accent) 60%, black);
+
+  --text-primary: var(--color-primary);
+  --text-primary-soft: color-mix(in srgb, var(--color-primary) 75%, black);
 
   @if $mode == dark {
-    --border: color-mix(in oklch, var(--panel) 82%, white 18%);
     --color-scheme: dark;
   } @else {
-    --border: color-mix(in oklch, var(--panel) 88%, black 12%);
     --color-scheme: light;
   }
 
-  --accent-soft: color-mix(in oklch, var(--accent) 18%, transparent);
-  --accent-strong: color-mix(in oklch, var(--accent) 78%, black 22%);
-  --shadow: color-mix(in oklch, var(--background) 80%, black 20%);
+  // --- Modifiers: any color-mixed variable lives here, never as a stored
+  // per-theme literal above, and is suffixed -modifier. `in srgb` (not
+  // oklch) avoids a color-mix bug where mixing toward a pure white/black
+  // endpoint in oklch skews visibly pink from that endpoint's undefined hue.
+  @if $mode == dark {
+    --background-modifier-hover: color-mix(in srgb, var(--background-primary) 88%, white);
+    --background-modifier-hover-alt: color-mix(in srgb, var(--background-primary-alt) 90%, white);
+    --background-modifier-active: color-mix(in srgb, var(--background-primary) 82%, white);
+    --background-modifier-glass: color-mix(in srgb, var(--background-primary-alt) 65%, transparent);
+    --text-accent-hover: color-mix(in srgb, var(--text-accent) 85%, white 15%);
+    --text-accent-soft-hover: color-mix(in srgb, var(--text-accent-soft) 85%, white 15%);
+  } @else {
+    --background-modifier-hover: color-mix(in srgb, var(--background-primary) 92%, black);
+    --background-modifier-hover-alt: color-mix(in srgb, var(--background-primary-alt) 92%, black);
+    --background-modifier-active: color-mix(in srgb, var(--background-primary) 85%, black);
+    --background-modifier-glass: color-mix(in srgb, var(--background-primary-alt) 75%, transparent);
+    --text-accent-hover: color-mix(in srgb, var(--text-accent) 85%, black);
+    --text-accent-soft-hover: color-mix(in srgb, var(--text-accent-soft) 85%, black);
+  }
 
-  // Chrome/status tones for elements not yet re-themed per mode (panel
-  // gradients, status badges, etc.) — kept as their own tier so each can
-  // still vary by theme without being derived from --background/--text.
-  --overlay-scrim: #{map.get($tokens, overlay-scrim)};
-  --overlay-shadow: #{map.get($tokens, overlay-shadow)};
-  --panel-gradient: #{map.get($tokens, panel-gradient)};
-  --surface-scrim: #{map.get($tokens, surface-scrim)};
-  --muted-slate: #{map.get($tokens, muted-slate)};
+  --background-modifier-success: color-mix(in srgb, var(--text-success) 40%, black);
+  --background-modifier-warning: color-mix(in srgb, var(--text-warning) 40%, black);
+  --background-modifier-error: color-mix(in srgb, var(--text-error) 40%, black 60%);
+  --background-modifier-error-hover: color-mix(in srgb, var(--text-error) 15%, black);
+  --background-modifier-info: color-mix(in srgb, var(--background-primary) 82%, var(--text-info));
 
-  --status-caution: #{map.get($tokens, status-caution)};
-  --status-caution-strong: #{map.get($tokens, status-caution-strong)};
-  --status-info: #{map.get($tokens, status-info)};
-  --status-info-strong: #{map.get($tokens, status-info-strong)};
-  --status-info-bg: #{map.get($tokens, status-info-bg)};
+  --shadow-modifier: color-mix(in srgb, var(--background-primary) 80%, black 20%);
+
+  // Darkened accent fills — what a full-strength accent color (--text-accent)
+  // needs to sit on top of and stay readable, same reasoning as the
+  // background-modifier-success/warning/error triad above.
+  --background-modifier-accent: color-mix(in srgb, var(--color-accent) 40%, black);
+  --background-modifier-accent-hover: color-mix(in srgb, var(--background-modifier-accent) 90%, white);
+
+  // A bit darker than --text-accent-soft itself, same reasoning — this is
+  // the fill a --text-accent-soft foreground sits on top of.
+  --background-modifier-accent-soft: color-mix(in srgb, var(--text-accent-soft) 50%, black);
+  --background-modifier-accent-soft-hover: color-mix(in srgb, var(--background-modifier-accent-soft) 90%, white);
+
+  // --- Interactive elements (buttons, clickable controls) ---
+  --interactive-normal: var(--background-secondary);
+  --interactive-hover: var(--background-modifier-hover);
 }

@@ -14,10 +14,12 @@
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
 - Popup should switch sides if it is going to go off the screen
-- Fix task slightly shrinking and regrowing whenever it is reordered over another task
-- Fix all the css files having really long comments
-- Fix the task changing state when it gets dragged to another list
-- Fix the leg when dragging a task between two lists really fast (I think it is because the component is being rebuilt everytime it swaps tasks?)
+
+- Make it use my firestore by default
+
+- Make it so that the stages can select colours from the extended colour css\
+
+fix task overlaing edge of page
 
 ---
 

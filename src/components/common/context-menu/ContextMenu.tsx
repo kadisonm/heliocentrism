@@ -11,13 +11,10 @@ type ContextMenuProps = {
   children: ReactNode;
 };
 
-// A small popup menu with its TOP-LEFT corner pinned to wherever the user
-// clicked, rather than being anchored to any particular element —
-// portaled to document.body (same SSR-safe mounted-gate as EditorModal)
-// so it floats above everything and is never clipped by an ancestor's own
-// overflow. Closing on an outside click is the CALLER's responsibility
-// (this only stops its own clicks from bubbling to such a listener) since
-// what counts as "outside" depends on where the menu is used.
+// Popup pinned by its top-left corner to the click point; portaled to
+// document.body (SSR-safe mounted-gate) to float above everything unclipped.
+// Closing on outside click is the caller's responsibility — this only stops
+// its own clicks from bubbling to such a listener.
 export default function ContextMenu({ position, children }: ContextMenuProps) {
   const [mounted, setMounted] = useState(false);
 

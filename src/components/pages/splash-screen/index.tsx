@@ -11,11 +11,9 @@ export default function SplashScreen() {
   const [isMounted, setIsMounted] = useState(true);
   const [loop, setLoop] = useState(false);
 
-  // Visit the page with a `?splash` query param (e.g. localhost:3000/?splash)
-  // to replay the sequence forever instead of once, for tweaking it live.
-  // Reading window.location is the sanctioned "sync from an external system"
-  // effect pattern — it's unavailable during SSR, so it can't be derived
-  // during render without desyncing the server/client hydration output.
+  // `?splash` query param replays the sequence forever instead of once, for
+  // tweaking it live. window.location is read in an effect (not during
+  // render) since it's unavailable during SSR.
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setLoop(new URLSearchParams(window.location.search).has('splash'));

@@ -47,10 +47,9 @@ export function cacheTheme(theme: ThemeSettings): void {
 }
 
 // Pre-paint script (injected in layout.tsx) that stamps data-palette/
-// data-theme on <html> before first paint, so the cached choice renders
-// with no flash. Runs before any module script, so it can't import
-// loadCachedTheme/applyTheme above — keep this logic in sync with them by
-// hand if the cache shape or key ever changes.
+// data-theme on <html> before first paint so the cached choice renders with
+// no flash. Runs before any module script, so it can't import loadCachedTheme
+// /applyTheme — keep this in sync with them by hand if the cache shape changes.
 export const THEME_INIT_SCRIPT = `(function () {
   try {
     var stored = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});

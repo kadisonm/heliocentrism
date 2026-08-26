@@ -10,15 +10,9 @@ export default function OrbitAnimation() {
       <path className="orbit-path orbit-path--inner" fill="none" d={ORBIT_PATH_INNER} />
       <path className="orbit-path orbit-path--outer" fill="none" d={ORBIT_PATH_OUTER} />
 
-      {/*
-        The outer planet is rendered twice at identical, perfectly
-        synchronized positions (same offset-path + motion animation) — SVG
-        has no reliable z-index-based stacking for plain shapes, only DOM
-        order, so going behind/in front of the inner planet means literally
-        being earlier/later in the markup. Each copy's visibility is
-        toggled to the opposite portion of the orbit, so only one is ever
-        actually shown at a time.
-      */}
+      {/* SVG has no z-index for plain shapes, only DOM order, so the outer
+        planet is rendered twice (behind/in front of the inner one); each
+        copy's visibility toggles so only one shows at a time. */}
       <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-behind" r="16" />
       <circle className="orbit-planet orbit-planet--inner" r="14" />
       <circle className="orbit-planet orbit-planet--outer orbit-planet--outer-front" r="16" />

@@ -16,12 +16,9 @@ type EditorModalProps = {
 // Visually distinct from common/Modal.tsx (used by Settings-style modals):
 // same portal-to-body/mounted-gate mechanics, different chrome.
 export default function EditorModal({ isOpen, title, onClose, children, actions }: EditorModalProps) {
-  // Widgets are positioned by react-grid-layout via CSS `transform`, which
-  // makes them a containing block for `position: fixed` descendants — this
-  // modal would otherwise be trapped inside its widget's box instead of
-  // covering the viewport. Portaling to document.body escapes that.
-  // document doesn't exist during SSR, so the portal only renders once
-  // mounted on the client.
+  // react-grid-layout positions widgets via CSS transform, making them a
+  // containing block for position:fixed — portal to document.body to escape
+  // it. document doesn't exist during SSR, so only render once mounted.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

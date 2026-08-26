@@ -12,7 +12,7 @@
 }
 
 .widget-content {
-  color: var(--text);
+  color: var(--text-normal);
   width: 100%;
   height: 100%;
   padding: 1.25rem;
@@ -28,7 +28,7 @@
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--text);
+    color: var(--text-normal);
   }
 }
 
@@ -54,25 +54,22 @@
 }
 
 .widget-show-toggle {
-  border: 1px solid var(--border);
-  background: var(--accent-soft);
-  color: var(--text);
+  background: var(--background-modifier-accent-soft);
+  color: var(--text-accent-soft);
   border-radius: 999px;
 
   &:hover {
-    background: color-mix(in srgb, var(--accent-soft) 90%, white 10%);
-    border-color: var(--accent);
+    background: var(--background-modifier-accent-soft-hover);
   }
 }
 
 .widget-add-button {
-  border: 1px solid var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--background-modifier-accent);
+  color: var(--text-accent);
   border-radius: 0.5rem;
 
   &:hover {
-    background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent) 20%);
+    background: var(--background-modifier-accent-hover);
   }
 }
 
@@ -93,5 +90,5 @@
   margin: 0;
   padding: 0.5rem 0;
   font-size: 0.72rem;
-  color: var(--muted-slate);
+  color: var(--text-faint);
 }

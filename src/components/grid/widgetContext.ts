@@ -6,11 +6,10 @@ export type WidgetContextValue = {
   onUpdate: (patch: Partial<Omit<DashboardWidget, 'id'>>) => void;
 };
 
-// Provided by WidgetShell around each widget's rendered component and
-// settings modal — lets a widget that needs its own per-instance config
-// (e.g. Photo's image URL) reach its own DashboardWidget entry and patch
-// it, without every other, simpler widget's zero-prop component needing
-// any signature change to accommodate it.
+// Provided by WidgetShell around each widget's component and settings modal,
+// so a widget needing per-instance config (e.g. Photo's URL) can reach and
+// patch its own DashboardWidget entry without changing every other widget's
+// signature.
 export const WidgetContext = createContext<WidgetContextValue | null>(null);
 
 export function useWidgetContext(): WidgetContextValue {

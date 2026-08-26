@@ -39,6 +39,10 @@ type TaskRowProps = {
   editExtra?: ReactNode;
   isEditingRow?: boolean;
   onEnterEditMode?: () => void;
+  // One-shot "picked up"/"dropped" scale pop, driven by our own stable
+  // draggingId/droppingId state rather than dnd-kit's own
+  // [data-dnd-dragging] attribute (see task-item.scss).
+  dragPhase?: 'dragging' | 'dropped';
   // Nested subtasks list — task rows only.
   children?: ReactNode;
 };
@@ -65,6 +69,7 @@ export default function TaskRow({
   editExtra,
   isEditingRow,
   onEnterEditMode,
+  dragPhase,
   children,
   dragRef,
 }: TaskRowProps) {
@@ -77,21 +82,11 @@ export default function TaskRow({
   return (
     <div
       ref={dragRef}
-      className={`${rootClass} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''}`}
-      // Clicking anywhere on the row enters edit mode — every interactive
-      // child below (toggle, badges, the inline title/description
-      // triggers, the menu button) already stopPropagation()s its own
-      // click, so this only ever fires for a click that isn't already
-      // handled more specifically. Exiting is symmetric but lives outside
-      // this component: a document-level "click landed outside every
-      // .task-item/.subtask" listener in index.tsx clears edit mode. Also
-      // stops propagation itself — a subtask's own root is nested inside
-      // its parent task's DOM (.task-item > ... > .task-item__subtasks >
-      // .subtask), so without this, clicking a subtask's plain background
-      // (nothing more specific to catch it) would bubble past the
-      // subtask's own onEnterEditMode call into the PARENT task's, which
-      // fires second and overwrites editingRow with the parent instead of
-      // the subtask actually clicked.
+      className={`${rootClass} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''} ${dragPhase ? `${rootClass}--${dragPhase}` : ''}`}
+      // Clicking the row background enters edit mode; interactive children
+      // already stopPropagation. Must stop it here too, since a subtask's
+      // DOM is nested inside its parent task's — otherwise the click
+      // bubbles up and the parent overwrites edit state meant for this subtask.
       onClick={(event) => {
         event.stopPropagation();
         onEnterEditMode?.();

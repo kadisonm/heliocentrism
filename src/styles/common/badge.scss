@@ -22,56 +22,44 @@
 }
 
 .badge--none {
-  background: color-mix(in srgb, var(--muted) 20%, transparent);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--text-muted) 20%, transparent);
+  color: var(--text-muted);
 }
 
 .badge--accent {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
 }
 
 .badge--success {
-  background: color-mix(in srgb, var(--success) 18%, transparent);
-  color: var(--success);
+  background: var(--background-modifier-success);
+  color: var(--text-success);
 }
 
 .badge--warning {
-  background: color-mix(in srgb, var(--warning) 16%, transparent);
-  color: var(--warning);
+  background: var(--background-modifier-warning);
+  color: var(--text-warning);
 }
 
 .badge--error {
-  background: color-mix(in srgb, var(--error) 16%, transparent);
-  color: var(--error);
+  background: var(--background-modifier-error);
+  color: var(--text-error);
 }
 
 .badge--secondary {
-  background: color-mix(in srgb, var(--secondary) 18%, transparent);
-  color: var(--secondary);
+  background: color-mix(in srgb, var(--color-secondary) 18%, transparent);
+  color: var(--color-secondary);
 }
 
 .badge--muted {
-  background: color-mix(in srgb, var(--muted) 18%, transparent);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+  color: var(--text-muted);
 }
 
-// "Set due date"/"Set repeat" placeholders — only ever mounted while the
-// parent row is in edit mode (see TaskRow.tsx's editExtra/isEditingRow).
-// A dashed outline (vs. the filled pill the other badge colors use) reads
-// as "not set yet, click to add" rather than as a real value. The
-// reveal/hide itself lives on the .task-item__footer-reveal wrapper
-// (task-item.scss), not here.
-//
-// `outline`, not `border`: every other badge color has no border, so a
-// real border here would make this badge ~2px taller than its siblings —
-// small enough to be easy to miss, but enough that align-items: center on
-// .task-item__footer grows the whole row to fit it, even while this badge
-// stays on the same line as the others. `outline` draws without taking
-// any box space, so it can't perturb the row's height.
+// Marks unset placeholders like "Set due date" — no border/outline (see the
+// app-wide border removal); the lower-opacity muted fill alone reads as a
+// placeholder next to a real badge's solid tint.
 .badge--ghost {
   background: transparent;
-  outline: 1px dashed var(--border);
-  outline-offset: -1px;
-  color: var(--muted);
+  color: var(--text-faint);
 }

@@ -1,12 +1,10 @@
 import { Pilcrow } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Click-to-edit text used for both task/subtask title and description. One
-// persistent <textarea> for its whole lifespan — entering/leaving edit mode
-// toggles `readOnly`/`tabIndex` on that same node rather than swapping
-// between a <button> and a <textarea>, so there's no unmount/remount in
-// between. Always a <textarea> (never <input>) so it can wrap multi-line
-// text while typing and so Shift+Enter has somewhere to put a real newline.
+// Click-to-edit text for title/description. One persistent <textarea> for
+// its whole lifespan — toggles readOnly/tabIndex rather than swapping
+// element types, avoiding an unmount/remount. Always <textarea> (never
+// <input>) so it can wrap multi-line text and take Shift+Enter newlines.
 type InlineEditableFieldProps = {
   value: string;
   // Shown in place of an empty value, and what makes an empty field
@@ -67,30 +65,17 @@ export default function InlineEditableField({
     node.style.height = `${node.scrollHeight}px`;
   }, []);
 
-  // Re-measures on every DISPLAYED value change, whether typed or not — a
-  // multi-line title/description needs its full height even at rest, not
-  // just while being actively edited (a plain <button> used to get this
-  // for free from natural text wrapping; a <textarea> needs it done by
-  // hand).
+  // Re-measures on every displayed value change, not just while typing —
+  // a <textarea> needs its height set by hand for text at rest too,
+  // unlike the old <button> which got this for free from wrapping.
   useEffect(() => {
     measure();
   }, [displayValue, measure]);
 
-  // Two things can make a LATER render at the SAME displayValue need a
-  // different height than what got measured above, without anything
-  // re-triggering that effect (displayValue itself never changed):
-  //  1. The web font (see next/font/google in layout.tsx) still loading at
-  //     the moment of the first measurement — that measurement reflects
-  //     the FALLBACK font's metrics, which, if just slightly wider, can
-  //     wrap a line the real font wouldn't. Caught once, when loading
-  //     actually finishes.
-  //  2. The textarea's own rendered WIDTH settling later than the first
-  //     measurement — e.g. sidebar/grid layout still resolving, or the
-  //     widget itself being resized — which can change how many lines the
-  //     same text needs. Caught continuously via ResizeObserver, watching
-  //     the textarea's own box rather than a parent, so this can't ever
-  //     feed back into itself (nothing here ever changes ITS width, only
-  //     its height).
+  // Re-measures when the web font finishes loading (fallback font metrics
+  // can wrap differently) and on any width change via ResizeObserver —
+  // both can change wrapping at the same displayValue without retriggering
+  // the effect above.
   useEffect(() => {
     const node = textareaRef.current;
     if (!node) return;
@@ -156,25 +141,10 @@ export default function InlineEditableField({
 
   if (!showPlaceholderIcon) return field;
 
-  // Height-collapse wrapper (see .task-item__description-reveal) — for a
-  // field that CAN show a placeholder icon, this wrapper is ALWAYS
-  // present, in every state, rather than only conditionally when currently
-  // showing the empty placeholder. Only the icon and the wrapper's own
-  // --visible modifier vary; the ROOT ELEMENT TYPE this component returns
-  // never changes across a re-render.
-  //
-  // That's deliberate, not incidental: the earlier version returned EITHER
-  // a bare <textarea> OR this wrapped version depending on isPlaceholder —
-  // and clicking the (wrapped) placeholder sets isEditing=true in the same
-  // render that flips isPlaceholder back to false, which flips which of
-  // the two shapes gets returned. React unmounts the old tree and mounts a
-  // fresh one whenever a component's OWN root element type changes, so the
-  // very <textarea> DOM node that was just clicked got torn down and
-  // replaced mid-click — detaching the click event's `target` from the
-  // document before index.tsx's document-level "click outside" listener
-  // ran its closest('.task-item') check, which then (correctly, given a
-  // detached node) found no such ancestor and cleared edit mode right back
-  // off. Keeping one stable shape here removes that unmount entirely.
+  // Always rendered as this same wrapper — never swapped for a bare
+  // <textarea> based on isPlaceholder. Switching root element type on
+  // click caused React to unmount/remount mid-click, detaching the node
+  // before index.tsx's click-outside listener ran, which then cleared edit mode.
   return (
     <div className={`task-item__description-reveal${isPlaceholder ? '' : ' task-item__description-reveal--visible'}`}>
       <div className="task-item__description-reveal-inner">

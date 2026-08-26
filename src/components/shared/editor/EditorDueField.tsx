@@ -7,13 +7,9 @@ type EditorDueFieldProps = {
   onChange: (due: string) => void;
 };
 
-// A native datetime-local input only reports a value once every subfield
-// (year/month/day/hour/minute) is filled in — pick just a date and it
-// stays empty, silently dropping the due date on save. Splitting into
-// separate date/time inputs avoids that: picking a date alone is already
-// a complete, valid value, and the time defaults to end-of-day. Shared by
-// TaskModal's own Due field and EditorSubtaskList's per-subtask expanded
-// Due field — identical editing behavior either way.
+// datetime-local silently reports empty until every subfield is filled;
+// splitting into separate date/time inputs lets a date alone be valid,
+// defaulting time to end-of-day.
 export default function EditorDueField({ value, onChange }: EditorDueFieldProps) {
   const [datePart, timePart = ''] = value.split('T');
 

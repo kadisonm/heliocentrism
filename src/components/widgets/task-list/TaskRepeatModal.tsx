@@ -13,12 +13,8 @@ type TaskRepeatModalProps = {
   onSubmit: (repeat: TaskRepeat | undefined) => void;
 };
 
-// A focused quick-edit surface for just a repeat schedule, opened by
-// clicking a clock badge — works on the plain value rather than a Task, so
-// the same modal serves both a task's and a subtask's repeat (mirrors
-// TaskDueModal). Reuses the same EditorRepeatFields used inline in
-// TaskModal, so every entry point edits the exact same data with no
-// duplicated fields/logic.
+// Quick-edit surface for just a repeat schedule. Works on the plain value
+// rather than a Task, so it serves both tasks and subtasks (mirrors TaskDueModal).
 export default function TaskRepeatModal({ isOpen, repeat, onClose, onSubmit }: TaskRepeatModalProps) {
   const [draftRepeat, setDraftRepeat] = useState<TaskRepeat | undefined>(repeat);
 

@@ -10,11 +10,9 @@ type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  // Clarifies whether this modal's settings affect just the one widget it
-  // was opened from ('instance', e.g. Photo's own image URL) or every
-  // instance of that widget type at once ('shared', e.g. Pomodoro's
-  // study/break minutes). Omit for modals that aren't per-widget settings
-  // at all (general app settings, sync config).
+  // 'instance' = affects only this widget (e.g. Photo's image URL); 'shared'
+  // = affects every instance of the widget type (e.g. Pomodoro minutes).
+  // Omit for non-per-widget modals (general settings, sync config).
   scope?: ModalScope;
   scopeLabel?: string;
   children: ReactNode;
@@ -26,12 +24,9 @@ const SCOPE_ICONS: Record<ModalScope, typeof Square> = {
 };
 
 export default function Modal({ isOpen, onClose, title, scope, scopeLabel, children }: ModalProps) {
-  // Widgets are positioned by react-grid-layout via CSS `transform`, which
-  // makes them a containing block for `position: fixed` descendants — a
-  // modal rendered directly in the tree would get trapped inside its
-  // widget's box instead of covering the viewport. Portaling to
-  // document.body escapes that entirely. document doesn't exist during
-  // SSR, so the portal only renders once mounted on the client.
+  // react-grid-layout positions widgets via CSS transform, making them a
+  // containing block for position:fixed — portal to document.body to escape
+  // it. document doesn't exist during SSR, so only render once mounted.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

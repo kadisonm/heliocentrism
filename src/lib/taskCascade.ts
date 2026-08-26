@@ -18,10 +18,8 @@ export function isTaskDone(task: { stage: number; stages: TaskStageDef[] }): boo
 type CascadeResult = { task: Task; subtasks: Subtask[] };
 
 // Clicking the parent: advance its own stage by one (wrapping), then bring
-// any subtask that's BEHIND the new stage up to meet it — subtasks already
-// at or past it are left untouched. `subtasks` must already be filtered to
-// this task's own children (parentId === task.id) — subtasks no longer live
-// inline on `task`, so the caller owns finding them.
+// any subtask that's BEHIND the new stage up to meet it. `subtasks` must
+// already be filtered to this task's own children (parentId === task.id).
 export function cycleTaskStage(task: Task, subtasks: Subtask[]): CascadeResult {
   const nextStage = getNextStageIndex(task.stage, task.stages.length);
   if (subtasks.length === 0) return { task: { ...task, stage: nextStage }, subtasks };

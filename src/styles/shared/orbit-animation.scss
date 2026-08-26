@@ -21,7 +21,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-sun {
-  fill: var(--accent);
+  fill: var(--color-accent);
   // fill-box makes transform-origin: center resolve to this shape's own
   // center (its cx/cy), regardless of where it sits in the wider viewBox —
   // more reliable than px-based transform-origin values or animating the
@@ -42,17 +42,17 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 // Each orbit path shares its animation-delay with its planet below, so the
 // ring and its planet fade in together instead of the planet lagging behind.
 .orbit-path--inner {
-  stroke: var(--primary);
+  stroke: var(--color-primary);
   animation-delay: 0.25s;
 }
 
 .orbit-path--outer {
-  stroke: var(--secondary);
+  stroke: var(--color-secondary);
   animation-delay: 0.4s;
 }
 
 .orbit-planet {
-  fill: var(--background);
+  fill: var(--background-primary);
   stroke-width: 2;
   opacity: 0;
   offset-distance: 0%;
@@ -60,7 +60,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-planet--inner {
-  stroke: var(--primary);
+  stroke: var(--color-primary);
   offset-path: path('#{$orbit-path-inner}');
   animation:
     orbit-planet-in 0.25s ease forwards 0.25s,
@@ -68,7 +68,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-planet--outer {
-  stroke: var(--secondary);
+  stroke: var(--color-secondary);
   offset-path: path('#{$orbit-path-outer}');
 }
 
@@ -124,15 +124,10 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
   }
 }
 
-// Run on the same timeline (duration + delay) as orbit-planet-orbit above,
-// so each copy is shown/hidden in step with the outer planet's actual
-// position: the "behind" copy (earlier in the DOM than the inner planet)
-// is visible while it's near the top of the path; the "front" copy (later
-// in the DOM) takes over near the bottom. visibility is a genuinely
-// discrete property (unlike z-index, which some browsers interpolate as a
-// number through intermediate values, and unlike opacity, which would
-// fight with the one-time fade-in animation on the same property) so the
-// swap is a clean, instant, browser-guaranteed snap.
+// Runs on the same timeline as orbit-planet-orbit so the behind/front
+// copies swap in step with the outer planet's actual position. Uses
+// visibility (not z-index/opacity, which interpolate or fight the fade-in)
+// for a clean, instant, browser-guaranteed snap.
 @keyframes orbit-outer-visible-behind {
   0% {
     visibility: visible;

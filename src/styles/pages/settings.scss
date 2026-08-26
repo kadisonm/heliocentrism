@@ -1,7 +1,9 @@
 .settings-overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay-scrim);
+  background: var(--background-modifier-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,10 +12,9 @@
 }
 
 .settings-panel {
-  background: var(--panel-gradient);
-  border: 1px solid var(--border);
+  background: var(--background-primary-alt);
   border-radius: 1.5rem;
-  box-shadow: 0 20px 60px var(--overlay-shadow);
+  box-shadow: 0 20px 60px var(--shadow-modifier);
   width: 100%;
   max-width: 36rem;
   max-height: 80vh;
@@ -26,7 +27,7 @@
 .onboarding-screen {
   position: fixed;
   inset: 0;
-  background: var(--background);
+  background: var(--background-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,7 +46,7 @@
 // section's flex `gap` when used as the first child instead).
 .onboarding-intro {
   margin: 0;
-  color: var(--muted-slate);
+  color: var(--text-faint);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -54,7 +55,7 @@
 // (not .settings-help, which would double-margin as a first child here).
 .confirm-dialog__message {
   margin: 0;
-  color: var(--muted-slate);
+  color: var(--text-faint);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -64,7 +65,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .settings-header-titles {
@@ -78,7 +78,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-normal);
 }
 
 // Clarifies whether a widget-settings modal (Modal's `scope` prop) affects
@@ -96,19 +96,19 @@
 }
 
 .settings-scope-badge--instance {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
 }
 
 .settings-scope-badge--shared {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
-  color: var(--primary);
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary);
 }
 
 .settings-close {
   background: none;
   border: none;
-  color: var(--text);
+  color: var(--text-normal);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
@@ -121,7 +121,7 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, white 10%, transparent);
+    background: var(--background-modifier-hover);
   }
 }
 
@@ -140,17 +140,15 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  background: color-mix(in srgb, var(--surface-scrim) 55%, transparent);
-  border: 1px solid var(--border);
+  background: var(--background-secondary);
   border-radius: 0.75rem;
   padding: 0.75rem 0.85rem;
-  color: var(--text);
+  color: var(--text-normal);
   cursor: pointer;
   text-align: left;
 
   &:hover {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--surface-scrim) 70%, transparent);
+    background: var(--background-modifier-hover);
   }
 }
 
@@ -159,8 +157,7 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  background: color-mix(in srgb, var(--surface-scrim) 35%, transparent);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background-secondary) 60%, transparent);
   border-radius: 0.75rem;
 }
 
@@ -187,19 +184,17 @@
 }
 
 .settings-status-icon--ok {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--text-success);
+  background: var(--background-modifier-success);
 }
 
 .settings-status-icon--warn {
-  color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--text-warning);
+  background: var(--background-modifier-warning);
 }
 
 .settings-section-header-caret {
-  color: var(--muted-slate);
+  color: var(--text-faint);
   font-size: 0.9rem;
 }
 
@@ -207,7 +202,7 @@
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -231,26 +226,23 @@
 .settings-field > label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-normal);
 }
 
 .settings-input {
   width: 100%;
-  border: 1px solid var(--border);
   border-radius: 0.65rem;
   padding: 0.6rem 0.7rem;
-  background: color-mix(in srgb, var(--surface-scrim) 60%, transparent);
-  color: var(--text);
+  background: var(--background-secondary);
+  color: var(--text-normal);
   font-size: 0.82rem;
 
   &::placeholder {
-    color: var(--muted-slate);
+    color: var(--text-faint);
   }
 
   &:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
   }
 }
 
@@ -263,7 +255,6 @@
 .settings-tabs {
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid var(--border);
   padding-bottom: 0.15rem;
 }
 
@@ -273,7 +264,7 @@
   border: none;
   border-radius: 0;
   background: transparent;
-  color: var(--muted-slate);
+  color: var(--text-faint);
   font-size: 0.83rem;
   font-weight: 600;
   padding: 0.5rem 0.35rem 0.65rem;
@@ -293,27 +284,27 @@
   }
 
   &:hover {
-    color: var(--text);
+    color: var(--text-normal);
   }
 
   &:focus-visible {
     outline: none;
-    color: var(--text);
+    color: var(--text-normal);
   }
 }
 
 .settings-tab--active {
-  color: var(--text);
+  color: var(--text-normal);
 
   &::after {
-    background: var(--accent);
+    background: var(--color-accent);
   }
 }
 
 .settings-button {
   flex: 1;
   min-width: 10rem;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 0.75rem;
   padding: 0.7rem 1rem;
   font-size: 0.8rem;
@@ -328,22 +319,20 @@
 }
 
 .settings-button-primary {
-  background: var(--accent-soft);
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--text-normal);
 
   &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent-soft) 85%, white 15%);
+    background: var(--background-modifier-accent-soft-hover);
   }
 }
 
 .settings-button-danger {
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 25%, transparent);
+  background: var(--background-modifier-error);
+  color: var(--text-error);
 
   &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--error) 20%, transparent);
+    background: var(--background-modifier-error-hover);
   }
 }
 
@@ -351,8 +340,8 @@
   margin: 1rem 0 0;
   padding: 0.75rem;
   font-size: 0.75rem;
-  color: var(--muted-slate);
-  background: color-mix(in srgb, var(--muted-slate) 5%, transparent);
+  color: var(--text-faint);
+  background: color-mix(in srgb, var(--text-faint) 5%, transparent);
   border-radius: 0.5rem;
   line-height: 1.5;
 }
@@ -363,23 +352,19 @@
   font-size: 0.75rem;
   border-radius: 0.5rem;
   line-height: 1.5;
-  border: 1px solid transparent;
 }
 
 .settings-alert-warning {
-  color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 14%, transparent);
-  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--text-warning);
+  background: var(--background-modifier-warning);
 }
 
 .settings-alert-success {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 12%, transparent);
-  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--text-success);
+  background: var(--background-modifier-success);
 }
 
 .settings-alert-info {
-  color: var(--status-info);
-  background: color-mix(in srgb, var(--status-info-bg) 12%, transparent);
-  border-color: color-mix(in srgb, var(--status-info-strong) 40%, transparent);
+  color: var(--text-info);
+  background: var(--background-modifier-info);
 }

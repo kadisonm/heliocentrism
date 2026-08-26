@@ -135,13 +135,21 @@ export type DashboardWidget = {
   selectedListId?: string;
 };
 
-// Each breakpoint owns its widgets and their layout together, as one unit
-// — not two parallel structures kept in sync by matching ids. Switching
-// breakpoints means loading a different tier's widgets+layout wholesale,
-// not repositioning a shared set of widgets.
-export type DashboardBreakpointState = {
+// One independent grid of widgets — a breakpoint can hold several, see
+// DashboardBreakpointState.
+export type DashboardPage = {
+  id: string;
   widgets: DashboardWidget[];
   layout: Layout;
+};
+
+// Each breakpoint owns an ordered list of pages, each a self-contained
+// widgets+layout unit — not two parallel structures kept in sync by
+// matching ids. Switching breakpoints or pages means loading a different
+// widgets+layout wholesale, not repositioning a shared set of widgets.
+// Always length >= 1 — the dashboard never has zero pages.
+export type DashboardBreakpointState = {
+  pages: DashboardPage[];
 };
 
 export type DashboardState = {

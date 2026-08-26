@@ -15,3 +15,5 @@ Where possible write something once that is open for extension but closed for mo
 Aim for one line comments where possible. Try to be brief and concise with comments. Avoid leaving comments longer than 4 lines.
 
 Shorten any extremely long comments you find to match the above description.
+
+Always use pre-existing CSS colour variables instead of creating your own colours. If you need a colour / mixes that does not exist, then ask me first. Colour mixes should derive from the base colours of the theme for consistency.

@@ -20,15 +20,18 @@ function isSubtaskDrag(type: unknown): boolean {
   return typeof type === 'string' && type.startsWith('subtask:');
 }
 
-// Wraps <Grid> (see src/app/(dashboard)/page.tsx) with the one shared
-// dnd-kit DragDropProvider the whole dashboard's task rows register into
-// — that's what lets a drag cross from one Task List widget instance onto
-// a different one. See useTaskLists.ts's applyTaskDragOver/endTaskDrag
-// for why cross-list reparenting is gated rather than run every dragover.
+// Matches task-item.scss's .task-item--dropped/.subtask--dropped animation
+// duration — how long the drop-shrink class stays applied before clearing.
+const DROP_SHRINK_MS = 200;
+
+// One shared dnd-kit DragDropProvider for the whole dashboard's task rows,
+// letting a drag cross from one Task List widget instance to another.
 export default function TaskDragProvider({ children }: { children: ReactNode }) {
-  const { beginTaskDrag, applyTaskDragOver, endTaskDrag, commitSubtaskDragEnd } = useTaskLists();
+  const { beginTaskDrag, applyTaskDragOver, endTaskDrag, commitSubtaskDragEnd, setDraggingId, setDroppingId } =
+    useTaskLists();
 
   const handleDragStart = (event: DragStartEvent) => {
+    setDraggingId(typeof event.operation.source?.id === 'string' ? event.operation.source.id : null);
     if (event.operation.source?.type === TASK_TYPE) beginTaskDrag();
   };
 
@@ -37,6 +40,12 @@ export default function TaskDragProvider({ children }: { children: ReactNode }) 
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    const id = event.operation.source?.id;
+    setDraggingId(null);
+    if (typeof id === 'string') {
+      setDroppingId(id);
+      setTimeout(() => setDroppingId(null), DROP_SHRINK_MS);
+    }
     const type = event.operation.source?.type;
     if (type === TASK_TYPE) endTaskDrag(event);
     else if (isSubtaskDrag(type)) commitSubtaskDragEnd(event);

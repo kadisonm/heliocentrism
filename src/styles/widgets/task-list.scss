@@ -17,21 +17,19 @@
   justify-content: space-between;
   gap: 0.4rem;
   width: 100%;
-  border: 1px solid transparent;
   border-radius: 0.5rem;
   padding: 0.35rem 0.5rem;
   background: transparent;
-  color: var(--text);
+  color: var(--text-normal);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 
-  // Matches .task-item's own hover fill/border exactly (see task-item.scss).
+  // Matches .task-item's own hover fill exactly (see task-item.scss).
   &:hover,
   &:focus-visible {
-    background: var(--panel-strong);
-    border-color: var(--border);
+    background: var(--background-modifier-hover);
   }
 }
 
@@ -46,10 +44,9 @@
   display: flex;
   flex-direction: column;
   max-height: 20rem;
-  border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: var(--panel-strong);
-  box-shadow: 0 12px 30px var(--shadow);
+  background: var(--background-secondary-alt);
+  box-shadow: 0 12px 30px var(--shadow-modifier);
   z-index: 1000;
   overflow: hidden;
 }
@@ -59,15 +56,14 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--muted-slate);
+  color: var(--text-faint);
 
   input {
     flex: 1;
     min-width: 0;
     border: none;
     background: transparent;
-    color: var(--text);
+    color: var(--text-normal);
     font-size: 0.82rem;
 
     &:focus {
@@ -75,7 +71,7 @@
     }
 
     &::placeholder {
-      color: var(--muted-slate);
+      color: var(--text-faint);
     }
   }
 }
@@ -92,21 +88,18 @@
   gap: 0.4rem;
   border-radius: 0.4rem;
   padding: 0.45rem 0.55rem;
-  color: var(--text);
+  color: var(--text-normal);
   font-size: 0.85rem;
   cursor: pointer;
 
-  // No native :hover rule here on purpose — the highlighted row is driven
-  // entirely by JS state (--highlighted, see below), which onMouseEnter
-  // also updates. A separate CSS :hover would let the row the cursor is
-  // physically sitting on light up independently of that state, so moving
-  // the highlight with arrow keys without also moving the mouse would show
-  // two different rows highlighted at once.
+  // No native :hover on purpose — highlighting is driven entirely by JS
+  // state (--highlighted) so keyboard nav and mouse position can't
+  // independently light up two different rows.
 }
 
 .task-list-switcher__option--active {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
   font-weight: 600;
 }
 
@@ -114,7 +107,7 @@
 // --active (the list actually selected), independent state that can point
 // anywhere (including a non-selected row, or the create row).
 .task-list-switcher__option--highlighted {
-  background: var(--accent-soft);
+  background: var(--background-modifier-accent-soft);
 }
 
 .task-list-switcher__option-label {
@@ -142,21 +135,21 @@
   height: 1.5rem;
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-muted);
   border-radius: 0.4rem;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
+    background: var(--background-modifier-accent-soft-hover);
+    color: var(--color-accent);
   }
 }
 
 .task-list-switcher__icon-button--danger {
   &:hover {
-    background: color-mix(in srgb, var(--error) 16%, transparent);
-    color: var(--error);
+    background: var(--background-modifier-error);
+    color: var(--text-error);
   }
 }
 
@@ -175,12 +168,12 @@
 // no other row has.
 .task-list-switcher__separator {
   height: 1px;
-  background: var(--border);
+  background: var(--background-modifier-hover);
   flex-shrink: 0;
 }
 
 .task-list-switcher__option--create {
-  color: var(--accent);
+  color: var(--color-accent);
   font-weight: 600;
 }
 
@@ -188,5 +181,5 @@
   margin: 0;
   padding: 0.75rem 0.55rem;
   font-size: 0.78rem;
-  color: var(--muted-slate);
+  color: var(--text-faint);
 }

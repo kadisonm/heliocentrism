@@ -4,11 +4,9 @@ import type { BadgeColor } from '../Badge';
 type MenuItemProps = {
   icon: LucideIcon;
   label: string;
-  // Reuses Badge's color set for consistency with the rest of the app's
-  // color system, though the meaning here is just icon/text color (no
-  // background pill) — 'none' (default) is full-contrast text, not
-  // muted, since that's what a menu item's normal/non-destructive state
-  // should read as.
+  // Reuses Badge's color set for app-wide consistency, but here it colors
+  // icon/text only (no pill); 'none' means full-contrast text, since that's
+  // a menu item's normal/non-destructive state.
   color?: BadgeColor;
   onClick: () => void;
 };

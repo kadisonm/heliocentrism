@@ -1,4 +1,5 @@
 import type {
+  DashboardPage,
   DashboardState,
   PomodoroSettings,
   StagePreset,
@@ -13,11 +14,18 @@ export const DEFAULT_TASK_LISTS: TaskList[] = [];
 export const DEFAULT_TASKS: Task[] = [];
 export const DEFAULT_SUBTASKS: Subtask[] = [];
 
+// A fixed sentinel id, not crypto.randomUUID() — this constant seeds a
+// brand-new user's state, so a stable id is more predictable than a random
+// one that only ever gets used once.
+function emptyPage(id: string): DashboardPage {
+  return { id, widgets: [], layout: [] };
+}
+
 export const DEFAULT_DASHBOARD: DashboardState = {
   breakpoints: {
-    desktop: { widgets: [], layout: [] },
-    tablet: { widgets: [], layout: [] },
-    mobile: { widgets: [], layout: [] },
+    desktop: { pages: [emptyPage('default')] },
+    tablet: { pages: [emptyPage('default')] },
+    mobile: { pages: [emptyPage('default')] },
   },
 };
 

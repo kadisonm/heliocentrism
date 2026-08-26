@@ -25,12 +25,9 @@ type TaskListSwitcherProps = {
   onRequestEdit: (list: TaskList) => void;
 };
 
-// A search-filterable replacement for the old plain <select>, styled as a
-// real bordered trigger (matching every other <select>/input in the app)
-// with a portaled dropdown panel — the app's first custom popover/combobox.
-// Portaled to document.body for the same reason Modal and ContextMenu
-// are: react-grid-layout positions widgets via CSS `transform`, which traps
-// position: fixed descendants inside the widget's box otherwise.
+// Search-filterable replacement for a plain <select>, with a portaled dropdown
+// panel. Portaled to document.body because react-grid-layout's CSS `transform`
+// traps position: fixed descendants inside the widget's box otherwise.
 export default function TaskListSwitcher({
   lists,
   activeList,
@@ -43,11 +40,8 @@ export default function TaskListSwitcher({
   const [query, setQuery] = useState('');
   const [position, setPosition] = useState<PanelPosition | null>(null);
   const [mounted, setMounted] = useState(false);
-  // Index into [...filteredLists, createRow] — the row Enter/arrow keys act
-  // on. The create row is always the last index, so when filteredLists is
-  // empty it's automatically index 0, i.e. the only (and thus highlighted)
-  // row, satisfying "if there's no result, Add list must stay selected"
-  // with no separate special-case branch.
+  // Index into [...filteredLists, createRow]; when filteredLists is empty
+  // this naturally lands on the create row with no special-case branch.
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -57,16 +51,10 @@ export default function TaskListSwitcher({
     setMounted(true);
   }, []);
 
-  // Outside-click-to-close, using DOM containment (closest()) rather than
-  // relying on each row's onClick calling stopPropagation() — same
-  // reasoning as index.tsx's activeToolbar listener (dnd-kit's
-  // PointerSensor registers its own document-level click listener, and
-  // stopPropagation() alone wasn't reliable against that). Both this
-  // component's own wrapper class AND its panel's class are checked: the
-  // panel is portaled to document.body, so it's a *sibling* of
-  // .task-list-switcher in the DOM, not a descendant — checking only the
-  // wrapper class would treat every click inside the open panel as
-  // "outside" and close it mid-interaction.
+  // Outside-click-to-close via DOM containment (dnd-kit's own document
+  // listener makes stopPropagation() unreliable). Checks both the wrapper
+  // and panel classes since the panel is portaled to document.body and so
+  // is a DOM sibling, not a descendant, of the wrapper.
   useEffect(() => {
     if (!isOpen) return;
     const handleDocumentClick = (event: globalThis.MouseEvent) => {
@@ -134,11 +122,8 @@ export default function TaskListSwitcher({
     setHighlightedIndex(0);
   };
 
-  // Enter confirms whichever row is currently highlighted — the top search
-  // result by default, or wherever Up/Down has since moved to. With zero
-  // matches the create row is the only (and thus highlighted) row, so
-  // Enter confirms that instead. Escape just closes the panel — no
-  // selection, mirroring how Escape now cancels every Modal-based dialog.
+  // Enter confirms the highlighted row (top result, or wherever Up/Down
+  // moved to; falls back to the create row when there are zero matches).
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
@@ -224,13 +209,8 @@ export default function TaskListSwitcher({
                         type="button"
                         className="task-list-switcher__icon-button"
                         onClick={(event) => {
-                          // Plain React-internal bubbling within this row —
-                          // stops the click from also reaching the row's
-                          // own onClick above (which would select this
-                          // list right as it's being edited/deleted).
-                          // Unrelated to the dnd-kit/document-listener
-                          // issue this component's outside-click effect
-                          // works around.
+                          // Prevent the row's own onClick from also firing (would select
+                          // this list while it's being edited/deleted).
                           event.stopPropagation();
                           onRequestEdit(list);
                         }}

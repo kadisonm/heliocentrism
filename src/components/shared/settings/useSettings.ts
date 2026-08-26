@@ -57,11 +57,9 @@ function ensureLoaded() {
   })();
 }
 
-// Pomodoro's minute inputs (and any other free-typed settings field) call
-// updateSettings on every keystroke — without debouncing, each digit typed
-// would fire its own full Firestore round-trip. The in-memory copy still
-// updates and notifies synchronously above, so typing itself stays instant;
-// only the network write is delayed until input settles.
+// Debounces the Firestore write only — free-typed fields call updateSettings
+// per keystroke, and the in-memory copy still updates/notifies synchronously
+// above, so typing stays instant while the network write waits for settle.
 let writeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function updateSettings(next: AppSettings) {

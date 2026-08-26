@@ -34,6 +34,11 @@ export type TaskParentHandlers = {
   onEnterEditMode?: () => void;
   editingSubtaskId?: string | null;
   onSubtaskEnterEditMode?: (subtaskId: string) => void;
+  // Which task/subtask id is currently mid-drag or just dropped — drives
+  // the row's stable, one-shot "picked up"/"dropped" scale pop (see
+  // TaskRow.tsx's dragPhase).
+  draggingId?: string | null;
+  droppingId?: string | null;
 };
 
 type TaskParentProps<T extends Task> = TaskParentHandlers & {
@@ -44,6 +49,12 @@ type TaskParentProps<T extends Task> = TaskParentHandlers & {
   subtasks: Subtask[];
   dragRef?: (element: Element | null) => void;
 };
+
+function dragPhaseFor(id: string, draggingId?: string | null, droppingId?: string | null) {
+  if (draggingId === id) return 'dragging' as const;
+  if (droppingId === id) return 'dropped' as const;
+  return undefined;
+}
 
 export function subtaskProps(subtask: Subtask, stages: TaskStageDef[]) {
   const stageDef = stages[subtask.stage];
@@ -95,6 +106,7 @@ function SubtaskSortableRow({
       editExtra={handlers.renderSubtaskEditExtra?.(subtask)}
       isEditingRow={handlers.editingSubtaskId === subtask.id}
       onEnterEditMode={() => handlers.onSubtaskEnterEditMode?.(subtask.id)}
+      dragPhase={dragPhaseFor(subtask.id, handlers.draggingId, handlers.droppingId)}
     />
   );
 }
@@ -122,6 +134,8 @@ export default function TaskParent<T extends Task>({
   onEnterEditMode,
   editingSubtaskId,
   onSubtaskEnterEditMode,
+  draggingId,
+  droppingId,
   dragRef,
 }: TaskParentProps<T>) {
   const nextIndex = getNextStageIndex(task.stage, task.stages.length);
@@ -138,13 +152,9 @@ export default function TaskParent<T extends Task>({
     accept: subtaskType(task.id),
   });
 
-  // An empty subtasks zone has no content to hold it open (see
-  // .task-item__subtasks:empty in task-item.scss) — it only takes up any
-  // space at all while a drag that could ACTUALLY land here is in
-  // progress, so a task with no subtasks stays perfectly invisible at
-  // rest. Scoped to a subtask drag whose OWN parent is this task
-  // specifically — a task, or a subtask belonging to some OTHER task, can
-  // never validly drop here (see taskSortableTypes.ts's per-task type).
+  // Only takes up space while dragging one of THIS task's own subtasks —
+  // otherwise an empty zone stays invisible at rest (see
+  // .task-item__subtasks:empty in task-item.scss).
   const { source } = useDragOperation();
   const isDropTargetCandidate = source?.type === subtaskType(task.id);
 
@@ -166,6 +176,8 @@ export default function TaskParent<T extends Task>({
     onEnterEditMode,
     editingSubtaskId,
     onSubtaskEnterEditMode,
+    draggingId,
+    droppingId,
   };
 
   let notDoneIndex = 0;
@@ -191,6 +203,7 @@ export default function TaskParent<T extends Task>({
       editExtra={editExtra}
       isEditingRow={isEditingRow}
       onEnterEditMode={onEnterEditMode}
+      dragPhase={dragPhaseFor(task.id, draggingId, droppingId)}
       dragRef={dragRef}
     >
       <div

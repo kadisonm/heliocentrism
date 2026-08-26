@@ -45,14 +45,9 @@ export default function EditorStagesField({ stages, onChange }: EditorStagesFiel
   const { settings, updateSettings } = useSettings();
   const customPresets = settings.customStagePresets;
 
-  // Purely derived from `stages` rather than a synchronous-once useState
-  // initializer — self-corrects if `settings` (and so `customPresets`) is
-  // still loading when this mounts and a real match arrives moments later,
-  // with no useEffect/isLoading plumbing needed. Becomes non-null the
-  // moment the user makes an explicit choice (picks a preset, goes Custom,
-  // saves, or deletes) — after that the derived fallback no longer matters,
-  // so hand-editing stages while a preset is selected never silently snaps
-  // the dropdown back to "Custom".
+  // null = derive preset from `stages` (self-corrects if settings/customPresets
+  // are still loading on mount); becomes non-null once the user makes an
+  // explicit choice, so hand-editing stages afterward won't snap back to Custom.
   const [presetOverride, setPresetOverride] = useState<string | null>(null);
   const selectedPresetId = presetOverride ?? detectPresetId(stages, customPresets);
   const isCustomPresetSelected = customPresets.some((preset) => preset.id === selectedPresetId);

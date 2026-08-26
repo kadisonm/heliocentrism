@@ -13,14 +13,10 @@ type TaskStagesModalProps = {
   onSubmit: (stages: TaskStageDef[]) => void;
 };
 
-// A focused quick-edit surface for a task's Stage list, opened by clicking
-// its Stage badge — reuses the same EditorStagesField TaskModal uses
-// inline, so this edits the exact same data with no duplicated fields/
-// logic. Task-only: subtasks share their parent task's `stages` array
-// (see TaskParent.tsx) rather than having one of their own, so editing here
-// reshapes every subtask's available stages too — the caller is
-// responsible for clamping each subtask's (and the task's own) current
-// stage index if the list shrinks (see clampTaskStages in taskCascade.ts).
+// Task-only: subtasks share their parent task's `stages` array rather than
+// having one of their own, so editing here reshapes every subtask's stages
+// too. Caller must clamp each subtask's (and the task's own) current stage
+// index if the list shrinks (see clampTaskStages in taskCascade.ts).
 export default function TaskStagesModal({ isOpen, stages, onClose, onSubmit }: TaskStagesModalProps) {
   const [draftStages, setDraftStages] = useState<TaskStageDef[]>(stages);
 

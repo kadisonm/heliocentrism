@@ -6,18 +6,14 @@ import SyncConfigForm from '../sync-config/SyncConfigForm';
 
 type GateStatus = 'checking' | 'blocked' | 'allowed';
 
-// Blocks the whole app (nav + routes) until Firebase is configured and the
-// visitor is signed in — Firestore is the only place app data lives, so
-// there's nothing useful to show before that's true. Reuses the same form
-// as the Nav-accessible "Sync Configuration" modal (SyncConfigForm) rather
-// than duplicating the config/sign-in UI.
+// Blocks the whole app until Firebase is configured and signed in — Firestore
+// is the only data store, so there's nothing to show before that. Reuses
+// SyncConfigForm (same as the Nav "Sync Configuration" modal) instead of duplicating it.
 export default function OnboardingGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<GateStatus>('checking');
-  // subscribeToAuthState() no-ops if Firebase isn't configured yet at the
-  // moment it's called — true on first mount during onboarding, since
-  // there's no config at all yet. Bumping this (via SyncConfigForm's
-  // onSyncConfigured below) re-runs the effect so it can attach for real
-  // once config exists, instead of staying stuck on that first dead call.
+  // subscribeToAuthState() no-ops if Firebase isn't configured yet (true on
+  // first mount). Bumping this via onSyncConfigured re-runs the effect so it
+  // attaches for real once config exists.
   const [configVersion, setConfigVersion] = useState(0);
 
   useEffect(() => {

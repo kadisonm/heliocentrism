@@ -23,9 +23,7 @@ function formatDatePart(year: number, month: number, day: number): string {
 
 // Steps a (year, month, day) forward by `steps` repeat-interval-sized units,
 // always from the SAME starting point passed in — never compounding off a
-// previously-clamped result. That's what avoids the classic Jan 31 -> Feb 28
-// -> Mar 28 drift bug: March must independently re-clamp from 31, landing on
-// the 31st, not compound off February's 28th.
+// previously-clamped result. Avoids the Jan 31 -> Feb 28 -> Mar 28 drift bug.
 function stepDate(
   year: number,
   month: number,
@@ -176,10 +174,8 @@ export function shouldResetSubtask(
 }
 
 // Transform applied to one subtask, either because its own repeat is due
-// (shouldResetSubtask) or because its parent reset as a whole (which
-// forces every subtask back to its start stage unconditionally — see
-// resetRepeatingTask below). due only advances via the subtask's OWN
-// repeat, same rule as a task's own due.
+// or because its parent reset as a whole (see resetRepeatingTask). due only
+// advances via the subtask's OWN repeat, same rule as a task's own due.
 export function resetSubtaskState(subtask: Subtask, now: Date = new Date()): Subtask {
   return {
     ...subtask,
@@ -190,13 +186,9 @@ export function resetSubtaskState(subtask: Subtask, now: Date = new Date()): Sub
 }
 
 // Transform applied when shouldResetTask is true: stage/completion clear,
-// every subtask resets too (mirroring the old routine-reset behavior, now
-// also clearing each subtask's own completedAt and advancing its own due
-// if it has its own repeat — see resetSubtaskState), and due (if set)
-// catches up to the current cycle. repeat itself (anchor included) is left
-// completely untouched — the schedule's phase never moves. `subtasks` must
-// already be filtered to this task's own children (parentId === task.id) —
-// subtasks no longer live inline on `task`, so the caller owns finding them.
+// every subtask resets too (see resetSubtaskState), and due (if set) catches
+// up to the current cycle. repeat itself (anchor included) is never touched.
+// `subtasks` must already be filtered to this task's own children.
 export function resetRepeatingTask(
   task: Task,
   subtasks: Subtask[],
@@ -214,16 +206,10 @@ export function resetRepeatingTask(
   };
 }
 
-// Independent of resetRepeatingTask above — resets any subtask whose OWN
-// repeat schedule is due, regardless of whether the parent itself has a
-// repeat or reset this tick, and re-derives the parent's stage from the
-// resulting subtask stages if anything changed (same "lowest incomplete
-// subtask" rule cycleSubtaskStage already uses for a manual click). Call
-// this AFTER any parent-level resetRepeatingTask has already run for this
-// task on the same tick — shouldResetSubtask's isTaskDone gate then
-// naturally skips any subtask the blanket reset just touched, since it's
-// no longer "done" at stage 0. `subtasks` must already be filtered to this
-// task's own children.
+// Independent of resetRepeatingTask — resets any subtask whose OWN repeat
+// schedule is due, then re-derives the parent's stage from the resulting
+// subtask stages if anything changed. Call AFTER any parent-level
+// resetRepeatingTask has run this tick. `subtasks` must be pre-filtered.
 export function resetDueSubtasks(
   task: Task,
   subtasks: Subtask[],

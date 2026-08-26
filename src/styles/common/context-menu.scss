@@ -10,10 +10,9 @@
   gap: 0.1rem;
   min-width: 9rem;
   padding: 0.3rem;
-  border: 1px solid var(--border);
-  background: var(--panel-strong);
+  background: var(--background-secondary-alt);
   border-radius: 0.6rem;
-  box-shadow: 0 4px 12px var(--shadow);
+  box-shadow: 0 4px 12px var(--shadow-modifier);
   z-index: 1000;
 }
 
@@ -28,7 +27,7 @@
   padding: 0.4rem 0.5rem;
   border: none;
   background: none;
-  color: var(--text);
+  color: var(--text-normal);
   font-size: 0.8rem;
   text-align: left;
   border-radius: 0.4rem;
@@ -36,34 +35,34 @@
   transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: var(--accent-soft);
+    background: var(--background-modifier-accent-soft-hover);
   }
 }
 
 .menu-item--accent {
-  color: var(--accent);
+  color: var(--color-accent);
 }
 
 .menu-item--success {
-  color: var(--success);
+  color: var(--text-success);
 }
 
 .menu-item--warning {
-  color: var(--warning);
+  color: var(--text-warning);
 }
 
 .menu-item--error {
-  color: var(--error);
+  color: var(--text-error);
 
   &:hover {
-    background: color-mix(in srgb, var(--error) 16%, transparent);
+    background: var(--background-modifier-error);
   }
 }
 
 .menu-item--secondary {
-  color: var(--secondary);
+  color: var(--color-secondary);
 }
 
 .menu-item--muted {
-  color: var(--muted);
+  color: var(--text-muted);
 }

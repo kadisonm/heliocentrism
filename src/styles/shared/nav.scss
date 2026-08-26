@@ -3,8 +3,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--background);
+  background: var(--background-primary);
   position: relative;
 }
 
@@ -42,25 +41,24 @@
   border-radius: 0.65rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text-muted);
   text-decoration: none;
   transition: all 0.2s ease;
 
   &:hover {
-    color: var(--text);
-    background: color-mix(in srgb, white 6%, transparent);
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
   }
 }
 
 .app-nav-link--active {
-  color: var(--text);
-  background: var(--accent-soft);
+  color: var(--text-normal);
+  background: var(--background-modifier-accent-soft);
 }
 
 .icon-button {
   background: none;
-  border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--text-normal);
   cursor: pointer;
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
@@ -72,8 +70,7 @@
   height: 2.5rem;
 
   &:hover {
-    background: color-mix(in srgb, white 10%, transparent);
-    border-color: var(--accent);
+    background: var(--background-modifier-hover);
   }
 
   &:active {
@@ -86,8 +83,7 @@
 .app-nav-menu-toggle {
   display: none;
   background: none;
-  border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--text-normal);
   cursor: pointer;
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
@@ -99,8 +95,7 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, white 10%, transparent);
-    border-color: var(--accent);
+    background: var(--background-modifier-hover);
   }
 
   &:active {
@@ -112,7 +107,7 @@
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: var(--background);
+  background: var(--background-primary);
   display: flex;
   flex-direction: column;
   padding: 0.85rem 1.5rem 2rem;
@@ -150,7 +145,6 @@
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 2rem;
-  border-top: 1px solid var(--border);
 }
 
 .app-nav-mobile-menu-action {
@@ -158,18 +152,16 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--border);
   border-radius: 0.85rem;
   background: none;
-  color: var(--text);
+  color: var(--text-normal);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, white 6%, transparent);
-    border-color: var(--accent);
+    background: var(--background-modifier-hover);
   }
 
   &:active {

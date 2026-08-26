@@ -4,19 +4,15 @@ import { useEffect, useRef } from 'react';
 import { applyTheme, cacheTheme } from '../../lib/theme';
 import { useSettings } from '../shared/settings/useSettings';
 
-// Renders nothing — mounted once in layout.tsx to keep the DOM theme
-// attributes (set synchronously pre-paint by the inline script, see
-// THEME_INIT_SCRIPT) in sync with the Firestore-backed setting once it
-// resolves, and to react live to OS color-scheme changes while mode is
-// 'system'.
+// Renders nothing — keeps DOM theme attributes (set pre-paint by
+// THEME_INIT_SCRIPT) in sync with the Firestore setting once it resolves,
+// and reacts live to OS color-scheme changes while mode is 'system'.
 export default function ThemeSync() {
   const { settings, isLoading } = useSettings();
 
-  // Lets the OS-preference listener below read the current theme without
-  // depending on the whole `settings.theme` object — depending on it
-  // directly would tear down and recreate the matchMedia subscription on
-  // every theme edit (e.g. a palette change), not just mode entering/
-  // leaving 'system'.
+  // Lets the OS-preference listener read current theme without depending on
+  // `settings.theme` directly, which would recreate the matchMedia
+  // subscription on every theme edit, not just mode entering/leaving 'system'.
   const themeRef = useRef(settings.theme);
   useEffect(() => {
     themeRef.current = settings.theme;

@@ -1,7 +1,7 @@
 .dashboard-wrapper {
   min-height: 100vh;
-  background: var(--background);
-  color: var(--text);
+  background: var(--background-primary);
+  color: var(--text-normal);
   display: flex;
   flex-direction: column;
 }
@@ -12,12 +12,8 @@
   align-items: flex-start;
   justify-content: center;
   padding: 2rem 1.5rem;
-  // .grid-status-bar is `position: fixed; right/bottom: 1.5rem` with a
-  // 2.75rem height — at any breakpoint it can sit directly over the grid's
-  // bottom-right corner (and the widget resize handle there) since there's
-  // no room below the grid to scroll it out of the way. This clears the
-  // status bar's full footprint (offset + height) plus some gap, so
-  // scrolling to the bottom lets the bar end up below the grid instead of
-  // on top of it.
+  // Clears .grid-status-bar's full fixed footprint (1.5rem offset + 2.75rem
+  // height) plus a gap, so scrolling to the bottom moves the grid's corner
+  // (and resize handle) out from under the bar instead of behind it.
   padding-bottom: 6rem;
 }

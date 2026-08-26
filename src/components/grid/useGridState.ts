@@ -3,17 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { verticalCompactor, type Layout } from 'react-grid-layout';
 import { DEFAULT_DASHBOARD } from '../../lib/data';
-import { GRID_COLS, DEFAULT_WIDGET_SIZE } from '../../lib/gridConfig';
+import { GRID_COLS, DEFAULT_WIDGET_SIZE, MAX_PAGES_PER_BREAKPOINT } from '../../lib/gridConfig';
 import { readDashboardState, writeDashboardState } from '../../lib/firebaseSync';
 import type {
   DashboardBreakpoint,
   DashboardBreakpointState,
+  DashboardPage,
   DashboardState,
   DashboardWidget,
 } from '../../lib/types';
 import { findWidgetDefinition } from '../../lib/widgetRegistry';
 
-const ALL_BREAKPOINTS: DashboardBreakpoint[] = ['desktop', 'tablet', 'mobile'];
+export const ALL_BREAKPOINTS: DashboardBreakpoint[] = ['desktop', 'tablet', 'mobile'];
 
 // Item-for-item comparison on just the fields that actually affect
 // position/size — ignores array order (GridLayout doesn't guarantee it's
@@ -29,28 +30,96 @@ function layoutsEqual(a: Layout, b: Layout): boolean {
   });
 }
 
-// Handles both shapes this predates:
-//  - the original: one flat widget list shared across every breakpoint,
-//    with only the per-breakpoint layout differing.
-//  - the short-lived intermediate: widgets already split per breakpoint,
-//    but still stored as a separate `widgets`/`layouts` pair kept in sync
-//    by matching ids rather than one combined per-breakpoint unit.
-// Either way, the result looks identical to what was already on screen —
-// this only changes storage shape, not what the dashboard displays.
+function toPage(widgets: DashboardWidget[], layout: Layout): DashboardPage {
+  return { id: crypto.randomUUID(), widgets, layout };
+}
+
+function isFiniteNumber(n: unknown): n is number {
+  return typeof n === 'number' && Number.isFinite(n);
+}
+
+// Guards against corrupted layout data (e.g. a stray null/Infinity y) that
+// would otherwise feed react-grid-layout's internal compaction/sync into an
+// infinite "Maximum update depth" loop and render widgets overlapping.
+function isValidLayout(layout: unknown): layout is Layout {
+  return (
+    Array.isArray(layout) &&
+    layout.every(
+      (item) =>
+        item &&
+        isFiniteNumber(item.x) &&
+        isFiniteNumber(item.y) &&
+        isFiniteNumber(item.w) &&
+        isFiniteNumber(item.h)
+    )
+  );
+}
+
+// Replaces any non-finite coordinate with a safe fallback (unresolved `y`
+// goes to Infinity, matching addWidget's own "place at the bottom"
+// convention) and re-compacts so nothing overlaps.
+function sanitizeLayout(layout: Layout, cols: number): Layout {
+  const fixed = layout.map((item) => ({
+    ...item,
+    x: isFiniteNumber(item.x) ? item.x : 0,
+    y: isFiniteNumber(item.y) ? item.y : Infinity,
+    w: isFiniteNumber(item.w) ? item.w : 1,
+    h: isFiniteNumber(item.h) ? item.h : 1,
+  }));
+  return verticalCompactor.compact(fixed, cols);
+}
+
+function sameWidgetIds(a: DashboardWidget[], b: DashboardWidget[]): boolean {
+  if (a.length !== b.length) return false;
+  const idsA = new Set(a.map((w) => w.id));
+  return b.every((w) => idsA.has(w.id));
+}
+
+// Normalizes one breakpoint's raw stored value, which may already be the
+// current {pages} shape (pass through) or the pre-pages {widgets, layout}
+// shape (wrap as a single page). Firestore's merge:true writes never delete
+// fields a newer write omits, so a doc can end up with both the current
+// `pages` field AND the older sibling `widgets`/`layout` fields left behind
+// by an earlier (possibly buggy) version — if a page's layout looks
+// corrupted, and its widget set exactly matches those sibling fields, that
+// page is the one the old shape was wrapped forward from, so recover its
+// layout from there. Any other invalid page (no matching sibling) is
+// sanitized in place rather than dropped, so no page is ever silently lost.
+function migrateBreakpointState(raw: unknown, breakpoint: DashboardBreakpoint): DashboardBreakpointState {
+  if (!raw || typeof raw !== 'object') return { pages: [toPage([], [])] };
+  const r = raw as { pages?: DashboardPage[]; widgets?: DashboardWidget[]; layout?: Layout };
+
+  if (Array.isArray(r.pages) && r.pages.length > 0) {
+    const cols = GRID_COLS[breakpoint];
+    const pages = r.pages.map((page) => {
+      if (isValidLayout(page.layout)) return page;
+      if (r.layout && isValidLayout(r.layout) && r.widgets && sameWidgetIds(page.widgets, r.widgets)) {
+        return { ...page, layout: r.layout };
+      }
+      return { ...page, layout: sanitizeLayout(page.layout as Layout, cols) };
+    });
+    return { pages };
+  }
+  return { pages: [toPage(r.widgets ?? [], r.layout ?? [])] };
+}
+
+// Migrates two legacy shapes (a flat shared widget list, and a split
+// widgets/layouts pair) plus the pre-pages per-breakpoint shape, all up to
+// the current pages format, without changing what's actually displayed.
 function migrateDashboardState(synced: unknown): Record<DashboardBreakpoint, DashboardBreakpointState> {
   if (!synced || typeof synced !== 'object') return DEFAULT_DASHBOARD.breakpoints;
 
   const data = synced as {
-    breakpoints?: Partial<Record<DashboardBreakpoint, DashboardBreakpointState>>;
+    breakpoints?: Partial<Record<DashboardBreakpoint, unknown>>;
     widgets?: DashboardWidget[] | Partial<Record<DashboardBreakpoint, DashboardWidget[]>>;
     layouts?: Partial<Record<DashboardBreakpoint, Layout>>;
   };
 
   if (data.breakpoints) {
     return {
-      desktop: data.breakpoints.desktop ?? DEFAULT_DASHBOARD.breakpoints.desktop,
-      tablet: data.breakpoints.tablet ?? DEFAULT_DASHBOARD.breakpoints.tablet,
-      mobile: data.breakpoints.mobile ?? DEFAULT_DASHBOARD.breakpoints.mobile,
+      desktop: migrateBreakpointState(data.breakpoints.desktop, 'desktop'),
+      tablet: migrateBreakpointState(data.breakpoints.tablet, 'tablet'),
+      mobile: migrateBreakpointState(data.breakpoints.mobile, 'mobile'),
     };
   }
 
@@ -63,10 +132,18 @@ function migrateDashboardState(synced: unknown): Record<DashboardBreakpoint, Das
       };
 
   return {
-    desktop: { widgets: widgetsByBreakpoint.desktop, layout: data.layouts?.desktop ?? [] },
-    tablet: { widgets: widgetsByBreakpoint.tablet, layout: data.layouts?.tablet ?? [] },
-    mobile: { widgets: widgetsByBreakpoint.mobile, layout: data.layouts?.mobile ?? [] },
+    desktop: { pages: [toPage(widgetsByBreakpoint.desktop, data.layouts?.desktop ?? [])] },
+    tablet: { pages: [toPage(widgetsByBreakpoint.tablet, data.layouts?.tablet ?? [])] },
+    mobile: { pages: [toPage(widgetsByBreakpoint.mobile, data.layouts?.mobile ?? [])] },
   };
+}
+
+// A page needs >=1 widget or it's deleted, except the dashboard's last
+// remaining page is never auto-deleted even if emptied.
+function withEmptyPageCollapsed(pages: DashboardPage[], pageId: string): DashboardPage[] {
+  const page = pages.find((p) => p.id === pageId);
+  if (!page || page.widgets.length > 0 || pages.length === 1) return pages;
+  return pages.filter((p) => p.id !== pageId);
 }
 
 export function useGridState() {
@@ -88,8 +165,8 @@ export function useGridState() {
     loadDashboard();
   }, []);
 
-  const hasAnyWidgets = ALL_BREAKPOINTS.some(
-    (breakpoint) => breakpoints[breakpoint].widgets.length > 0
+  const hasAnyWidgets = ALL_BREAKPOINTS.some((breakpoint) =>
+    breakpoints[breakpoint].pages.some((page) => page.widgets.length > 0)
   );
 
   // react-grid-layout calls onLayoutChange on every drag/resize *frame*,
@@ -126,39 +203,43 @@ export function useGridState() {
     };
   }, []);
 
-  // useCallback with an empty dep array is safe here — each only touches
-  // state via the setState updater form (reading `current` as an argument,
-  // never closing over the outer `breakpoints`), so there's nothing
-  // reactive to depend on. Stable identity matters: these get passed down
-  // to every WidgetShell (React.memo'd), and a fresh function reference
-  // every render would defeat that memoization on every drag/resize frame.
-  const addWidget = useCallback((type: string, breakpoint: DashboardBreakpoint) => {
+  // Empty dep array is safe — these only use the setState updater form and
+  // never close over `breakpoints`. Stable identity matters: they're passed
+  // to every React.memo'd WidgetShell, and a fresh reference each render
+  // would defeat that memoization.
+  const addWidget = useCallback((type: string, breakpoint: DashboardBreakpoint, pageId: string) => {
     const id = crypto.randomUUID();
     const size = findWidgetDefinition(type)?.defaultSize ?? DEFAULT_WIDGET_SIZE;
     const w = Math.min(size.w, GRID_COLS[breakpoint]);
 
     setBreakpoints((current) => {
       const tier = current[breakpoint];
-      return {
-        ...current,
-        [breakpoint]: {
-          widgets: [...tier.widgets, { id, type }],
-          layout: [...tier.layout, { i: id, x: 0, y: Infinity, w, h: size.h }],
-        },
-      };
+      const pages = tier.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              widgets: [...page.widgets, { id, type }],
+              layout: [...page.layout, { i: id, x: 0, y: Infinity, w, h: size.h }],
+            }
+          : page
+      );
+      return { ...current, [breakpoint]: { pages } };
     });
   }, []);
 
-  const removeWidget = useCallback((id: string, breakpoint: DashboardBreakpoint) => {
+  const removeWidget = useCallback((id: string, breakpoint: DashboardBreakpoint, pageId: string) => {
     setBreakpoints((current) => {
       const tier = current[breakpoint];
-      return {
-        ...current,
-        [breakpoint]: {
-          widgets: tier.widgets.filter((widget) => widget.id !== id),
-          layout: tier.layout.filter((item) => item.i !== id),
-        },
-      };
+      const updatedPages = tier.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              widgets: page.widgets.filter((widget) => widget.id !== id),
+              layout: page.layout.filter((item) => item.i !== id),
+            }
+          : page
+      );
+      return { ...current, [breakpoint]: { pages: withEmptyPageCollapsed(updatedPages, pageId) } };
     });
   }, []);
 
@@ -167,77 +248,109 @@ export function useGridState() {
   // (e.g. Photo's url/alt/fit, applied together as one `photo` patch via
   // WidgetContext's onUpdate) through the same path.
   const updateWidget = useCallback(
-    (id: string, breakpoint: DashboardBreakpoint, patch: Partial<Omit<DashboardWidget, 'id'>>) => {
+    (id: string, breakpoint: DashboardBreakpoint, pageId: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => {
       setBreakpoints((current) => {
         const tier = current[breakpoint];
-        return {
-          ...current,
-          [breakpoint]: {
-            ...tier,
-            widgets: tier.widgets.map((widget) =>
-              widget.id === id ? { ...widget, ...patch } : widget
-            ),
-          },
-        };
+        const pages = tier.pages.map((page) =>
+          page.id === pageId
+            ? { ...page, widgets: page.widgets.map((widget) => (widget.id === id ? { ...widget, ...patch } : widget)) }
+            : page
+        );
+        return { ...current, [breakpoint]: { pages } };
       });
     },
     []
   );
 
-  // Bails out (returns the SAME `current` reference) when the incoming
-  // layout is item-for-item identical to what's already stored — this
-  // matters because GridLayout can call onLayoutChange reporting a layout
-  // that hasn't actually changed, most often while crossing a
-  // breakpoint's column-count change (e.g. desktop's 12 cols -> tablet's
-  // 8), where it re-validates every item's position/size against the new
-  // grid and reports back regardless of whether anything moved. Without
-  // this guard, that "no-op" notification still produces a brand new
-  // `breakpoints` object every time, which re-derives a new `layout` array
-  // reference for Grid.tsx's own `layout` useMemo, which GridLayout then
-  // treats as a fresh prop worth re-validating all over again — an
-  // infinite ping-pong between this state and GridLayout's own internal
-  // layout-prop sync (surfaced as React's "Maximum update depth exceeded").
-  const setLayout = useCallback((breakpoint: DashboardBreakpoint, layout: Layout) => {
+  // Bails out with the same `current` reference when the layout is
+  // item-for-item unchanged, since GridLayout can report a no-op layout
+  // (e.g. across a column-count change); otherwise a fresh reference each
+  // time ping-pongs with GridLayout's own prop sync ("Maximum update depth").
+  const setLayout = useCallback((breakpoint: DashboardBreakpoint, pageId: string, layout: Layout) => {
     setBreakpoints((current) => {
-      if (layoutsEqual(current[breakpoint].layout, layout)) return current;
-      return {
-        ...current,
-        [breakpoint]: { ...current[breakpoint], layout },
-      };
+      const tier = current[breakpoint];
+      const page = tier.pages.find((p) => p.id === pageId);
+      if (!page || layoutsEqual(page.layout, layout)) return current;
+      const pages = tier.pages.map((p) => (p.id === pageId ? { ...p, layout } : p));
+      return { ...current, [breakpoint]: { pages } };
     });
   }, []);
 
-  // Called continuously by WidgetShell's ResizeObserver while a widget's
-  // auto-expand is on — patches just that one layout item's height and
-  // bails out if it's already correct so a settled widget doesn't keep
-  // scheduling no-op state updates (and debounced Firestore writes) on
-  // every observer callback.
-  //
-  // Compacts and persists the result immediately, here, rather than
-  // leaving that to Grid's own layout useMemo + waiting for GridLayout to
-  // echo the recompacted array back through onLayoutChange — that
-  // round-trip depends on GridLayout's internal prop-sync effect timing,
-  // which turned out not to reliably push a widget further down when
-  // there was a gap between it and the one below (the two-item push was
-  // fine; anything needing compaction to also close a gap first wasn't
-  // making it back into state). Compacting at the source removes that
-  // dependency entirely — this is the same algorithm react-grid-layout
-  // itself uses for drag/resize, so it's a no-op on an already-settled
-  // layout.
-  const setWidgetHeight = useCallback(
-    (id: string, breakpoint: DashboardBreakpoint, h: number) => {
+  // Called by GridPage's coalesced flush of WidgetShell's ResizeObserver
+  // callbacks during auto-expand (see GridPage's HEIGHT_COALESCE_MS) — all
+  // widgets that remeasured together land in one compaction pass here,
+  // rather than one setState per widget. That matters: react-grid-layout's
+  // own internal layout-sync effect can't cleanly reconcile against a drip
+  // of separate incremental layout-prop changes (each landing in its own
+  // commit) — it can echo back a stale intermediate value, which gets
+  // immediately re-measured and pushed forward again, forever ("Maximum
+  // update depth exceeded"). One atomic update per settle avoids that race.
+  const setWidgetHeights = useCallback(
+    (breakpoint: DashboardBreakpoint, pageId: string, patches: Array<{ id: string; h: number }>) => {
+      if (patches.length === 0) return;
       setBreakpoints((current) => {
         const tier = current[breakpoint];
-        const item = tier.layout.find((entry) => entry.i === id);
-        if (!item || item.h === h) return current;
+        const page = tier.pages.find((p) => p.id === pageId);
+        if (!page) return current;
 
-        const resized = tier.layout.map((entry) => (entry.i === id ? { ...entry, h } : entry));
+        const heightById = new Map(patches.map(({ id, h }) => [id, h]));
+        let changed = false;
+        const resized = page.layout.map((entry) => {
+          const h = heightById.get(entry.i);
+          if (h === undefined || entry.h === h) return entry;
+          changed = true;
+          return { ...entry, h };
+        });
+        if (!changed) return current;
+
         const compacted = verticalCompactor.compact(resized, GRID_COLS[breakpoint]);
+        const pages = tier.pages.map((p) => (p.id === pageId ? { ...p, layout: compacted } : p));
 
-        return {
-          ...current,
-          [breakpoint]: { ...tier, layout: compacted },
+        return { ...current, [breakpoint]: { pages } };
+      });
+    },
+    []
+  );
+
+  const createPage = useCallback((breakpoint: DashboardBreakpoint): string => {
+    const id = crypto.randomUUID();
+    setBreakpoints((current) => {
+      const tier = current[breakpoint];
+      // Defensive only — the UI already hides the "new page" affordance at
+      // the cap (see buildVirtualPages), so this should never actually apply.
+      if (tier.pages.length >= MAX_PAGES_PER_BREAKPOINT) return current;
+      return { ...current, [breakpoint]: { pages: [...tier.pages, { id, widgets: [], layout: [] }] } };
+    });
+    return id;
+  }, []);
+
+  const moveWidgetToPage = useCallback(
+    (id: string, breakpoint: DashboardBreakpoint, fromPageId: string, toPageId: string) => {
+      if (fromPageId === toPageId) return;
+      setBreakpoints((current) => {
+        const tier = current[breakpoint];
+        const fromPage = tier.pages.find((p) => p.id === fromPageId);
+        const toPage = tier.pages.find((p) => p.id === toPageId);
+        const widget = fromPage?.widgets.find((w) => w.id === id);
+        const layoutItem = fromPage?.layout.find((item) => item.i === id);
+        if (!fromPage || !toPage || !widget || !layoutItem) return current;
+
+        const cols = GRID_COLS[breakpoint];
+        const toLayout = verticalCompactor.compact([...toPage.layout, { ...layoutItem, x: 0, y: Infinity }], cols);
+
+        const updatedFrom = {
+          ...fromPage,
+          widgets: fromPage.widgets.filter((w) => w.id !== id),
+          layout: fromPage.layout.filter((item) => item.i !== id),
         };
+
+        const rawPages = tier.pages.map((page) => {
+          if (page.id === fromPageId) return updatedFrom;
+          if (page.id === toPageId) return { ...page, widgets: [...page.widgets, widget], layout: toLayout };
+          return page;
+        });
+
+        return { ...current, [breakpoint]: { pages: withEmptyPageCollapsed(rawPages, fromPageId) } };
       });
     },
     []
@@ -250,6 +363,8 @@ export function useGridState() {
     removeWidget,
     updateWidget,
     setLayout,
-    setWidgetHeight,
+    setWidgetHeights,
+    createPage,
+    moveWidgetToPage,
   };
 }

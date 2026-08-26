@@ -3,8 +3,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  background: var(--background-modifier-success);
   border-radius: 0.75rem;
 }
 
@@ -12,9 +11,8 @@
   margin: 0 0 1rem;
   padding: 1rem;
   font-size: 0.8rem;
-  color: var(--status-caution);
-  background: color-mix(in srgb, var(--status-caution) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--status-caution) 25%, transparent);
+  color: var(--text-warning);
+  background: var(--background-modifier-warning);
   border-radius: 0.75rem;
 
   p {
@@ -31,6 +29,6 @@
   }
 
   strong {
-    color: var(--status-caution-strong);
+    color: var(--text-warning);
   }
 }

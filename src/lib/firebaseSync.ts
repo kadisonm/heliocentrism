@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
+  deleteField,
   doc,
   getDoc,
   getFirestore,
@@ -125,14 +126,10 @@ export function isFirebaseConfigured(): boolean {
   return !!loadFirebaseConfig();
 }
 
-// Once a config is loaded, the app/db pairing can't actually change within
-// the session anyway — getApps()[0] below always wins over whatever config
-// is currently in storage, so re-deriving from scratch on every call bought
-// nothing but a localStorage read + JSON.parse + an initializeFirestore()
-// throw/catch (Firestore rejects re-initializing an already-initialized
-// app) on every single read/write across the whole app. Cache the success
-// case; leave the "not configured yet" case uncached so a config saved
-// mid-session (e.g. during onboarding) is picked up on the next call.
+// The app/db pairing can't change mid-session, so cache the success case to
+// avoid re-parsing storage and re-initializing Firestore on every call.
+// "Not configured yet" is left uncached so a config saved mid-session is
+// picked up on the next call.
 let cachedServices: FirebaseServices | null | undefined;
 
 function getFirebaseServices(): FirebaseServices | null {
@@ -170,13 +167,9 @@ function getAppDataDocRef(uid: string) {
   return doc(services.db, 'users', uid, 'appData', 'userData');
 }
 
-// Firebase Auth restores a signed-in session asynchronously — reading
-// auth.currentUser immediately after page load can see `null` even when the
-// user is actually signed in, because the restore hasn't resolved yet.
-// authStateReady() waits for that restore to finish, so currentUser here can
-// be trusted. Without this, an early read would wrongly report "not signed
-// in", and a subsequent write would overwrite the real saved data with that
-// empty state.
+// Firebase Auth restores a signed-in session asynchronously, so an early read
+// of auth.currentUser can wrongly see `null`. authStateReady() waits for that
+// restore first so currentUser can be trusted here.
 async function getAuthenticatedDocRef() {
   const auth = getFirebaseAuth();
   if (!auth) return null;
@@ -431,7 +424,26 @@ export async function writeDashboardState(
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'dashboard'> = { dashboard };
+    // setDoc with merge:true never removes fields a write omits, so older
+    // shapes this doc may still carry (a pre-pages breakpoint's widgets/layout,
+    // or the even older top-level widgets/layouts) would otherwise linger
+    // forever, silently shadowing the current data on the next migration.
+    const breakpointCleanup = {
+      widgets: deleteField(),
+      layout: deleteField(),
+    };
+    const data = {
+      dashboard: {
+        ...dashboard,
+        widgets: deleteField(),
+        layouts: deleteField(),
+        breakpoints: {
+          desktop: { ...dashboard.breakpoints.desktop, ...breakpointCleanup },
+          tablet: { ...dashboard.breakpoints.tablet, ...breakpointCleanup },
+          mobile: { ...dashboard.breakpoints.mobile, ...breakpointCleanup },
+        },
+      },
+    };
     await setDoc(
       docRef,
       {

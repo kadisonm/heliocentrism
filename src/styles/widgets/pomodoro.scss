@@ -14,7 +14,7 @@
 .pomodoro-time {
   font-size: 3rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-normal);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
@@ -33,14 +33,13 @@
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  border: 1px solid var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent) 20%);
+    background: var(--background-modifier-accent-soft-hover);
   }
 
   &:active {
@@ -55,21 +54,19 @@
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
   background: transparent;
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--panel-soft);
-    color: var(--text);
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
   }
 
   &.is-active {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--background-modifier-accent-soft);
+    color: var(--color-accent);
   }
 
   &:active {

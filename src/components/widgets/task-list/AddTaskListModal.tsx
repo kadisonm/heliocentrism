@@ -10,11 +10,8 @@ type AddTaskListModalProps = {
   // Non-null while editing an existing list — read for its initial name
   // only, matching SubtaskModal's `subtask: Subtask | null` convention.
   list?: TaskList | null;
-  // Pre-fills the name field when adding — used when opened from the list
-  // switcher's "Add list" row, seeded with whatever the user had already
-  // typed into its search box. The parent remounts this component (via a
-  // `key` tied to the seed/list) whenever either changes, since this only
-  // matters at mount.
+  // Pre-fills the name field on add. Parent remounts this component (via a
+  // `key`) whenever it changes, since this only matters at mount.
   initialName?: string;
   onClose: () => void;
   onSubmit: (name: string) => void;

@@ -14,10 +14,8 @@ function formatTimeOfDay(date: Date): string {
 }
 
 // Relative day/time label for a date near `now` — "Yesterday"/"Today"/
-// "Tomorrow"/"In N days" out to a week, then falls back to an absolute
-// short date (day-month order, independent of locale, to match "19 Sep"
-// rather than a locale-dependent "Sep 19"). Shared by the due-date and
-// repeat badges so both read the same way.
+// "Tomorrow"/"In N days" out to a week, then an absolute short date
+// (day-month order, locale-independent). Shared by due-date and repeat badges.
 export function formatRelativeDateTime(date: Date, now: Date = new Date()): string {
   const time = formatTimeOfDay(date);
   const dayDiff = daysBetween(now, date);

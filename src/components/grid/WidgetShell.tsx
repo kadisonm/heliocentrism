@@ -15,14 +15,10 @@ type WidgetShellProps = {
   onHeightChange: (id: string, h: number) => void;
 };
 
-// Grid re-renders on every drag/resize frame (layout changes continuously
-// while dragging) — without memoizing here, every widget's full subtree
-// would re-render on every frame even though only the one being dragged
-// actually changed. Relies on the parent's `widgets` array preserving
-// object identity for unrelated widgets (see useGridState's updateWidget/
-// removeWidget, which use .map()/.filter() so untouched items keep their
-// reference) and on onUpdateWidget/onRemove being stable (useCallback in
-// useGridState).
+// Memoized because Grid re-renders every drag/resize frame; without it every
+// widget's subtree would re-render even though only the dragged one changed.
+// Relies on the parent's widgets array preserving identity for untouched
+// items (map/filter in useGridState) and on onUpdateWidget/onRemove being stable.
 function WidgetShell({
   widget,
   isEditMode,
@@ -50,14 +46,10 @@ function WidgetShell({
   const isTransparent = definition?.transparentInViewMode && !isEditMode;
   const isAutoExpand = !!(widget.autoExpand && definition?.supportsAutoExpand);
 
-  // Measures the widget's own content root (grid-widget-body's single real
-  // child — modals rendered alongside it portal to document.body, so they
-  // never show up here) rather than grid-widget-body itself, which is
-  // pinned to whatever height the grid gives it. The CSS pairing in
-  // grid.scss frees that content root (and widgets/shared.scss's
-  // .widget-content) from their normal height:100% while auto-expand is on,
-  // so its rendered size reflects the content's true natural height instead
-  // of just echoing its fixed container back.
+  // Measures the content root (grid-widget-body's real child; portaled modals
+  // don't show up here), not grid-widget-body itself which is pinned to the
+  // grid's given height. CSS in grid.scss/shared.scss frees that root from
+  // height:100% while auto-expand is on so it reports its natural height.
   useEffect(() => {
     if (!isAutoExpand) return;
     const target = bodyRef.current?.firstElementChild;
@@ -66,21 +58,10 @@ function WidgetShell({
     const minH = definition?.minSize.h;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    // Debounced on a short settle window rather than calling onHeightChange
-    // straight from the observer callback (or coalescing through just one
-    // rAF, which isn't a long enough window — a CSS transition inside the
-    // content, e.g. a task row expanding into edit mode, fires this
-    // observer once per animation frame while it's mid-transition, and a
-    // single-frame coalesce still ends up applying each of those
-    // intermediate heights in turn, fighting the animation instead of
-    // waiting for it to settle). This same debounce is what also coalesces
-    // the cascade of notifications toggling auto-expand on a widget with
-    // others below it can trigger (this widget growing, then whatever
-    // compaction that pushes around) — reacting to every one of them
-    // synchronously is what was originally tripping React's update-depth
-    // guard. 250ms is comfortably past this file's own CSS transitions
-    // (see task-item.scss's .task-item__description-reveal/__footer-reveal,
-    // 0.2s) — only the final, settled height in a burst gets applied.
+    // Debounced (not single-rAF): a mid-transition CSS change fires this
+    // once per frame, and one-frame coalescing still fights the animation.
+    // Also coalesces the auto-expand cascade that tripped React's
+    // update-depth guard; 250ms exceeds this file's own CSS transitions.
     const observer = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height;
       if (height === undefined) return;

@@ -12,12 +12,8 @@ type TaskDueModalProps = {
   onSubmit: (due: string) => void;
 };
 
-// A focused quick-edit surface for just a due date, opened by clicking a
-// calendar badge — works on the plain value rather than a Task, so the same
-// modal serves both a task's and a subtask's due date (mirrors
-// TaskRepeatModal). Reuses the same EditorDueField that TaskModal uses
-// inline so every entry point edits the exact same data with no duplicated
-// fields/logic.
+// Quick-edit surface for just a due date. Works on the plain value rather
+// than a Task, so it serves both tasks and subtasks (mirrors TaskRepeatModal).
 export default function TaskDueModal({ isOpen, due, onClose, onSubmit }: TaskDueModalProps) {
   const [draftDue, setDraftDue] = useState(due);
 

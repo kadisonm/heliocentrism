@@ -1,16 +1,17 @@
+import { memo } from 'react';
 import type { Subtask, Task } from '../../../lib/types';
 import { isTaskDone } from '../../../lib/taskCascade';
 import TaskParent, { type TaskParentHandlers } from './TaskParent';
 import { TASK_TYPE } from './taskSortableTypes';
 import { useTaskSortable } from './useTaskSortable';
 
-type SortableTaskProps<T extends Task> = TaskParentHandlers & { task: T; subtasks: Subtask[]; index: number };
+type SortableTaskProps = TaskParentHandlers & { task: Task; subtasks: Subtask[]; index: number };
 
 // Drag-sortable wrapper around TaskParent. A done task is excluded from
-// the live sortable arrangement entirely (see useTaskLists.ts's
-// groupedTaskIds) — `disabled` keeps it a fixed, non-draggable,
-// non-drop-target row while every other handler stays live.
-export default function SortableTask<T extends Task>({ task, subtasks, index, ...handlers }: SortableTaskProps<T>) {
+// the live sortable arrangement (see useTaskLists.ts's groupedTaskIds) via
+// `disabled`. Memoized — see TaskListRow.tsx, which is what keeps its props
+// referentially stable so unrelated rows skip re-rendering entirely.
+function SortableTask({ task, subtasks, index, ...handlers }: SortableTaskProps) {
   const done = isTaskDone(task);
   const { dragRef } = useTaskSortable({
     id: task.id,
@@ -21,3 +22,5 @@ export default function SortableTask<T extends Task>({ task, subtasks, index, ..
   });
   return <TaskParent task={task} subtasks={subtasks} {...handlers} dragRef={dragRef} />;
 }
+
+export default memo(SortableTask);

@@ -24,6 +24,49 @@ let hasStartedLoad = false;
 let hasStartedRepeatWatcher = false;
 const listeners = new Set<() => void>();
 
+// Which single task/subtask row is in "edit mode" — shared globally (not
+// per-widget local state) so it survives a task being dragged into a
+// different Task List widget instance's list mid-edit, which otherwise
+// remounts the row into a tree with no memory of it being edited.
+export type EditingRow = { type: 'task'; taskId: string } | { type: 'subtask'; taskId: string; subtaskId: string };
+let editingRow: EditingRow | null = null;
+
+function getEditingRowSnapshot() {
+  return editingRow;
+}
+
+function setEditingRow(row: EditingRow | null) {
+  editingRow = row;
+  notify();
+}
+
+// The task/subtask id currently mid-drag (draggingId) or just released
+// (droppingId), if any — shared globally (like editingRow) so the row's
+// "picked up"/"dropped" scale pop is driven by a stable, React-set class
+// instead of dnd-kit's own [data-dnd-dragging]/[data-dnd-dropping]
+// attributes, which it re-touches every drag frame and can restart the CSS
+// keyframe animation on (e.g. whenever another row is pushed aside).
+let draggingId: string | null = null;
+let droppingId: string | null = null;
+
+function getDraggingIdSnapshot() {
+  return draggingId;
+}
+
+function setDraggingId(id: string | null) {
+  draggingId = id;
+  notify();
+}
+
+function getDroppingIdSnapshot() {
+  return droppingId;
+}
+
+function setDroppingId(id: string | null) {
+  droppingId = id;
+  notify();
+}
+
 function notify() {
   for (const listener of listeners) listener();
 }
@@ -89,11 +132,9 @@ function ensureLoaded() {
   })();
 }
 
-// Guards on having actually finished the initial load (rather than e.g. an
-// array-length check) so a stray pre-load mutation can never write the
-// pristine empty starting state over real Firestore data, while a
-// genuinely-empty account (every list/task deleted) still persists that
-// correctly — no special-case bypass needed for that case.
+// Guards on having actually finished the initial load, not e.g. an
+// array-length check, so a stray pre-load mutation can never overwrite
+// real Firestore data with the pristine empty starting state.
 function persist() {
   if (isLoading) return;
   writeTaskLists(taskLists);
@@ -106,11 +147,9 @@ function commit() {
   persist();
 }
 
-// Resets any completed repeating task whose schedule has passed since it
-// was last completed (or all its subtasks reset along with it — see
-// resetRepeatingTask), plus, independently, any subtask whose OWN repeat
-// schedule has passed regardless of the parent (see resetDueSubtasks). Not
-// tied to exact-time triggering — see ensureRepeatWatcherStarted.
+// Resets any completed repeating task whose schedule has passed (see
+// resetRepeatingTask), plus any subtask whose OWN repeat schedule has
+// passed regardless of the parent (see resetDueSubtasks).
 function runRepeatResetCheck() {
   if (tasks.length === 0) return;
 
@@ -162,10 +201,8 @@ function ensureRepeatWatcherStarted() {
 }
 
 // Compares done-ness before vs. after, not raw stage numbers — a stages
-// list edit can shrink the array so the SAME numeric stage index now means
-// "done" when it didn't before (e.g. a 3-stage list shrinking to 2 turns
-// index 1 from "Doing" into "Done"). Comparing stage numbers alone would
-// miss that transition and skip the stamp.
+// list shrinking can make the SAME numeric index mean "done" when it
+// didn't before, which a raw number comparison would miss.
 function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; completedAt: string | null }>(
   wasDone: boolean,
   updated: T,
@@ -176,11 +213,8 @@ function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; 
   return { ...updated, completedAt: isDone ? now : null };
 }
 
-// Mirrors withStageTimestamps, but for one subtask within a task whose own
-// stage just changed — either because the user clicked that subtask
-// directly, the parent's own toggle cascaded it forward (cycleTaskStage),
-// or a stages-list edit clamped it. Needed so a subtask with its own repeat
-// has an accurate completedAt to check itself against (shouldResetSubtask)
+// Mirrors withStageTimestamps for one subtask. Needed so a subtask with its
+// own repeat has an accurate completedAt to check against (shouldResetSubtask)
 // instead of reading null and being treated as immediately stale.
 function withSubtaskCompletedAt(wasDone: boolean, subtask: Subtask, stages: TaskStageDef[], now: string): Subtask {
   const isDone = isTaskDone({ stage: subtask.stage, stages });
@@ -234,11 +268,9 @@ function updateSubtaskStage(subtaskId: string) {
   commit();
 }
 
-// Wholesale-replaces a task (used by inline-edit title/description saves
-// and the due/repeat quick-edit modals) — none of those touch `stage`, so
-// no cascade/timestamp bookkeeping is needed here. Stage-list edits go
-// through updateTaskStages below instead, since those DO need to reach the
-// task's subtasks too.
+// Wholesale-replaces a task (inline-edit and due/repeat quick-edit saves) —
+// none of those touch `stage`, so no cascade/timestamp bookkeeping needed
+// here. Stage-list edits go through updateTaskStages instead.
 function updateTask(updatedTask: Task) {
   const now = new Date().toISOString();
   tasks = tasks.map((task) => (task.id === updatedTask.id ? { ...updatedTask, updatedAt: now } : task));
@@ -278,11 +310,9 @@ function deleteTask(taskId: string) {
 type TaskDraft = Omit<Task, 'parentId' | 'order' | 'createdAt' | 'updatedAt' | 'completedAt'>;
 type SubtaskDraft = Omit<Subtask, 'parentId' | 'order'>;
 
-// `subtaskDrafts` lets TaskModal's "add task" form submit subtasks added in
-// the same draft in one go — each draft's id is already client-generated
-// (see TaskModal.tsx), so they can be created alongside their new parent
-// without a separate round trip, and this fires just one persist() instead
-// of N+1 separate writes.
+// `subtaskDrafts` lets TaskModal's "add task" form submit subtasks created
+// in the same draft in one go (each draft's id already client-generated),
+// firing a single persist() instead of N+1 separate writes.
 function addTask(listId: string, taskDraft: TaskDraft, subtaskDrafts: SubtaskDraft[] = []) {
   const now = new Date().toISOString();
   const siblingTasks = tasks.filter((t) => t.parentId === listId);
@@ -301,13 +331,9 @@ function addTask(listId: string, taskDraft: TaskDraft, subtaskDrafts: SubtaskDra
   commit();
 }
 
-// Not-done tasks grouped by list id and ordered — the shape
-// @dnd-kit/helpers' move() expects. A done task is never draggable and
-// never a drop target (see index.tsx rendering it as a plain, non-sortable
-// row when shown) — excluding it here, unconditionally, keeps every
-// task's sortable `index` prop consistent regardless of which widget(s)
-// currently have "show completed" on, since that's a per-widget display
-// setting this data layer otherwise has no way to reconcile across them.
+// Not-done tasks grouped by list id and ordered — the shape @dnd-kit/helpers'
+// move() expects. Done tasks are excluded unconditionally so every task's
+// sortable `index` stays consistent regardless of per-widget "show completed".
 function groupedTaskIds(): Record<string, string[]> {
   const grouped: Record<string, string[]> = {};
   for (const list of taskLists) grouped[list.id] = [];
@@ -344,20 +370,16 @@ function beginTaskDrag() {
   taskDragSnapshot = tasks;
 }
 
-// Reparents a task into its hovered list the moment it crosses into one —
-// but ONLY then. Same-list reordering needs nothing here at all (dnd-kit's
-// OptimisticSortingPlugin animates that live, client-side, no app-state
-// change needed) — calling move()+notify() on every dragover regardless
-// fans a re-render out to every widget 60+ times a second, which is what
-// actually read as jitter. Final position is captured once, at drop.
+// Reparents a task into its hovered list the moment it crosses into one, but
+// ONLY then — same-list reordering is animated live by dnd-kit's
+// OptimisticSortingPlugin with no app-state change needed. Calling
+// move()+notify() on every dragover regardless caused visible jitter.
 function applyTaskDragOver(event: DragOverEvent) {
-  console.count('dragover-event');
   const source = event.operation.source;
   if (!isSortable(source)) return;
   const currentTask = tasks.find((t) => t.id === source.id);
   if (!currentTask || currentTask.parentId === source.group) return;
   applyTaskGroups(move(groupedTaskIds(), event));
-  console.count('applyTaskDragOver-notify');
   notify();
 }
 
@@ -373,12 +395,9 @@ function endTaskDrag(event: DragEndEvent) {
   taskDragSnapshot = null;
 }
 
-// Does not re-derive the parent's stage from its subtasks (via
-// deriveStageFromSubtasks) — matches the already-existing behavior of the
-// old modal-based add path. A parent shown "done" with zero subtasks that
-// then gets a fresh incomplete subtask added won't visually un-done itself
-// until some other stage-changing operation touches it — a pre-existing
-// latent gap, not something introduced or fixed here.
+// Does not re-derive the parent's stage from its subtasks. A parent shown
+// "done" with zero subtasks that gets a fresh incomplete subtask added
+// won't un-done itself until some other stage-changing operation touches it.
 function addSubtask(taskId: string, input: { title: string; description?: string; due: string; repeat?: TaskRepeat }) {
   const now = new Date().toISOString();
   const siblings = subtasks.filter((s) => s.parentId === taskId);
@@ -421,12 +440,8 @@ function deleteSubtask(subtaskId: string) {
 }
 
 // Not-done subtasks grouped by parent task id — mirrors groupedTaskIds/
-// applyTaskGroups above, same reasoning (a done subtask is shown as a
-// plain, non-sortable row and never reindexed). Subtasks never cross
-// tasks (see the per-task sortable `type` in SubtaskSortableRow, which
-// makes a different task's subtask area an invalid target at the dnd-kit
-// level), so this only ever runs once, at drop — not live on every
-// dragover the way groupedTaskIds is.
+// applyTaskGroups above. Subtasks never cross tasks (see SubtaskSortableRow's
+// per-task sortable `type`), so this only ever runs once, at drop.
 function groupedSubtaskIds(): Record<string, string[]> {
   const grouped: Record<string, string[]> = {};
   const stagesByTaskId = new Map(tasks.map((t) => [t.id, t.stages]));
@@ -496,12 +511,21 @@ export function useTaskLists() {
   const currentTasks = useSyncExternalStore(subscribe, getTasksSnapshot, () => DEFAULT_TASKS);
   const currentSubtasks = useSyncExternalStore(subscribe, getSubtasksSnapshot, () => DEFAULT_SUBTASKS);
   const currentIsLoading = useSyncExternalStore(subscribe, getIsLoadingSnapshot, () => true);
+  const currentEditingRow = useSyncExternalStore(subscribe, getEditingRowSnapshot, () => null);
+  const currentDraggingId = useSyncExternalStore(subscribe, getDraggingIdSnapshot, () => null);
+  const currentDroppingId = useSyncExternalStore(subscribe, getDroppingIdSnapshot, () => null);
 
   return {
     taskLists: currentTaskLists,
     tasks: currentTasks,
     subtasks: currentSubtasks,
     isLoading: currentIsLoading,
+    editingRow: currentEditingRow,
+    setEditingRow,
+    draggingId: currentDraggingId,
+    setDraggingId,
+    droppingId: currentDroppingId,
+    setDroppingId,
     createList,
     renameList,
     deleteList,
