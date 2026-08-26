@@ -21,7 +21,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-sun {
-  fill: var(--color-accent);
+  fill: var(--color-secondary);
   // fill-box makes transform-origin: center resolve to this shape's own
   // center (its cx/cy), regardless of where it sits in the wider viewBox —
   // more reliable than px-based transform-origin values or animating the
@@ -42,12 +42,12 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 // Each orbit path shares its animation-delay with its planet below, so the
 // ring and its planet fade in together instead of the planet lagging behind.
 .orbit-path--inner {
-  stroke: var(--color-primary);
+  stroke: var(--color-accent);
   animation-delay: 0.25s;
 }
 
 .orbit-path--outer {
-  stroke: var(--color-secondary);
+  stroke: var(--color-primary);
   animation-delay: 0.4s;
 }
 
@@ -60,7 +60,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-planet--inner {
-  stroke: var(--color-primary);
+  stroke: var(--color-accent);
   offset-path: path('#{$orbit-path-inner}');
   animation:
     orbit-planet-in 0.25s ease forwards 0.25s,
@@ -68,7 +68,7 @@ $orbit-path-outer: 'M 140,12 A 130,78 0 1 1 139.99,12 Z';
 }
 
 .orbit-planet--outer {
-  stroke: var(--color-secondary);
+  stroke: var(--color-primary);
   offset-path: path('#{$orbit-path-outer}');
 }
 

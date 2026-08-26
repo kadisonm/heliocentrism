@@ -1,7 +1,5 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-
 type BlankPagePaneProps = {
   // 'current': shown as the main canvas while sitting on the blank page.
   // 'peek': shown in the peek carousel's trailing slot.
@@ -10,7 +8,8 @@ type BlankPagePaneProps = {
 };
 
 // The synthetic "create a new page" placeholder — never a real DashboardPage,
-// so there's nothing to lay out here, unlike GridPage.
+// so there's nothing to lay out here, unlike GridPage. Left visually empty
+// (no icon/label) by design — just an empty page-sized area.
 export default function BlankPagePane({ variant, onClick }: BlankPagePaneProps) {
   return (
     <div
@@ -18,9 +17,6 @@ export default function BlankPagePane({ variant, onClick }: BlankPagePaneProps) 
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-    >
-      <Plus size={20} />
-      <span>New page</span>
-    </div>
+    />
   );
 }

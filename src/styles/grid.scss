@@ -476,7 +476,7 @@ $page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} -
 // becoming active mid-slide).
 .grid-page-slot--active {
   @include page-slot-outline-base;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, outline-color 1s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, outline-color 0.5s ease;
 }
 
 // The panel-filled, bordered canvas actually being edited — in view mode
@@ -494,13 +494,26 @@ $page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} -
 // which page is being edited — so it stays a literal "white" rather than a
 // themed token that could wash out against a light theme's own background.
 .grid-page-slot--active.grid-page-slot--editing {
-  outline-color: var(--color-accent);
   min-height: $page-min-height;
+}
+
+// Split out from .grid-page-slot--active.grid-page-slot--editing above:
+// --committed (see Grid.tsx) tracks which page just got navigated to —
+// independent of --active, which only follows once the peek<->active role
+// swap actually lands, roughly a slide's worth of time later. Letting the
+// outline react to --committed instead means it starts fading in the
+// instant a hop (drag-to-edge, click, swipe) commits, rather than sitting
+// through that role-swap delay first. --active keeps the min-height rule
+// above to itself: only the border's color should jump ahead like this,
+// not a peek slot's actual size.
+.grid-page-slot--active.grid-page-slot--editing,
+.grid-page-slot--committed.grid-page-slot--editing {
+  outline-color: var(--color-accent);
 }
 
 .grid-page-slot--peek {
   @include page-slot-outline-base;
-  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 1s ease;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 0.5s ease;
 }
 
 // A neighbor page peeking in at the screen edge — full size, just mostly
@@ -518,7 +531,7 @@ $page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} -
 
   cursor: pointer;
   min-height: $page-min-height;
-  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 1s ease;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 0.5s ease;
 
   &:hover {
     opacity: 0.85;
@@ -527,10 +540,12 @@ $page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} -
 
 // Hinted while a drag is being held over this slot's edge (see Grid.tsx's
 // onDrag) — toggled imperatively via classList, not React state, so it
-// doesn't cost a re-render on every drag frame.
+// doesn't cost a re-render on every drag frame. Only cancels the peek
+// hover-dim below; no color/border treatment of its own — the outline
+// fading in (see --committed above) is the only hand-off cue, and it
+// starts on its own as soon as the hop commits, armed or not.
 .grid-page-slot--peek.grid-page-slot--armed {
   opacity: 1;
-  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
 .grid-page-slot-content {
@@ -541,17 +556,10 @@ $page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} -
 // peek preview and once clicked into as the current page, so it never ends
 // with the toolbar floating over empty space below it.
 .grid-blank-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
   width: 100%;
   height: 100%;
   min-height: $page-min-height;
-  color: var(--text-muted);
   border-radius: 1rem;
-  font-size: 0.8rem;
 }
 
 .grid-length-warning {

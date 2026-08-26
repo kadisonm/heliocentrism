@@ -65,6 +65,16 @@ function WidgetShell({
     const observer = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height;
       if (height === undefined) return;
+      // A cross-page drag (Grid.tsx's beginRelocation) hides this widget's
+      // real DOM node with display:none while a ghost stands in for it on
+      // the target page, which collapses this ResizeObserver's target to
+      // 0x0 — reporting that as the widget's real height would shrink its
+      // layout entry to minH, fighting the placeholder (sized off the
+      // pre-drag height) and overlapping the page's other widgets, plus
+      // racing the relocation's own per-frame layout writes into "Maximum
+      // update depth exceeded". offsetParent is null exactly while an
+      // ancestor is display:none, so this only skips that case.
+      if (height === 0 && target instanceof HTMLElement && target.offsetParent === null) return;
 
       if (timeoutId !== null) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {

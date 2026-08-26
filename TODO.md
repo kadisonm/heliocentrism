@@ -8,9 +8,12 @@
 
 - Allow widgets to be placed anywhere without gravity
 
+- Refactor all the css files to match a similar structure to the actual tsx files
+
+- When switching pages you can visibly see all the widgets slightly reload as they do a pixel jitter. (and the orbit animation restarts)
+
 ## Tasks
 - Fix tasks minimum stage not being updated
-- Make it so when dragging tasks it has a grey filter
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
 - Popup should switch sides if it is going to go off the screen
@@ -19,7 +22,7 @@
 
 - Make it so that the stages can select colours from the extended colour css\
 
-fix task overlaing edge of page
+- Dragging a thin task over a thicker task doesnt move the thicker task out the way and the tasks just overlap. It must pick to either move out the way up or down.
 
 ---
 

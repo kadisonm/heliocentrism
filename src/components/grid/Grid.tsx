@@ -1,6 +1,6 @@
 'use client';
 
-import { calcGridItemPosition, calcXY, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
+import { calcGridItemPosition, calcXY, cloneLayout, getLayoutItem, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
   pageTrackWidth,
 } from '../../lib/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
+import { clampPageIndex } from '../../lib/pageNavigation';
 import BlankPagePane from './BlankPagePane';
 import GridPage from './GridPage';
 import { usePageNavigation } from './usePageNavigation';
@@ -120,12 +121,32 @@ export default function Grid({
   const [displayedIndex, setDisplayedIndex] = useState(committedIndex);
   const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { activeIndex, current, prev, next, goToIndex, goToDelta } = usePageNavigation(
+  const { activeIndex, current, prev, next, goToIndex, goToDelta, virtualPages } = usePageNavigation(
     pages,
     isEditMode,
     displayedIndex,
     handlePageIndexChange
   );
+
+  // Identifies a slot by its content (page id, or 'blank'/'none') rather
+  // than the prev/current/next/committed objects themselves — those are
+  // fresh references whenever usePageNavigation rebuilds its virtual page
+  // list, which would otherwise read as "changed" even when the actual
+  // page occupying a slot hasn't.
+  const slotSignature = (vp: typeof prev) => (vp ? (vp.kind === 'real' ? vp.page.id : 'blank') : 'none');
+
+  // Which page just got committed as active (e.g. a widget-drag hop's own
+  // goToIndex, or a click/swipe), independent of the lagging displayedIndex
+  // above — virtualPages itself doesn't depend on which index is "current",
+  // so this is safe to look up against the SAME array prev/current/next
+  // were built from. Lets the outline below start turning blue the instant
+  // the hop commits, rather than waiting out the slide-settle delay that
+  // prev/current/next's role reassignment (deliberately) still waits for.
+  const committedVirtualPage = virtualPages[clampPageIndex(committedIndex, pages.length, isEditMode)] ?? null;
+  const committedSignature = slotSignature(committedVirtualPage);
+  const isPrevCommitted = !!prev && slotSignature(prev) === committedSignature;
+  const isCurrentCommitted = !!current && slotSignature(current) === committedSignature;
+  const isNextCommitted = !!next && slotSignature(next) === committedSignature;
 
   const viewportHeight = useViewportHeight();
   const softLimitRows = isEditMode && viewportHeight > 0 ? pageSoftHeightRows(viewportHeight) : undefined;
@@ -179,12 +200,6 @@ export default function Grid({
     },
     [onRemoveWidget, effectiveBreakpoint, pages, goToIndex]
   );
-  const handleWidgetHeightsChange = useCallback(
-    (pageId: string, patches: Array<{ id: string; h: number }>) =>
-      onWidgetHeightsChange(effectiveBreakpoint, pageId, patches),
-    [onWidgetHeightsChange, effectiveBreakpoint]
-  );
-
   // --- Drag-to-edge: dragging a widget onto a peek neighbor's actual
   // hitbox (its rendered bounding box — see isPointInRect below, not a
   // column-count threshold) relocates it onto that page immediately and
@@ -209,15 +224,9 @@ export default function Grid({
   // around them just the same, but without also cycling the active slot's
   // own box through display:none — which would silently cancel any CSS
   // transition running on it (e.g. the border/outline fade below) even
-  // though the active slot's content never actually changed.
-  //
-  // Keyed on each slot's content identity (page id, or 'blank'/'none'),
-  // not the prev/current/next objects themselves — those are fresh
-  // references every time isEditMode toggles (usePageNavigation rebuilds
-  // its virtual page list off of it), which would otherwise re-fire this
-  // for every edit-mode switch even when the actual page in a slot hasn't
-  // changed.
-  const slotSignature = (vp: typeof prev) => (vp ? (vp.kind === 'real' ? vp.page.id : 'blank') : 'none');
+  // though the active slot's content never actually changed. Keyed by
+  // slotSignature (see above) so this only re-fires when a slot's actual
+  // page changes, not on every prev/next reference change.
   const prevSignature = slotSignature(prev);
   const nextSignature = slotSignature(next);
   useLayoutEffect(() => {
@@ -492,7 +501,7 @@ export default function Grid({
   // depth-faking planets do exactly this) regardless of what an ancestor
   // says — and writes that snapped x/y to app state anyway, needed for
   // compaction/persistence, just not for anything on screen.
-  const applyRelocatedPosition = useCallback((point: { x: number; y: number }) => {
+  const applyRelocatedPosition = useCallback((point: { x: number; y: number }, isDropping = false) => {
     const state = relocationRef.current;
     if (!state) return;
     updateGhostPosition(point);
@@ -510,42 +519,100 @@ export default function Grid({
       rowHeight: GRID_ROW_HEIGHT,
       maxRows: Infinity,
     };
-    const { x, y } = calcXY(positionParams, point.y - rect.top, point.x - rect.left, state.w, state.h);
-
     const targetPage = pages.find((p) => p.id === state.targetPageId);
-    const item = targetPage?.layout.find((it) => it.i === state.widgetId);
-    if (!targetPage || !item) return;
+    const rawItem = targetPage?.layout.find((it) => it.i === state.widgetId);
+    if (!targetPage || !rawItem) return;
 
-    // moveElement + compact — the same two calls react-grid-layout's own
-    // native onDrag makes internally — so widgets already on the target
-    // page get pushed out of the way in real time instead of just sitting
-    // there overlapped, and the final drop lands wherever that live reflow
-    // actually put things rather than snapping to the bottom (which is all
-    // moveWidgetToPage's own one-shot append+compact, run once at hop time,
-    // otherwise leaves it at). The dragged item's OWN resolved x/y can
-    // differ from the raw cursor-derived x/y once other items push back —
-    // the placeholder has to follow that resolved position, not the raw
-    // one, or it visibly floats over a spot the data says is occupied.
-    const moved = moveElement(targetPage.layout, item, x, y, true, false, verticalCompactor.type, positionParams.cols, false);
+    // The widget's own height is read live off its current layout entry
+    // rather than frozen from state.h (captured once, from the source page,
+    // when the drag started) — an auto-expand widget mounted fresh on the
+    // target page can settle at a genuinely different height there, and
+    // WidgetShell's ResizeObserver keeps correcting rawItem.h for it
+    // throughout the drag (see WidgetShell's hidden-element guard for why
+    // that's safe to leave running rather than suppressing it). Using a
+    // stale frozen height here would under- or over-push whatever's below
+    // it, and disagree with whatever height that live correction had
+    // already committed — two different "correct" heights for the same
+    // widget fighting over the same page's layout is exactly the kind of
+    // stale-echo race that trips "Maximum update depth exceeded".
+    const liveH = rawItem.h;
+
+    // point is the raw cursor position, not the widget's own top-left — the
+    // ghost (the only on-screen stand-in for the dragged widget) is drawn at
+    // point minus the grab offset (see updateGhostPosition/createGhost), so
+    // the grid cell fed into collision/placement math has to be computed
+    // from that same top-left, not the cursor itself. Using the cursor
+    // directly here shifted the widget's LOGICAL position down-and-right of
+    // where the ghost visually sits by the grab offset (e.g. roughly half
+    // the widget's own height/width, when grabbed near its center) — which
+    // undershoots how far an existing widget below it needs to be pushed to
+    // actually clear the ghost, leaving it only partially out of the way.
+    const { x, y } = calcXY(
+      positionParams,
+      point.y - state.grabOffsetY - rect.top,
+      point.x - state.grabOffsetX - rect.left,
+      state.w,
+      liveH
+    );
+
+    // Everything from here down — moveElement, compact, the placeholder's
+    // resolved position — is a LOCAL, in-memory preview computed fresh off
+    // whatever's currently committed (targetPage.layout via a defensive
+    // clone; moveElement mutates whatever it's given). It is NOT written
+    // back to React state until the gesture actually ends (isDropping): see
+    // the early return below. Every earlier attempt at fixing this
+    // relocation's "Maximum update depth exceeded" — a mutation-safety fix,
+    // a live-height fix, a static/isDraggable pin — assumed the live
+    // per-frame write to page.layout itself was sound and chased what was
+    // fighting it. It wasn't: GridLayout mounts on the target page with no
+    // native drag of its own ever having started there (this hand-off never
+    // goes through RGL's own onDragStart/activeDrag), so its internal
+    // reconciliation effect — which normally stands down for the duration of
+    // a real same-page drag — stays active throughout, independently
+    // recompacting whatever we write and feeding its own result back out
+    // through the very same onLayoutChange channel. That's two authors
+    // pushing updates through one channel many times a second; no amount of
+    // making our own math more correct closes a race that's structural.
+    //
+    // The live "push other widgets out of the way" visual is instead driven
+    // by writing straight to each affected widget's own DOM style below —
+    // the exact transform/width/height react-grid-layout's own GridItem
+    // would set for that resolved position (see setTransform in the
+    // library) — bypassing React/props entirely for the target page, so
+    // there's nothing for its reconciliation effect to react to or fight
+    // over. It rides the SAME CSS transition every ordinary drag-triggered
+    // reflow already uses, so it animates identically. Nothing here needs
+    // explicit cleanup: a hop to a different page (or a different peek
+    // role) remounts that page's GridPage under a fresh key, discarding
+    // this DOM subtree entirely; a normal drop commits the identical
+    // resolved layout to React state, which repaints every item with the
+    // same values this loop was already showing.
+    const clonedLayout = cloneLayout(targetPage.layout);
+    const item = getLayoutItem(clonedLayout, state.widgetId);
+    if (!item) return;
+
+    const moved = moveElement(clonedLayout, item, x, y, true, false, verticalCompactor.type, positionParams.cols, false);
     const nextLayout = verticalCompactor.compact(moved, positionParams.cols);
     const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
 
     const placeholderEl = ensurePlaceholder(gridEl);
-    const pos = calcGridItemPosition(positionParams, resolvedItem.x, resolvedItem.y, state.w, state.h);
+    const pos = calcGridItemPosition(positionParams, resolvedItem.x, resolvedItem.y, state.w, liveH);
     placeholderEl.style.left = `${pos.left}px`;
     placeholderEl.style.top = `${pos.top}px`;
     placeholderEl.style.width = `${pos.width}px`;
     placeholderEl.style.height = `${pos.height}px`;
 
-    const unchanged =
-      nextLayout.length === targetPage.layout.length &&
-      targetPage.layout.every((prevItem) => {
-        const nextItem = nextLayout.find((it) => it.i === prevItem.i);
-        return (
-          nextItem && nextItem.x === prevItem.x && nextItem.y === prevItem.y && nextItem.w === prevItem.w && nextItem.h === prevItem.h
-        );
-      });
-    if (unchanged) return;
+    for (const otherItem of nextLayout) {
+      if (otherItem.i === state.widgetId) continue;
+      const otherEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${otherItem.i}"]`);
+      if (!otherEl) continue;
+      const otherPos = calcGridItemPosition(positionParams, otherItem.x, otherItem.y, otherItem.w, otherItem.h);
+      otherEl.style.transform = `translate(${otherPos.left}px, ${otherPos.top}px)`;
+      otherEl.style.width = `${otherPos.width}px`;
+      otherEl.style.height = `${otherPos.height}px`;
+    }
+
+    if (!isDropping) return;
     onLayoutChange(effectiveBreakpoint, state.targetPageId, nextLayout);
   }, [updateGhostPosition, ensurePlaceholder]);
 
@@ -559,10 +626,13 @@ export default function Grid({
       attachedRelocationListenersRef.current = null;
     }
     // Flush whatever position the cursor was last known to be at before
-    // tearing the relocation state down, so the drop lands exactly where
-    // the ghost was, not wherever the last-applied frame happened to be.
+    // tearing the relocation state down. isDropping=true is what makes this
+    // call actually commit to React state — every earlier frame this drag
+    // only computed a local preview (see applyRelocatedPosition), so this
+    // is also the FIRST write for this gesture, landing the dragged widget
+    // and anything it pushed out of the way in one atomic step.
     const finalPoint = pendingPointRef.current;
-    if (finalPoint) applyRelocatedPosition(finalPoint);
+    if (finalPoint) applyRelocatedPosition(finalPoint, true);
     if (relocationRef.current) revealRelocatedWidget(relocationRef.current.widgetId);
     destroyGhost();
     destroyPlaceholder();
@@ -723,6 +793,12 @@ export default function Grid({
   // component unmounts mid-drag (e.g. navigating away).
   useEffect(() => detachRelocationListeners, [detachRelocationListeners]);
 
+  const handleWidgetHeightsChange = useCallback(
+    (pageId: string, patches: Array<{ id: string; h: number }>) =>
+      onWidgetHeightsChange(effectiveBreakpoint, pageId, patches),
+    [onWidgetHeightsChange, effectiveBreakpoint]
+  );
+
   const handleActiveLayoutChange = useCallback(
     (pageId: string, layout: Layout) => {
       // RGL fires the source page's own onLayoutChange around the same drop
@@ -853,7 +929,7 @@ export default function Grid({
                 // separately guards against the stale-flex-layout Chromium
                 // bug this used to dodge by forcing a fresh node every time.
                 key={`${effectiveBreakpoint}:${prev.kind === 'real' ? prev.page.id : 'blank'}`}
-                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}`}
+                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isPrevCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armLeftRef}
                 onClick={() => goToIndex(activeIndex - 1)}
                 style={{ width: pageWidth }}
@@ -878,7 +954,7 @@ export default function Grid({
 
             <div
               key={`${effectiveBreakpoint}:${current.kind === 'real' ? current.page.id : 'blank'}`}
-              className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}`}
+              className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}`}
               style={{ width: pageWidth }}
             >
               {current.kind === 'real' ? (
@@ -911,7 +987,7 @@ export default function Grid({
                 // See the prev slot's comment above for why this is keyed
                 // by page identity alone.
                 key={`${effectiveBreakpoint}:${next.kind === 'real' ? next.page.id : 'blank'}`}
-                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}`}
+                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isNextCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armRightRef}
                 onClick={() => goToIndex(activeIndex + 1)}
                 style={{ width: pageWidth }}
