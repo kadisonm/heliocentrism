@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import ClockWidget from '../components/widgets/clock';
 import OrbitWidget from '../components/widgets/orbit';
 import PhotoWidget from '../components/widgets/photo';
 import PhotoSettingsModal from '../components/widgets/photo/PhotoSettingsModal';
@@ -12,7 +13,8 @@ export type WidgetType =
   | 'orbit'
   | 'pomodoro-timer'
   | 'photo'
-  | 'spacer';
+  | 'spacer'
+  | 'clock';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
@@ -84,6 +86,14 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 1, h: 1 },
     component: SpacerWidget,
     transparentInViewMode: true,
+  },
+  {
+    type: 'clock',
+    name: 'Clock',
+    description: 'The current time, 12-hour format.',
+    defaultSize: { w: 2, h: 1 },
+    minSize: { w: 1, h: 1 },
+    component: ClockWidget,
   },
 ];
 
