@@ -14,7 +14,10 @@
 - Make it so the edit button has a frosted glass effect
 - Make it so that the bottom of the screen has a slight vignette
 - Make it so that the background has a cool simple and optimised space background pattern (with the ability for this background to be changeable in the settings - with a preview)
+- Fix the outline transition abruptly complete suddenly whlie it is still fading (presumably the page is loading before the transition finishes causing it to suddenly appear solid)
 
+- Create mobile header
+- Create mobile navigation + edit button
 
 ## Tasks
 - Fix tasks minimum stage not being updated
