@@ -18,14 +18,14 @@
   transition: background 0.15s ease, box-shadow 0.15s ease, scale 150ms cubic-bezier(0.25, 1, 0.5, 1);
 
   &:hover {
-    background: var(--background-modifier-hover-alt);
+    background: var(--background-secondary-modifier-hover);
   }
 
   // Click-driven "selected" state (toggled in TaskRow.tsx) — its context
   // menu (see .context-menu) is a separate portaled popup, not anchored
   // inside this card, so all this needs to do is lighten the row.
   &.task-item--active {
-    background: var(--background-modifier-hover-alt);
+    background: var(--background-secondary-modifier-active);
   }
 
   // The floating copy under the pointer while dragging — see dnd-kit's own
@@ -33,7 +33,7 @@
   // visibility:hidden already leaves plain empty space, same height as
   // this row, right where it'd land — exactly what should show there).
   &[data-dnd-dragging] {
-    background: var(--background-modifier-active);
+    background: var(--background-secondary-modifier-active);
     box-shadow: 0 4px 10px var(--shadow-modifier);
     cursor: grabbing;
   }

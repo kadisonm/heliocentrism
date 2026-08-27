@@ -1,0 +1,104 @@
+@use 'sass:math';
+@use 'sass:list';
+
+// Deliberately --color-black/--color-white (not --background-primary/
+// --text-normal): those flip lightness between light/dark theme mode, but
+// "space" should read as space regardless of which mode is active — every
+// palette already defines color-black/color-white as consistently dark/
+// light extended colors for exactly this kind of case.
+$space-depth: 1600; // px scrolled before a layer's own loop point (see below)
+
+// Generates $count random dots within a $depth-tall, 100vw-wide field as a
+// comma-separated box-shadow list — the standard CSS-only-starfield trick,
+// done at compile time so no JS/DOM cost per star.
+@function space-stars($count, $depth) {
+  $shadows: ();
+  @for $i from 1 through $count {
+    $x: math.random(100) * 1vw;
+    $y: math.random($depth) * 1px;
+    $shadows: list.append($shadows, #{$x} #{$y} var(--color-white), comma);
+  }
+  @return $shadows;
+}
+
+$space-stars-small: space-stars(500, $space-depth);
+$space-stars-medium: space-stars(150, $space-depth);
+$space-stars-large: space-stars(60, $space-depth);
+
+.space-background {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    color-mix(in srgb, var(--color-primary) 14%, var(--color-black) 86%) 0%,
+    var(--color-black) 65%
+  );
+  // Its size already comes purely from `inset: 0` (the viewport), never
+  // from its own content, so `strict` (size + layout + style + paint) is
+  // safe here — tells the browser this subtree can never affect, and is
+  // never affected by, layout/paint elsewhere on the page. Without it, an
+  // unrelated forced reflow (e.g. Grid.tsx's page-switch reflow-forcing
+  // tricks) can still force this whole animating starfield through a
+  // layout/paint pass too, which is what read as the drift "resetting" and
+  // contributed to the jitter when switching pages.
+  contain: strict;
+}
+
+// Each layer is a single 1px dot whose box-shadow paints every star at
+// once, translated upward on a loop — a second, identical dot offset by
+// exactly one $space-depth below (via ::after) fills the gap the instant
+// the first scrolls out of view, so the loop reads as seamless/infinite.
+@mixin space-star-layer($shadows, $size, $duration) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: #{$size}px;
+  height: #{$size}px;
+  background: transparent;
+  border-radius: 50%;
+  box-shadow: $shadows;
+  animation: space-background-drift $duration linear infinite;
+  // Promotes each layer to its own GPU-composited layer up front, so the
+  // browser never has to decide mid-animation whether this qualifies —
+  // that re-evaluation is itself a place a heavy unrelated reflow can
+  // introduce a visible stutter.
+  will-change: transform;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: #{$space-depth}px;
+    left: 0;
+    width: #{$size}px;
+    height: #{$size}px;
+    background: transparent;
+    border-radius: 50%;
+    box-shadow: $shadows;
+  }
+}
+
+// Slower + smaller reads as farther away; faster + larger as closer — the
+// same depth cue real parallax motion gives.
+.space-background__layer--small {
+  @include space-star-layer($space-stars-small, 1, 140s);
+  opacity: 0.7;
+}
+
+.space-background__layer--medium {
+  @include space-star-layer($space-stars-medium, 2, 90s);
+  opacity: 0.85;
+}
+
+.space-background__layer--large {
+  @include space-star-layer($space-stars-large, 3, 50s);
+}
+
+@keyframes space-background-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-#{$space-depth}px);
+  }
+}

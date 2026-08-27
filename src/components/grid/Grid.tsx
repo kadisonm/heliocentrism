@@ -1024,7 +1024,15 @@ export default function Grid({
       <div className="grid-page-slot-content">
         {lookaheadPage.kind === 'real' ? (
           <GridPage
-            key={`${effectiveBreakpoint}:${lookaheadPage.page.id}:lookahead`}
+            // Keyed by page identity alone, matching the prev/current/next
+            // GridPages below (and their own outer slots) — a page revealed
+            // by the overshoot here is the same page.id that'll occupy the
+            // next/prev role once the slide settles, so this lets that same
+            // GridPage instance (react-grid-layout, every widget, all their
+            // measurement effects) carry across the role change instead of
+            // unmounting and remounting from scratch, which is what read as
+            // jitter/freeze on every page switch.
+            key={`${effectiveBreakpoint}:${lookaheadPage.page.id}`}
             page={lookaheadPage.page}
             effectiveBreakpoint={effectiveBreakpoint}
             isEditMode={isEditMode}
@@ -1072,7 +1080,10 @@ export default function Grid({
                 <div className="grid-page-slot-content">
                   {prev.kind === 'real' ? (
                     <GridPage
-                      key={`${effectiveBreakpoint}:${prev.page.id}:peek`}
+                      // Page identity alone (see lookahead's GridPage above)
+                      // — lets this instance survive a role change (e.g.
+                      // promoting to active) instead of remounting.
+                      key={`${effectiveBreakpoint}:${prev.page.id}`}
                       page={prev.page}
                       effectiveBreakpoint={effectiveBreakpoint}
                       isEditMode={isEditMode}
@@ -1095,7 +1106,10 @@ export default function Grid({
             >
               {current.kind === 'real' ? (
                 <GridPage
-                  key={`${effectiveBreakpoint}:${current.page.id}:active`}
+                  // Page identity alone (see lookahead's GridPage above) —
+                  // lets this instance survive a role change (e.g. demoting
+                  // to a peek neighbor) instead of remounting.
+                  key={`${effectiveBreakpoint}:${current.page.id}`}
                   page={current.page}
                   effectiveBreakpoint={effectiveBreakpoint}
                   isEditMode={isEditMode}
@@ -1141,7 +1155,10 @@ export default function Grid({
                 <div className="grid-page-slot-content">
                   {next.kind === 'real' ? (
                     <GridPage
-                      key={`${effectiveBreakpoint}:${next.page.id}:peek`}
+                      // Page identity alone (see lookahead's GridPage above)
+                      // — lets this instance survive a role change (e.g.
+                      // promoting to active) instead of remounting.
+                      key={`${effectiveBreakpoint}:${next.page.id}`}
                       page={next.page}
                       effectiveBreakpoint={effectiveBreakpoint}
                       isEditMode={isEditMode}

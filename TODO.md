@@ -41,7 +41,6 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Figure out how to allow google accounts to also be connected to an email address and password. (For google calendar integration etc)
 - Add the option to export/ import user data
 - Add data backups and the option to export them/ change how often and how many are saved
-- Switch to just using my firebase configuration and set up secrets (Lock the site behind a sign in)
 
 ---
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import {
+  DEFAULT_BACKGROUND_SETTINGS,
   DEFAULT_POMODORO_SETTINGS,
   DEFAULT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
@@ -50,6 +51,7 @@ function ensureLoaded() {
           ...syncedSettings,
           pomodoro: { ...DEFAULT_POMODORO_SETTINGS, ...syncedSettings.pomodoro },
           theme: { ...DEFAULT_THEME_SETTINGS, ...syncedSettings.theme },
+          background: { ...DEFAULT_BACKGROUND_SETTINGS, ...syncedSettings.background },
         }
       : DEFAULT_SETTINGS;
     isLoading = false;

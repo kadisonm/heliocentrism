@@ -1,4 +1,5 @@
 import type {
+  BackgroundSettings,
   DashboardPage,
   DashboardState,
   PomodoroSettings,
@@ -39,6 +40,10 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   mode: 'system',
 };
 
+export const DEFAULT_BACKGROUND_SETTINGS: BackgroundSettings = {
+  variant: 'space',
+};
+
 // User-saved stage presets start empty — the built-in Normal/Kanban presets
 // are pure code constants (src/lib/taskCascade.ts) and never stored here.
 export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
@@ -47,12 +52,14 @@ export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
 export type AppSettings = {
   pomodoro: PomodoroSettings;
   theme: ThemeSettings;
+  background: BackgroundSettings;
   customStagePresets: StagePreset[];
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pomodoro: DEFAULT_POMODORO_SETTINGS,
   theme: DEFAULT_THEME_SETTINGS,
+  background: DEFAULT_BACKGROUND_SETTINGS,
   customStagePresets: DEFAULT_CUSTOM_STAGE_PRESETS,
 };
 

@@ -31,6 +31,18 @@ const AUTO_EXPAND_RESIZE_HANDLES: Array<'e' | 'w'> = ['e', 'w'];
 // arrives within this window into one atomic update closes that race.
 const HEIGHT_COALESCE_MS = 60;
 
+// Forces react-grid-layout's own per-item transition off for exactly the
+// next style flush, then hands it back — the toggle-a-class/reflow/
+// next-frame-remove trick used wherever this file needs a layout update to
+// snap instead of animate (see grid-page.scss's .grid--no-transition).
+function snapGridTransition(el: HTMLDivElement | null) {
+  if (!el) return;
+  el.classList.add('grid--no-transition');
+  void el.offsetHeight; // force a reflow so the disable actually takes effect
+  const raf = requestAnimationFrame(() => el.classList.remove('grid--no-transition'));
+  return () => cancelAnimationFrame(raf);
+}
+
 type GridPageProps = {
   page: DashboardPage;
   effectiveBreakpoint: DashboardBreakpoint;
@@ -89,6 +101,10 @@ export default function GridPage({
   // each one immediately.
   const pendingHeightsRef = useRef<Map<string, number>>(new Map());
   const flushHeightsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Read by the layout-settle effect below — an auto-expand patch is an
+  // internal correction settling into place, not a gesture worth animating
+  // (unlike a user's manual drag/resize, which still animates as normal).
+  const suppressLayoutTransitionRef = useRef(false);
   const handleWidgetHeightChange = useCallback(
     (id: string, h: number) => {
       pendingHeightsRef.current.set(id, h);
@@ -97,6 +113,7 @@ export default function GridPage({
         flushHeightsTimeoutRef.current = null;
         const patches = Array.from(pendingHeightsRef.current, ([id, h]) => ({ id, h }));
         pendingHeightsRef.current.clear();
+        suppressLayoutTransitionRef.current = true;
         onWidgetHeightsChange?.(page.id, patches);
       }, HEIGHT_COALESCE_MS);
     },
@@ -168,19 +185,31 @@ export default function GridPage({
   // so there's nothing to suppress for those cases — only this one remains.
   // Also keyed on gridWidth, not just isEditMode, since a width change can
   // happen without isEditMode itself changing (e.g. a window resize).
+  //
+  // Skipped on the very first run (a fresh mount): the whole point of this
+  // toggle is to cancel a transition already in flight on an
+  // already-painted element, which a just-mounted one never has — so the
+  // forced reflow below is pure unpaid cost on every page switch (GridPage
+  // remounts fresh per page) for a state that was never going to animate
+  // anyway.
+  const hasMountedRef = useRef(false);
   useLayoutEffect(() => {
-    const el = gridElRef.current;
-    if (!el) return;
-
-    el.classList.add('grid--no-transition');
-    void el.offsetHeight; // force a reflow so the disable actually takes effect
-
-    const raf = requestAnimationFrame(() => {
-      el.classList.remove('grid--no-transition');
-    });
-
-    return () => cancelAnimationFrame(raf);
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    return snapGridTransition(gridElRef.current);
   }, [isEditMode, gridWidth]);
+
+  // An auto-expand height patch (see handleWidgetHeightChange above) lands
+  // as an ordinary layout update as far as react-grid-layout is concerned,
+  // which would otherwise animate every affected item through its own
+  // transition — snap it instead, same as the mode-toggle case above.
+  useLayoutEffect(() => {
+    if (!suppressLayoutTransitionRef.current) return;
+    suppressLayoutTransitionRef.current = false;
+    return snapGridTransition(gridElRef.current);
+  }, [layout]);
 
   const pageContentRows = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
 

@@ -57,6 +57,11 @@ function WidgetShell({
 
     const minH = definition?.minSize.h;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let hasMeasured = false;
+    const apply = (height: number) => {
+      const rows = pxToGridRows(height);
+      onHeightChange(widget.id, minH ? Math.max(minH, rows) : rows);
+    };
 
     // Debounced (not single-rAF): a mid-transition CSS change fires this
     // once per frame, and one-frame coalescing still fights the animation.
@@ -76,11 +81,22 @@ function WidgetShell({
       // ancestor is display:none, so this only skips that case.
       if (height === 0 && target instanceof HTMLElement && target.offsetParent === null) return;
 
+      // The very first measurement isn't racing a mid-transition value or a
+      // sibling widget's own update (GridPage's own coalescing already
+      // batches simultaneous first-measurements together) — applying it
+      // right away means a freshly mounted page's true layout is already
+      // settled well before any later slide brings it into view, instead of
+      // visibly resizing right after that slide lands.
+      if (!hasMeasured) {
+        hasMeasured = true;
+        apply(height);
+        return;
+      }
+
       if (timeoutId !== null) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         timeoutId = null;
-        const rows = pxToGridRows(height);
-        onHeightChange(widget.id, minH ? Math.max(minH, rows) : rows);
+        apply(height);
       }, 250);
     });
 

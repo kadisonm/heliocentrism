@@ -22,6 +22,7 @@
 
 @use 'shared/nav/index' as nav;
 @use 'shared/orbit-animation/index' as orbit-animation;
+@use 'shared/background/space-background';
 @use 'shared/editor/editor-modal';
 @use 'shared/editor/editor-field';
 @use 'shared/editor/editor-repeat-fields';

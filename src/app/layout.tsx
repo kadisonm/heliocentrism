@@ -5,6 +5,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "../styles/globals.scss";
 import ClientRoot from "./ClientRoot";
+import Background from "../components/shared/background";
 import Nav from "../components/shared/nav";
 import SplashScreen from "../components/pages/splash-screen";
 import ThemeSync from "../components/theme-sync";
@@ -46,6 +47,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
         <ThemeSync />
+        <Background />
         <SplashScreen />
         <ClientRoot>
           <Nav />

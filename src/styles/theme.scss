@@ -208,13 +208,18 @@ $themes: (
   @if $mode == dark {
     --background-modifier-hover: color-mix(in srgb, var(--background-primary) 88%, white);
     --background-modifier-hover-alt: color-mix(in srgb, var(--background-primary-alt) 90%, white);
+    --background-secondary-modifier-hover: color-mix(in srgb, var(--background-secondary) 97%, white);
+    --background-secondary-modifier-hover-alt: color-mix(in srgb, var(--background-secondary-alt) 90%, white);
     --background-modifier-active: color-mix(in srgb, var(--background-primary) 82%, white);
-    --background-modifier-glass: color-mix(in srgb, var(--background-primary-alt) 65%, transparent);
+    --background-secondary-modifier-active: color-mix(in srgb, var(--background-secondary) 95%, white);
+    --background-modifier-glass: color-mix(in srgb, var(--background-secondary) 90%, transparent);
     --text-accent-hover: color-mix(in srgb, var(--text-accent) 85%, white 15%);
     --text-accent-soft-hover: color-mix(in srgb, var(--text-accent-soft) 85%, white 15%);
   } @else {
     --background-modifier-hover: color-mix(in srgb, var(--background-primary) 92%, black);
     --background-modifier-hover-alt: color-mix(in srgb, var(--background-primary-alt) 92%, black);
+    --background-secondary-modifier-hover: color-mix(in srgb, var(--background-secondary) 92%, black);
+    --background-secondary-modifier-hover-alt: color-mix(in srgb, var(--background-secondary-alt) 92%, black);
     --background-modifier-active: color-mix(in srgb, var(--background-primary) 85%, black);
     --background-modifier-glass: color-mix(in srgb, var(--background-primary-alt) 75%, transparent);
     --text-accent-hover: color-mix(in srgb, var(--text-accent) 85%, black);

@@ -108,6 +108,13 @@ export type ThemeSettings = {
   mode: ThemeMode;
 };
 
+// Extend as new backgrounds are added (see src/lib/background.ts).
+export type BackgroundVariant = 'none' | 'space';
+
+export type BackgroundSettings = {
+  variant: BackgroundVariant;
+};
+
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
 export type PhotoWidgetConfig = {
