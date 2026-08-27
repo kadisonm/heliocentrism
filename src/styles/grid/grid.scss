@@ -1,0 +1,213 @@
+@use 'tokens' as *;
+
+.grid-canvas {
+  width: 100%;
+}
+
+// A cloned stand-in for a widget mid cross-page drag (see Grid.tsx's
+// relocation ghost) — position/size are set imperatively per frame to
+// track the cursor, so only cosmetics belong here. Matches
+// .react-grid-item.react-draggable-dragging's own shadow (see
+// grid-page.scss) so the handoff from the native drag is invisible.
+.grid-drag-ghost {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+}
+
+// Edit-mode page carousel — the active page plus its immediate real/blank
+// neighbors, all rendered at full (unscaled) size (see Grid.tsx). The
+// viewport clips whatever doesn't fit, so a neighbor mostly slides off
+// the screen with only PAGE_PEEK_SLIVER_PX peeking in at the edge. Outside
+// edit mode none of this renders — the dashboard shows one full-width page.
+.grid-page-viewport {
+  overflow: hidden;
+  width: 100%;
+
+  // The active page's outline bleeds a couple px outside its own box, so it
+  // never touches the grid's actual size. With align-items: flex-start on
+  // the track, every slot's top edge sits flush against this viewport's own
+  // top edge, leaving no room for that bleed — reserve it only while a
+  // border can actually be showing, so view mode is never affected.
+  &:has(.grid-page-slot--editing) {
+    padding-block: 8px;
+  }
+}
+
+.grid-page-track {
+  display: flex;
+  align-items: flex-start;
+  transition: transform 0.25s ease;
+  // Positions the backward-slide lookahead slot's absolute `left` (see
+  // Grid.tsx) relative to the track itself, so it inherits this same
+  // transform without needing its own offset math.
+  position: relative;
+
+  // Toggled imperatively (see Grid.tsx) around any transform reset that
+  // shouldn't itself animate — settling a slide back to its resting value,
+  // or cutting straight to a non-adjacent page.
+  &.grid-page-track--no-transition {
+    transition: none !important;
+  }
+}
+
+.grid-page-slot--active,
+.grid-page-slot--peek {
+  flex-shrink: 0;
+}
+
+.grid-page-slot--editing {
+  background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
+}
+
+// While simulating a narrower device (see Grid.tsx's isSimulating), the slot
+// itself stays real-screen-width purely for the track/peek-centering math —
+// the visible "being edited" panel (background, outline, min-height) moves
+// onto the inner .grid-preview-frame instead (see grid-page.scss), so it
+// hugs the simulated device size rather than the full-width slot around it.
+.grid-page-slot--simulating.grid-page-slot--editing {
+  background: none;
+}
+
+// Shared "resting" outline/corner baseline for both the active and peek
+// variants below — kept CONSTANT (never itself the thing that changes) so a
+// slot can smoothly fade its outline-color in/out across every transition
+// that touches it: entering/exiting edit mode, and — since a page's slot
+// now keeps the same DOM node across a peek<->active role change (see
+// Grid.tsx's page-identity keying) — being promoted from a peeking
+// neighbor to the active page, or demoted back. outline-style/border-radius
+// themselves can't be transitioned (a discrete flip, not an interpolation),
+// so only outline-color ever actually changes value.
+@mixin page-slot-outline-base {
+  border-radius: 1rem;
+  outline: solid 1px transparent;
+}
+
+// Fades the background/border panel in rather than having it snap on the
+// instant .grid-page-slot--editing is added (entering edit mode, or this
+// page becoming active mid-slide) — min-height itself is deliberately NOT
+// animated (0s): a live width tween tried alongside it previously triggered
+// a documented Chromium flex-layout bug elsewhere in this app, so both
+// dimensions just snap instead.
+.grid-page-slot--active {
+  @include page-slot-outline-base;
+  min-height: 0;
+  transition-property: background-color, box-shadow, outline-color, min-height;
+  // outline-color is 0s here (not editing) — exiting edit mode hides the
+  // border immediately rather than fading it out, while the editing rule
+  // below still overrides it back to 0.5s so entering edit mode, and
+  // navigating between pages while editing, keep fading smoothly.
+  transition-duration: 0.15s, 0.15s, 0s, 0s;
+  transition-timing-function: ease;
+}
+
+// Forces outline-color's transition off for exactly one frame when exiting
+// edit mode (see Grid.tsx) — belt-and-suspenders alongside the 0s duration
+// above, since --editing being removed and outline-color's target value
+// changing land in the very same style recalculation, which isn't reliably
+// enough on its own to guarantee the instant hide actually takes effect.
+// !important, and restating the OTHER three durations unchanged.
+.grid-page-slot--no-outline-transition {
+  transition-duration: 0.15s, 0.15s, 0s, 0s !important;
+}
+
+// The panel-filled, bordered canvas actually being edited — in view mode
+// (no .grid-page-slot--editing) this renders bare, exactly like a normal
+// single page. The border is a box-shadow rather than a real border: a real
+// border+padding would eat into the box's content area, forcing GridPage's
+// gridWidth (see Grid.tsx) to shrink to compensate — visibly resizing every
+// widget the instant edit mode turns on. A box-shadow paints outside the
+// box without changing its size at all, so the grid content never moves.
+// Two stacked shadows carry the gap before the line: the inner one repaints
+// that gap in the page's own background (masking it, since a shadow can't
+// itself be "transparent then opaque"), leaving only the outer ring,
+// offset out past the gap, visible as the border line. This is the one
+// border kept in the whole app — a deliberate, always-visible indicator of
+// which page is being edited — so it stays a literal "white" rather than a
+// themed token that could wash out against a light theme's own background.
+.grid-page-slot--active.grid-page-slot--editing:not(.grid-page-slot--simulating) {
+  min-height: $page-min-height;
+}
+
+// Split out from .grid-page-slot--active.grid-page-slot--editing above:
+// --committed (see Grid.tsx) tracks which page just got navigated to —
+// independent of --active, which only follows once the peek<->active role
+// swap actually lands, roughly a slide's worth of time later. Keying the
+// outline on --committed ALONE (not also --active) means it reacts the
+// instant a hop (drag-to-edge, click, swipe) commits either way: fading in
+// on the incoming page right away instead of waiting out the role-swap
+// delay, AND fading out on the outgoing page right away too, instead of
+// keeping its border lit for the whole slide and only starting the fade
+// once it settles into its new peek role. --active keeps the min-height
+// rule above to itself: only the border's color should react this early,
+// not a peek slot's actual size.
+.grid-page-slot--committed.grid-page-slot--editing:not(.grid-page-slot--simulating) {
+  outline-color: var(--color-accent);
+}
+
+// Simulating a narrower device: give the inner device frame the same
+// "being edited" treatment the slot itself gets above (background, outline,
+// minimum height) instead, so the editing panel visually hugs the simulated
+// device size rather than the real (wide) slot around it.
+.grid-page-slot--simulating.grid-page-slot--editing .grid-preview-frame {
+  background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
+  outline: solid 1px var(--color-accent);
+  min-height: $page-min-height;
+}
+
+.grid-page-slot--peek {
+  @include page-slot-outline-base;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 0.5s ease;
+}
+
+// The page just beyond the one becoming active during an adjacent-step
+// slide (see Grid.tsx's lookaheadSlot) — mounted early specifically so it
+// can fade in via the opacity transition above, then simply ride along
+// with the shared track transform, rather than popping in at full opacity
+// the instant the slide settles and reveals it as the real prev/next.
+.grid-page-slot--incoming {
+  opacity: 0;
+
+  &.grid-page-slot--incoming-visible {
+    opacity: 1;
+  }
+}
+
+// A neighbor page peeking in at the screen edge — full size, just mostly
+// clipped by .grid-page-viewport's overflow (or, in view mode, fully
+// off-screen until it slides through). Its content is inert (see
+// .grid-page-slot-content below): clicking anywhere on it navigates there
+// instead of interacting with the widgets underneath. The panel background/
+// hover only apply once it actually has a neighbor to show — an empty
+// reserved slot (no neighbor there) stays invisible. Unstyled in view mode:
+// during a slide it should look like a real page, not a dimmed preview.
+.grid-page-slot--peek.grid-page-slot--editing:has(.grid-page-slot-content) {
+  // Not var(--background-primary-alt): color-mix(in oklch, ..., white ...)
+  // mis-handles white's undefined hue and skews visibly pink here — in srgb
+  // mixes predictably.
+
+  cursor: pointer;
+  min-height: $page-min-height;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, outline-color 0.5s ease;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+// Hinted while a drag is being held over this slot's edge (see Grid.tsx's
+// onDrag) — toggled imperatively via classList, not React state, so it
+// doesn't cost a re-render on every drag frame. Only cancels the peek
+// hover-dim below; no color/border treatment of its own — the outline
+// fading in (see --committed above) is the only hand-off cue, and it
+// starts on its own as soon as the hop commits, armed or not.
+.grid-page-slot--peek.grid-page-slot--armed {
+  opacity: 1;
+}
+
+.grid-page-slot-content {
+  pointer-events: none;
+}

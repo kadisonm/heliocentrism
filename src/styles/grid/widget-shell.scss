@@ -1,0 +1,166 @@
+.grid-widget {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary-alt);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+// For widgets flagged transparentInViewMode (e.g. Spacer) — WidgetShell
+// only applies this outside edit mode, so the widget looks completely like
+// empty space in view mode but still shows its normal chrome/background
+// while editing (positioning/resizing an invisible box would be unusable).
+.grid-widget--transparent {
+  background: none;
+}
+
+.grid-widget-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  flex-shrink: 0;
+}
+
+.widget-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.grid-widget-settings {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-accent-soft-hover);
+  }
+}
+
+.grid-widget-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-error);
+  }
+}
+
+.grid-widget-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+
+  &.is-locked {
+    pointer-events: none;
+    opacity: 0.55;
+    filter: grayscale(0.4);
+  }
+
+  // Auto-expand: align-self: flex-start opts the shell out of this flex
+  // container's align-items: stretch so height: auto can shrink to content
+  // for ResizeObserver to measure. overflow: hidden (not auto) avoids a
+  // scrollbar/reflow oscillation that never settles.
+  &.grid-widget-body--auto-expand {
+    overflow: hidden;
+
+    .widget-content-shell {
+      align-self: flex-start;
+      height: auto;
+    }
+
+    .widget-content {
+      height: auto;
+      overflow: visible;
+    }
+  }
+}
+
+// Bottom-center toggle for a widget's auto-expand mode (edit mode only,
+// only for widgets declaring supportsAutoExpand — see WidgetShell). Sits on
+// top of the body rather than in the chrome bar above, so it stays anchored
+// to the edge whose behavior it's actually changing.
+.grid-widget-auto-expand {
+  position: absolute;
+  left: 50%;
+  bottom: 0.5rem;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background-secondary) 70%, transparent);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  &:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+}
+
+.grid-widget-auto-expand--active {
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
+}
+
+.grid-widget-type-select {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0.5rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--background-secondary) 35%, transparent);
+  color: var(--text-normal);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.grid-widget-unknown {
+  margin: auto;
+  padding: 1rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}

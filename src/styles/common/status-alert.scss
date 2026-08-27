@@ -1,0 +1,22 @@
+.settings-alert {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+  line-height: 1.5;
+}
+
+.settings-alert-warning {
+  color: var(--text-warning);
+  background: var(--background-modifier-warning);
+}
+
+.settings-alert-success {
+  color: var(--text-success);
+  background: var(--background-modifier-success);
+}
+
+.settings-alert-info {
+  color: var(--text-info);
+  background: var(--background-modifier-info);
+}

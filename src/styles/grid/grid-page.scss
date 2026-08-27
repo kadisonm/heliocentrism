@@ -1,0 +1,55 @@
+.grid-preview-frame {
+  // No padding of its own — GRID_CONTAINER_PADDING (baked into every
+  // breakpoint's react-grid-layout, not CSS) is the only inset, so editing a
+  // simulated device looks identical to editing your own real breakpoint.
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--background-secondary) 20%, transparent);
+}
+
+.grid {
+  width: 100%;
+}
+
+// Applied for exactly one render when edit/view mode (or the edit-mode
+// breakpoint) changes, so every widget jumps to its new layout instantly
+// instead of animating — the settle-after-drag/resize animation on
+// .react-grid-item below is left untouched for the normal case.
+.grid--no-transition .react-grid-item {
+  transition: none !important;
+}
+
+// Library classes react-grid-layout renders for each item (via <GridLayout>
+// in GridPage.tsx) and its own drag placeholder/resize handle.
+.react-grid-item {
+  &.react-draggable-dragging {
+    box-shadow: 0 12px 30px var(--shadow-modifier);
+  }
+
+  // Dragging the resize handle sweeps the cursor across the widget's own
+  // text, which the browser reads as a text-selection drag — highlighting
+  // everything underneath instead of resizing it.
+  &.resizing,
+  &.react-draggable-dragging {
+    user-select: none;
+  }
+}
+
+.react-grid-placeholder {
+  background: var(--color-accent) !important;
+  border-radius: 1rem;
+}
+
+.react-resizable-handle::after {
+  border-right-color: var(--color-accent) !important;
+  border-bottom-color: var(--color-accent) !important;
+}
+
+.grid-length-warning {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.75rem;
+  background: var(--background-modifier-warning);
+  color: var(--text-warning);
+  font-size: 0.8rem;
+  text-align: center;
+}

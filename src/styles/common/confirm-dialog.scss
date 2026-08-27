@@ -1,0 +1,10 @@
+// Same reasoning as pages/onboarding-gate's .onboarding-intro (not
+// .settings-help, which would double-margin as a first child here). Reuses
+// .settings-actions/.settings-button from common/settings-kit.scss for its
+// buttons.
+.confirm-dialog__message {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

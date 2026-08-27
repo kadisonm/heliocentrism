@@ -1,0 +1,82 @@
+// Resets chrome for the single <textarea> used across both resting (readOnly)
+// and active editing states (see InlineEditableField.tsx), so it stays
+// visually anchored with no shift between them. Deliberately doesn't set
+// color — that would override .task-item__title/__description's own color and was the bug that made the description render in the title's color.
+.task-item__editable-trigger {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  // Not just for the active state — a readOnly <textarea> can still pick
+  // up a focus ring for one frame between being clicked and this flipping
+  // to editable, and this rules that out regardless of which state it's in.
+  outline: none;
+  padding: 0;
+  margin: 0;
+  resize: none;
+  overflow: hidden;
+  text-align: left;
+  cursor: text;
+  border-radius: 0.25rem;
+  font-family: inherit;
+  // Native auto-sizing keeps height in sync with content with no JS, avoiding
+  // staleness from a one-off scrollHeight measurement (e.g. before a web font
+  // swaps in). Ignored by unsupporting browsers, which keep the JS measurement
+  // in InlineEditableField.tsx as a fallback.
+  field-sizing: content;
+}
+
+// The empty-description placeholder, styled as a hint rather than real
+// content. Only applied at rest (see InlineEditableField's isPlaceholder),
+// never while editing even if the draft is momentarily empty.
+.task-item__editable-trigger--placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+// Pilcrow icon shown before an empty description's placeholder (see
+// InlineEditableField's showPlaceholderIcon). Sits beside the textarea
+// rather than inside it since a textarea can only hold plain text; its
+// own click also starts editing, matching the field itself.
+.task-item__description-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: text;
+}
+
+// Wraps the description field always (see InlineEditableField); collapsed by
+// default when empty, expanded via --visible (has content) or the edit-mode
+// class. Scoped to its own direct parent so a subtask entering edit mode
+// doesn't also reveal the PARENT task's own placeholder. margin-top cancels the flex `gap` still reserved for this element while collapsed to 0 height.
+.task-item__description-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: -0.3rem;
+  transition: grid-template-rows 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+}
+
+.task-item__description-reveal--visible {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0;
+}
+
+.task-item--editing > .task-item__content > .task-item__description-reveal,
+.subtask--editing > .subtask__content > .task-item__description-reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0;
+}
+
+// Holds the Pilcrow icon + the textarea side by side when the icon is
+// showing (see InlineEditableField) — the icon's flex layout lives here
+// rather than as a separate opt-in modifier on the trigger itself, since
+// this wrapper is only ever used for a field that can show one.
+.task-item__description-reveal-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}

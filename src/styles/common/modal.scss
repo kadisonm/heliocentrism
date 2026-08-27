@@ -1,0 +1,91 @@
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--background-modifier-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.settings-panel {
+  background: var(--background-primary-alt);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 60px var(--shadow-modifier);
+  width: 100%;
+  max-width: 36rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+}
+
+.settings-header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+// Clarifies whether a widget-settings modal (Modal's `scope` prop) affects
+// just the widget it was opened from or every instance of that widget type
+// — see PhotoSettingsModal (instance) vs PomodoroSettingsModal (shared).
+.settings-scope-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.settings-scope-badge--instance {
+  background: var(--background-modifier-accent-soft);
+  color: var(--color-accent);
+}
+
+.settings-scope-badge--shared {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary);
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: var(--text-normal);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.settings-content {
+  padding: 1.5rem;
+}

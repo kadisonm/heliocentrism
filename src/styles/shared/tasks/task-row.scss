@@ -1,0 +1,255 @@
+// TaskRow.tsx renders either a .task-item (variant="task") or a .subtask
+// (variant="subtask" — see subtask.scss) row. The base task styling and
+// every rule genuinely shared across both variants live here, since this
+// one component renders both; subtask.scss holds only what's exclusive to
+// the subtask variant.
+.task-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--background-secondary);
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  // Not `pointer` — the row itself has no click action anymore (see
+  // .task-item__menu-button below); only specific things inside it
+  // (toggle, badges, editable text, the menu button) are interactive.
+  cursor: default;
+  transition: background 0.15s ease, box-shadow 0.15s ease, scale 150ms cubic-bezier(0.25, 1, 0.5, 1);
+
+  &:hover {
+    background: var(--background-modifier-hover-alt);
+  }
+
+  // Click-driven "selected" state (toggled in TaskRow.tsx) — its context
+  // menu (see .context-menu) is a separate portaled popup, not anchored
+  // inside this card, so all this needs to do is lighten the row.
+  &.task-item--active {
+    background: var(--background-modifier-hover-alt);
+  }
+
+  // The floating copy under the pointer while dragging — see dnd-kit's own
+  // [data-dnd-placeholder] (no custom styling needed: its default
+  // visibility:hidden already leaves plain empty space, same height as
+  // this row, right where it'd land — exactly what should show there).
+  &[data-dnd-dragging] {
+    background: var(--background-modifier-active);
+    box-shadow: 0 4px 10px var(--shadow-modifier);
+    cursor: grabbing;
+  }
+
+  // dnd-kit injects its own `!important scale: var(--dnd-scale)` rule tied
+  // to [data-dnd-dragging] and rewrites that var every drag frame, which
+  // fights a plain scale here — `!important` + tripled class (specificity
+  // over that rule's two attribute selectors) is what makes ours stick.
+  &.task-item--dragging.task-item--dragging {
+    scale: 1.04 !important;
+  }
+
+  // Same fight for the post-drop shrink-back (see DROP_SHRINK_MS) — dnd-kit's
+  // own attribute can still be present during that window too.
+  &.task-item--dropped.task-item--dropped {
+    scale: 1 !important;
+  }
+}
+
+.task-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: transparent;
+  border: 1.5px solid var(--text-primary-soft);
+  border-radius: 50%;
+  color: var(--text-normal);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--text-primary);
+  }
+}
+
+// Each stage variant fills with a darkened version of its color (same
+// pattern as --background-modifier-success/warning/error) so the icon on
+// top can stay the actual, undarkened stage color and still read clearly.
+.task-toggle--accent {
+  background: var(--background-modifier-accent);
+  color: var(--text-accent);
+  border-color: transparent;
+}
+
+.task-toggle--success {
+  background: var(--background-modifier-success);
+  color: var(--text-success);
+  border-color: transparent;
+}
+
+.task-toggle--warning {
+  background: var(--background-modifier-warning);
+  color: var(--text-warning);
+  border-color: transparent;
+}
+
+.task-toggle--error {
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+  border-color: transparent;
+}
+
+.task-toggle--secondary {
+  background: color-mix(in srgb, var(--color-secondary) 22%, black 78%);
+  color: var(--color-secondary);
+  border-color: transparent;
+}
+
+.task-toggle--muted {
+  background: color-mix(in srgb, var(--text-muted) 22%, black 78%);
+  color: var(--text-muted);
+  border-color: transparent;
+}
+
+// One `gap` here (not per-child margin-top): children differ in font-size/
+// line-height, so equal margin-top values wouldn't read as equal gaps.
+.task-item__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+// Lines the title's first line up with .task-toggle's vertical center, not
+// its top, since both are flex-start-aligned siblings on .task-item/.subtask
+// (see subtask.scss). Deliberately not align-items: center on the row —
+// that would drag the toggle's center down with a wrapped multi-line title
+// or footer badges.
+.task-item__content,
+.subtask__content {
+  margin-top: 0.1625rem;
+}
+
+.task-item__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-normal);
+  line-height: 1.4;
+  // pre-wrap (not plain `normal`): still wraps long lines the same way,
+  // but also renders an embedded "\n" (Shift+Enter — see
+  // InlineEditableField.tsx) as an actual line break instead of
+  // collapsing it to a space.
+  white-space: pre-wrap;
+
+  &.is-done {
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+}
+
+.task-item__description {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+// Badges row sits below title/description so a long wrapped title never
+// crowds them. Shared by task and subtask contexts; spacing above comes
+// from the parent's own `gap`, not from here.
+.task-item__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+// Wraps the "Set due date"/"Set repeat" placeholders, always in the DOM —
+// reveal is driven by the row's edit-mode class (TaskRow.tsx's isEditingRow),
+// not by mounting/unmounting. Animates like inline-editable-field.scss's
+// own .task-item__description-reveal.
+.task-item__footer-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.2s ease, opacity 0.2s ease;
+}
+
+// Scoped with child combinators to the task's own footer (not a plain
+// descendant selector) — .task-item--editing alone says nothing about which
+// nested subtask is being edited, so a descendant selector would match every
+// subtask's reveal too. Subtasks don't need this scoping since they're siblings, not nested.
+.task-item--editing > .task-item__content > .task-item__footer > .task-item__footer-reveal,
+.subtask--editing .task-item__footer-reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+// Same dead-gap fix as inline-editable-field.scss's .task-item__description-
+// reveal, one level up: .task-item__footer only exists once it has
+// something to show, and :only-child excludes rows where a persistent badge
+// sits alongside the reveal (those rows have real height, so the preceding
+// gap is legitimate).
+.task-item__footer:has(> .task-item__footer-reveal:only-child) {
+  margin-top: -0.3rem;
+  transition: margin-top 0.2s ease;
+}
+
+.task-item--editing > .task-item__content > .task-item__footer:has(> .task-item__footer-reveal:only-child),
+.subtask--editing > .subtask__content > .task-item__footer:has(> .task-item__footer-reveal:only-child) {
+  margin-top: 0;
+}
+
+// flex-wrap: wrap so a too-narrow footer wraps ghost badges onto a second
+// line instead of overflowing past this element's own overflow: hidden
+// (needed for the grid-template-rows collapse animation above to clip).
+.task-item__footer-reveal-inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// The hover-revealed "..." trigger that opens the row's context menu (see
+// ContextMenu/MenuItem in components/common/context-menu, styled separately).
+.task-item__toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
+    color: var(--text-normal);
+  }
+}
+
+// Hover-reveal for the "..." trigger. Also forced visible via
+// .task-item--active/.subtask--active so it doesn't vanish out from under
+// an already-open (portaled) context menu when the pointer leaves the row.
+.task-item__menu-button {
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.task-item:hover > .task-item__menu-button,
+.subtask:hover > .task-item__menu-button,
+.task-item--active > .task-item__menu-button,
+.subtask--active > .task-item__menu-button {
+  opacity: 1;
+}

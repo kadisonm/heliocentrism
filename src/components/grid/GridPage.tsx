@@ -166,6 +166,8 @@ export default function GridPage({
   // jumping to its new layout; a drag/resize settling into place should.
   // Page/breakpoint switches already remount fresh (see Grid.tsx's `key`),
   // so there's nothing to suppress for those cases — only this one remains.
+  // Also keyed on gridWidth, not just isEditMode, since a width change can
+  // happen without isEditMode itself changing (e.g. a window resize).
   useLayoutEffect(() => {
     const el = gridElRef.current;
     if (!el) return;
@@ -178,7 +180,7 @@ export default function GridPage({
     });
 
     return () => cancelAnimationFrame(raf);
-  }, [isEditMode]);
+  }, [isEditMode, gridWidth]);
 
   const pageContentRows = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
 

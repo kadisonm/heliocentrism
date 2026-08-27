@@ -46,19 +46,11 @@ export function getBreakpointForWidth(width: number): DashboardBreakpoint {
 
 // Fixed pixel widths used to simulate each device tier while editing, so the
 // grid locks onto that breakpoint's layout regardless of real browser width.
-// This is the frame's total on-screen footprint (chrome included) — see
-// GRID_PREVIEW_FRAME_CHROME for why the width fed to the grid is smaller.
 export const GRID_PREVIEW_WIDTHS: Record<DashboardBreakpoint, number> = {
   desktop: 1280,
   tablet: 900,
   mobile: 375,
 };
-
-// .grid-preview-frame is content-box, so its padding/border add on top of
-// GRID_PREVIEW_WIDTHS rather than eating into it. Subtract this before handing
-// the width to the grid so the frame's total footprint matches the simulated
-// size. Kept in sync by hand with grid.scss's padding (16px) + border (1px).
-export const GRID_PREVIEW_FRAME_CHROME = 2 * (16 + 1); // padding + border, each side
 
 // Fallback size for a new widget if its definition has no defaultSize for some reason.
 export const DEFAULT_WIDGET_SIZE = { w: 4, h: 6 };

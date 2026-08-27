@@ -1,0 +1,11 @@
+@use 'tokens' as *;
+
+// Sized like a real page's panel would be (see $page-min-height) in both the
+// peek preview and once clicked into as the current page, so it never ends
+// with the toolbar floating over empty space below it.
+.grid-blank-page {
+  width: 100%;
+  height: 100%;
+  min-height: $page-min-height;
+  border-radius: 1rem;
+}

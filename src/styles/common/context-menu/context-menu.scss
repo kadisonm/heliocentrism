@@ -1,0 +1,17 @@
+// The popup shell (see ContextMenu.tsx) — top-left corner pinned to
+// wherever it was opened from via inline `left`/`top` (position: fixed,
+// not absolute, since the trigger can be anywhere, including inside a
+// scrolled container).
+.context-menu {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.1rem;
+  min-width: 9rem;
+  padding: 0.3rem;
+  background: var(--background-secondary-alt);
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 12px var(--shadow-modifier);
+  z-index: 1000;
+}

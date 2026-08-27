@@ -1,0 +1,53 @@
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--background-secondary);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  color: var(--text-normal);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.settings-section-header-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.settings-section-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+}
+
+.settings-status-icon--ok {
+  color: var(--text-success);
+  background: var(--background-modifier-success);
+}
+
+.settings-status-icon--warn {
+  color: var(--text-warning);
+  background: var(--background-modifier-warning);
+}
+
+.settings-section-header-caret {
+  color: var(--text-faint);
+  font-size: 0.9rem;
+}

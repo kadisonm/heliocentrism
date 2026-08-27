@@ -1,0 +1,16 @@
+// Single source of truth for .grid-status-bar/.page-dots' own fixed
+// position, and for $page-min-height below (which needs every page panel
+// to reach exactly that far). Shared across several grid/ files — @use
+// this as * rather than duplicating the values.
+$toolbar-bottom-offset: 1.5rem;
+$toolbar-height: 2.75rem;
+
+// Matches .dashboard-container's own padding-top (see pages/dashboard.scss)
+// — a page's top always sits exactly this far from the viewport.
+$page-top-offset: 2rem;
+
+// Every page panel (active or peeking, real or the blank "new page"
+// placeholder) should be tall enough to reach the toolbar floating near the
+// bottom of the viewport, so it never ends with the toolbar floating over
+// empty space below a short page.
+$page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} - #{$toolbar-height});

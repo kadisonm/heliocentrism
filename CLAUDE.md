@@ -17,3 +17,5 @@ Aim for one line comments where possible. Try to be brief and concise with comme
 Shorten any extremely long comments you find to match the above description.
 
 Always use pre-existing CSS colour variables instead of creating your own colours. If you need a colour / mixes that does not exist, then ask me first. Colour mixes should derive from the base colours of the theme for consistency.
+
+Keep src/styles/ structured to mirror src/components/ — one component's CSS per file, at the equivalent path (e.g. src/components/shared/tasks/TaskRow.tsx's styles belong in src/styles/shared/tasks/task-row.scss). When adding or editing a component's styles, split them out into their own file this way rather than appending to an existing shared/bundled file, even if that means creating a new file. Only truly global styles (resets, theme tokens, base element defaults) belong outside this per-component structure.

@@ -1,0 +1,160 @@
+.editor-preset-delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-error);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// Deliberately its own class rather than reusing .editor-subtask-add's
+// wrapper — that class's own `button {}` rule sits at higher specificity
+// than the plain .editor-save/.editor-cancel classes and would silently
+// override their styling.
+.editor-preset-save {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+
+  input[type='text'] {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    color: var(--text-normal);
+    background: var(--background-secondary);
+  }
+}
+
+.editor-stage-row {
+  & + & {
+    margin-top: 0.4rem;
+  }
+}
+
+.editor-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--background-secondary);
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--text-normal);
+}
+
+.editor-stage__main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  input[type='text'] {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.82rem;
+    color: var(--text-normal);
+    background: var(--background-primary-alt);
+  }
+
+  > button {
+    border: none;
+    background: transparent;
+    color: var(--text-error);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+.editor-stage__swatches {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.editor-swatch {
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border-radius: 0.35rem;
+  background: var(--background-primary-alt);
+  cursor: pointer;
+}
+
+.editor-swatch--none {
+  background: transparent;
+}
+
+.editor-swatch--accent {
+  background: var(--color-accent);
+}
+
+.editor-swatch--success {
+  background: var(--text-success);
+}
+
+.editor-swatch--warning {
+  background: var(--text-warning);
+}
+
+.editor-swatch--error {
+  background: var(--text-error);
+}
+
+.editor-swatch--secondary {
+  background: var(--color-secondary);
+}
+
+.editor-swatch--muted {
+  background: var(--text-muted);
+}
+
+.editor-swatch--selected {
+  box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 4px var(--color-accent);
+}
+
+.editor-stage__icon-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.5rem;
+  background: var(--background-primary-alt);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
+  }
+}
+
+.editor-stage__icon-placeholder {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.editor-stage-add {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--background-modifier-accent-soft);
+  color: var(--text-normal);
+  cursor: pointer;
+  margin-top: 0.4rem;
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
+  }
+}

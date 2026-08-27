@@ -1,0 +1,37 @@
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+
+  input,
+  select {
+    border-radius: 0.65rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--text-normal);
+    background: var(--background-secondary);
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+// A row of two inputs side by side within a single field (e.g. a task's
+// due date + time), or a select paired with a trailing action button (e.g.
+// the stage-preset picker's delete button). Reused by EditorDueField,
+// EditorRepeatFields, and EditorStagesField.
+.editor-field-row {
+  display: flex;
+  gap: 0.5rem;
+
+  input,
+  select {
+    flex: 1;
+    min-width: 0;
+  }
+}

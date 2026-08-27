@@ -1,0 +1,29 @@
+// Full-viewport, non-dismissable stand-in for .settings-overlay (see
+// common/modal.scss) — it IS the page rather than something layered over
+// it, so it paints the theme background instead of a dimming scrim.
+.onboarding-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--background-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.onboarding-panel {
+  margin: auto;
+}
+
+// Plain intro copy above the reused SyncConfigForm — deliberately not
+// .settings-help (that class carries its own margin-top, meant for a
+// trailing note after other content, which would double up with this
+// section's flex `gap` when used as the first child instead).
+.onboarding-intro {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

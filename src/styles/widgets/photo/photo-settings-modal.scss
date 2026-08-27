@@ -1,0 +1,20 @@
+.photo-settings-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--background-secondary) 30%, transparent);
+
+  img {
+    max-width: 100%;
+    max-height: 12rem;
+    display: block;
+  }
+}
+
+.photo-settings-preview-empty {
+  display: flex;
+  color: var(--text-faint);
+}

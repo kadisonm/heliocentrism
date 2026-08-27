@@ -1,0 +1,10 @@
+// Aligns subtask.scss's indent guide midpoint with the parent .task-toggle's
+// center, and lines the subtask rows' own .task-toggle back up with the
+// parent .task-item__content left edge. Shared between task-parent.scss and
+// subtask.scss — local to this one alignment, not general-purpose tokens.
+$task-toggle-width: 1.25rem; // .task-toggle, task-row.scss
+$task-item-gap: 0.75rem; // .task-item, task-row.scss — space between .task-toggle/.task-item__content/.task-item__menu-button
+$task-item-subtasks-border-width: 2px; // .task-item__subtasks' own indent guide width
+$subtask-left-padding: 0.35rem; // .subtask's own left inset before ITS .task-toggle — also reused as its right inset
+$subtask-gap: 0.5rem; // .subtask's own `gap` — deliberately tighter than $task-item-gap
+$menu-button-width: 1.5rem; // .task-item__toolbar-button, task-row.scss

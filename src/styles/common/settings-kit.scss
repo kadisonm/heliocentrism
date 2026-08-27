@@ -1,0 +1,88 @@
+// Shared layout primitives reused verbatim by several unrelated settings/
+// modal components (general-settings, SyncConfigForm, onboarding-gate,
+// AddWidgetModal, PomodoroSettingsModal, PhotoSettingsModal,
+// AddTaskListModal, ConfirmDialog) — not one component's own styling.
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--background-secondary) 60%, transparent);
+  border-radius: 0.75rem;
+}
+
+.settings-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.settings-field-row {
+  display: flex;
+  gap: 0.75rem;
+
+  > .settings-field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.settings-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.settings-button {
+  flex: 1;
+  min-width: 10rem;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.settings-button-primary {
+  background: var(--background-modifier-accent-soft);
+  color: var(--text-normal);
+
+  &:hover:not(:disabled) {
+    background: var(--background-modifier-accent-soft-hover);
+  }
+}
+
+.settings-button-danger {
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+
+  &:hover:not(:disabled) {
+    background: var(--background-modifier-error-hover);
+  }
+}
+
+.settings-help {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  background: color-mix(in srgb, var(--text-faint) 5%, transparent);
+  border-radius: 0.5rem;
+  line-height: 1.5;
+}

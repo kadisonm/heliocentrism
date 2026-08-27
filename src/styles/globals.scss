@@ -1,18 +1,50 @@
 @use 'theme';
 @use 'base';
-@use 'grid';
+
+@use 'grid/grid';
+@use 'grid/grid-page';
+@use 'grid/widget-shell';
+@use 'grid/grid-status-bar';
+@use 'grid/page-dots';
+@use 'grid/blank-page-pane';
+@use 'grid/add-widget-modal';
+
 @use 'common/badge';
-@use 'common/context-menu';
-@use 'shared/nav';
-@use 'shared/orbit-animation';
-@use 'shared/editor';
-@use 'shared/task-item';
-@use 'pages/splash-screen';
+@use 'common/context-menu/context-menu';
+@use 'common/context-menu/menu-item';
+@use 'common/modal';
+@use 'common/section-header';
+@use 'common/settings-field';
+@use 'common/status-alert';
+@use 'common/tabs';
+@use 'common/settings-kit';
+@use 'common/confirm-dialog';
+
+@use 'shared/nav/index' as nav;
+@use 'shared/orbit-animation/index' as orbit-animation;
+@use 'shared/editor/editor-modal';
+@use 'shared/editor/editor-field';
+@use 'shared/editor/editor-repeat-fields';
+@use 'shared/editor/editor-stages-field';
+@use 'shared/editor/editor-icon-picker';
+@use 'shared/editor/editor-subtask-list';
+@use 'shared/editor/editor-actions';
+@use 'shared/tasks/task-row';
+@use 'shared/tasks/subtask';
+@use 'shared/tasks/inline-editable-field';
+@use 'shared/tasks/task-parent';
+
+@use 'pages/splash-screen/index' as splash-screen;
 @use 'pages/dashboard';
-@use 'pages/settings';
-@use 'pages/sync-config';
-@use 'widgets/shared';
-@use 'widgets/task-list';
-@use 'widgets/pomodoro';
-@use 'widgets/photo';
-@use 'widgets/clock';
+@use 'pages/onboarding-gate/index' as onboarding-gate;
+@use 'pages/sync-config/connection-status';
+
+@use 'widgets/widget-content-shell';
+@use 'widgets/task-list/index' as task-list;
+@use 'widgets/task-list/task-list-switcher';
+@use 'widgets/pomodoro-timer/index' as pomodoro-timer;
+@use 'widgets/photo/index' as photo;
+@use 'widgets/photo/photo-settings-modal';
+@use 'widgets/clock/index' as clock;
+@use 'widgets/orbit/index' as orbit;
+@use 'widgets/spacer/index' as spacer;

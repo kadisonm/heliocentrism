@@ -1,0 +1,51 @@
+@use 'tokens' as *;
+
+// Bottom-center page navigation — sibling of .grid-status-bar (see
+// pages/dashboard.scss's padding-bottom, sized to clear both their footprints).
+.page-dots {
+  position: fixed;
+  left: 50%;
+  bottom: $toolbar-bottom-offset;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: $toolbar-height;
+  padding: 0 0.75rem;
+  background: var(--background-primary-alt);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+}
+
+.page-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--text-muted);
+  }
+}
+
+.page-dot--active {
+  width: 1.25rem;
+  background: var(--color-accent);
+
+  &:hover {
+    background: var(--color-accent);
+  }
+}
+
+.page-dot--blank {
+  background: var(--background-modifier-hover);
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
+  }
+}

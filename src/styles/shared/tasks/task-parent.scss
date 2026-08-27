@@ -1,0 +1,48 @@
+@use 'tokens' as *;
+
+// Rendered by TaskParent.tsx — the list of subtask rows (see subtask.scss)
+// nested under a task, plus the indent guide connecting them to the
+// parent's own .task-toggle (task-row.scss).
+.task-item__subtasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  // .task-item__content's own gap (0.3rem) already applies above this —
+  // this tops it up to the larger 0.5rem this nested list deliberately
+  // wants, to read as a step down in hierarchy rather than just another row.
+  margin-top: 0.2rem;
+  // Pulls the guide left so its own midpoint (not its left edge) lands at
+  // the parent toggle's horizontal center.
+  margin-left: calc(-1 * (#{$task-toggle-width} / 2 + #{$task-item-gap}) - #{$task-item-subtasks-border-width} / 2);
+  // Closes the gap back up from the guide's new left edge to where the
+  // subtask rows' own .task-toggle should land — the same left edge as
+  // .task-item__content (title/description/badges) above.
+  padding-left: calc(
+    #{$task-toggle-width} / 2 + #{$task-item-gap} + #{$task-item-subtasks-border-width} / 2 -
+      #{$task-item-subtasks-border-width} - #{$subtask-left-padding}
+  );
+  // Extends this container's right edge outward (without widening
+  // .subtask__content, still flex: 1) so a subtask row's own "..." button
+  // lines up with .task-item's, while staying inside this container rather
+  // than overflowing it. Amount matches the row's own right padding + button width + the gap it sits behind (see subtask.scss's .subtask > .task-item__menu-button).
+  margin-right: calc(-1 * (#{$subtask-left-padding} + #{$menu-button-width} + #{$task-item-gap}));
+
+  // Always in the DOM, even with zero subtasks (see TaskParent.tsx), so a
+  // drag has something to hit-test against; collapses to nothing here so an
+  // empty task looks unchanged. margin-top: -0.3rem cancels the parent's
+  // `gap` still reserved for this element while collapsed, same as the reveal elements in inline-editable-field.scss.
+  &:empty {
+    margin-top: -0.3rem;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    min-height: 0;
+  }
+}
+
+// While a drag that could land here is in progress (see TaskParent.tsx's
+// isDropTargetCandidate), give an empty zone enough height to be hoverable —
+// a zero-size element can't become a dnd-kit collision target.
+.task-item__subtasks--droppable:empty {
+  min-height: 0.6rem;
+}

@@ -1,0 +1,63 @@
+.editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--background-modifier-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.editor-panel {
+  width: min(100%, 28rem);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--background-primary-alt);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 60px var(--shadow-modifier);
+  padding: 1.25rem;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-normal);
+  }
+}
+
+.editor-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: var(--background-modifier-accent-soft-hover);
+    color: var(--text-normal);
+  }
+}
+
+.editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}

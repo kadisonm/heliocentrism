@@ -1,0 +1,48 @@
+.editor-icon-picker {
+  margin-top: 0.4rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--background-secondary);
+
+  input[type='text'] {
+    width: 100%;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.8rem;
+    color: var(--text-normal);
+    background: var(--background-primary-alt);
+    margin-bottom: 0.5rem;
+  }
+}
+
+.editor-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+  gap: 0.3rem;
+  max-height: 12rem;
+  overflow-y: auto;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--background-modifier-accent-soft-hover);
+      color: var(--text-normal);
+    }
+  }
+
+  &__button--selected {
+    background: var(--background-modifier-accent-soft);
+    color: var(--color-accent) !important;
+  }
+}

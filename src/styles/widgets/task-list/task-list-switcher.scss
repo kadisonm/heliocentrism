@@ -1,10 +1,3 @@
-.task-list-empty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
 .task-list-switcher {
   position: relative;
   min-width: 0;
@@ -26,7 +19,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
 
-  // Matches .task-item's own hover fill exactly (see task-item.scss).
+  // Matches .task-item's own hover fill exactly (see shared/tasks/task-row.scss).
   &:hover,
   &:focus-visible {
     background: var(--background-modifier-hover);

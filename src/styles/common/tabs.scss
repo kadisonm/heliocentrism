@@ -1,0 +1,48 @@
+.settings-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding-bottom: 0.15rem;
+}
+
+.settings-tab {
+  flex: 1;
+  position: relative;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 0.83rem;
+  font-weight: 600;
+  padding: 0.5rem 0.35rem 0.65rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    bottom: -0.2rem;
+    height: 2px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+
+  &:hover {
+    color: var(--text-normal);
+  }
+
+  &:focus-visible {
+    outline: none;
+    color: var(--text-normal);
+  }
+}
+
+.settings-tab--active {
+  color: var(--text-normal);
+
+  &::after {
+    background: var(--color-accent);
+  }
+}

@@ -1,0 +1,28 @@
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-field > label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.settings-input {
+  width: 100%;
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 0.82rem;
+
+  &::placeholder {
+    color: var(--text-faint);
+  }
+
+  &:focus {
+    outline: none;
+  }
+}

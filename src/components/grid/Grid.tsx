@@ -7,7 +7,6 @@ import {
   GRID_COLS,
   GRID_CONTAINER_PADDING,
   GRID_ITEM_MARGIN,
-  GRID_PREVIEW_FRAME_CHROME,
   GRID_PREVIEW_WIDTHS,
   GRID_ROW_HEIGHT,
   PAGE_GAP_PX,
@@ -148,14 +147,72 @@ export default function Grid({
   const isCurrentCommitted = !!current && slotSignature(current) === committedSignature;
   const isNextCommitted = !!next && slotSignature(next) === committedSignature;
 
+  // Tracks whichever page was actually rendered as `current` as of the last
+  // completed render, for the reflow-forcing effect further down to compare
+  // against — lets it recognize "this peek slot is simply the page that was
+  // JUST active, demoting" as a distinct case from "a genuinely different
+  // page is entering this slot". Deliberately NOT committedSignature: that
+  // updates the instant a click commits, still several renders (the whole
+  // slide) before `current` itself actually changes at settle — using it
+  // here would start reflecting the new page far too early, defeating the
+  // comparison below for the entire slide.
+  const currentSignature = slotSignature(current);
+  const previousCurrentSignatureRef = useRef(currentSignature);
+  useEffect(() => {
+    previousCurrentSignatureRef.current = currentSignature;
+  });
+
+  // Mid-slide (an adjacent-step move only — see committedIndex/displayedIndex
+  // above), the page just beyond the one becoming active hasn't been
+  // rendered at all yet, since prev/current/next above are still keyed off
+  // the OLD displayedIndex. Render it here too, past whichever of next/prev
+  // it's beyond (see the track JSX below), so it can fade in and then simply
+  // ride along with the shared track transform, instead of popping in at
+  // full opacity the instant the slide settles and role-reassignment
+  // reveals it as the real new prev/next.
+  const slideDirection = committedIndex - displayedIndex;
+  const lookaheadPage =
+    Math.abs(slideDirection) === 1 ? virtualPages[activeIndex + slideDirection * 2] ?? null : null;
+  const lookaheadSignature = slotSignature(lookaheadPage);
+
+  // Resets to fully transparent the instant a NEW page takes on the
+  // lookahead role, then fades it to opaque on the next frame — flipping
+  // straight to the visible class on the same mount wouldn't transition at
+  // all, since the browser never gets to paint the "before" state to
+  // animate away from.
+  const [lookaheadVisible, setLookaheadVisible] = useState(false);
+  useEffect(() => {
+    // Synchronizing to which page (if any) currently holds the lookahead
+    // role — not derivable during render, since the fade needs an actual
+    // "before" frame painted first.
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setLookaheadVisible(false);
+    if (lookaheadSignature === 'none') return;
+    const raf = requestAnimationFrame(() => setLookaheadVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [lookaheadSignature]);
+
   const viewportHeight = useViewportHeight();
   const softLimitRows = isEditMode && viewportHeight > 0 ? pageSoftHeightRows(viewportHeight) : undefined;
 
-  // The preview frame's own padding/border add to this width rather than
-  // being included in it (see GRID_PREVIEW_FRAME_CHROME) — subtract them so
-  // the frame's total footprint matches the breakpoint it's meant to
-  // simulate instead of overflowing past it.
-  const gridWidth = isSimulating ? GRID_PREVIEW_WIDTHS[activeBreakpoint] - GRID_PREVIEW_FRAME_CHROME : width;
+  // Exiting edit mode should hide the border immediately rather than fading
+  // it out — plainly giving outline-color a 0s duration outside of
+  // .grid-page-slot--editing (see grid.scss) turned out not to reliably win
+  // once other transitionable properties are ALSO changing on the exact
+  // same render (min-height, --editing itself). Forcing it via the same
+  // toggle-a-class/reflow/next-frame-remove trick already used elsewhere in
+  // this file (see applyDisplayedIndexInstantly and the Chromium reflow fix
+  // below) sidesteps that ambiguity entirely, at the cost of one extra ref.
+  const activeSlotRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (isEditMode) return;
+    const el = activeSlotRef.current;
+    if (!el) return;
+    el.classList.add('grid-page-slot--no-outline-transition');
+    void el.offsetHeight; // force a reflow so the disable actually takes effect
+    const raf = requestAnimationFrame(() => el.classList.remove('grid-page-slot--no-outline-transition'));
+    return () => cancelAnimationFrame(raf);
+  }, [isEditMode]);
 
   // Edit mode reserves room on each edge for a neighbor's sliver plus a gap
   // before it; view mode reserves nothing, so a neighbor sits fully
@@ -163,17 +220,40 @@ export default function Grid({
   const reservePx = isEditMode ? PAGE_PEEK_SLIVER_PX + PAGE_GAP_PX : 0;
   const slotGapPx = isEditMode ? PAGE_GAP_PX : 0;
 
+  // The local coordinate space the peek carousel lays out within: the real
+  // canvas normally, but while simulating a device, the device's own width
+  // plus room for a neighbor's sliver on each edge — NOT the real (wider)
+  // canvas, so a peeking neighbor reads at the same size as the device
+  // being simulated rather than the real screen.
+  const localCanvasWidth = isSimulating
+    ? GRID_PREVIEW_WIDTHS[activeBreakpoint] + 2 * reservePx
+    : width;
+
   // Every page (active or neighbor) renders at this same full, unscaled
-  // width — the canvas width minus whatever's reserved on each edge.
+  // width — the local canvas width minus whatever's reserved on each edge.
   // Reserved whether or not a neighbor actually exists, so the canvas
-  // doesn't resize as you page toward either end.
-  const pageWidth = pageTrackWidth(gridWidth, reservePx);
+  // doesn't resize as you page toward either end. Equals GRID_PREVIEW_WIDTHS
+  // exactly while simulating (by construction) — no separate preview-frame
+  // chrome to account for, since .grid-preview-frame carries no padding of
+  // its own (see grid.scss): the same GRID_CONTAINER_PADDING every
+  // breakpoint's react-grid-layout already reserves internally is the only
+  // inset, so it looks identical to editing your own real breakpoint.
+  const pageWidth = pageTrackWidth(localCanvasWidth, reservePx);
+
+  // localCanvasWidth is narrower than the real canvas while simulating —
+  // .grid-page-viewport still clips at the real width (see below), rather
+  // than a matching narrower one, so a peeking neighbor is only cut off by
+  // the real screen edge, never by an artificial inner boundary. This shifts
+  // the whole local peek/gap/active/gap/peek assembly to sit centered
+  // within that wider real viewport (half the leftover space); zero when
+  // not simulating (localCanvasWidth === width).
+  const simulatedCenteringOffsetPx = (width - localCanvasWidth) / 2;
 
   // Shifts the page track so the active page always sits centered — even
   // on the first page, where there's no `prev` pushing it rightward — with
   // exactly `reservePx` of margin (a neighbor peeking in, or just empty
   // space if none exists) on each side.
-  const restingTrackOffsetPx = reservePx - (prev ? pageWidth + slotGapPx : 0);
+  const restingTrackOffsetPx = simulatedCenteringOffsetPx + reservePx - (prev ? pageWidth + slotGapPx : 0);
   // Mid-slide (committedIndex ahead of/behind displayedIndex by one step),
   // overshoot by one extra slot in that direction — see the comment above
   // committedIndex/displayedIndex for why this, rather than just jumping
@@ -230,8 +310,20 @@ export default function Grid({
   const prevSignature = slotSignature(prev);
   const nextSignature = slotSignature(next);
   useLayoutEffect(() => {
-    for (const el of [armLeftRef.current, armRightRef.current]) {
-      if (!el) continue;
+    // The page that was JUST active a render ago demoting into this peek
+    // slot is a real page-change too (so it'd normally get the toggle below
+    // like any other), but it's mid-fading its own outline OUT right now
+    // (see grid.scss) — cycling it through display:none would cancel that
+    // transition before the browser ever gets to paint it, snapping the
+    // border away instantly instead. Skip only that specific arm; a
+    // genuinely different page entering the other side still gets fixed up
+    // as before.
+    const outgoingSignature = previousCurrentSignatureRef.current;
+    for (const [signature, el] of [
+      [prevSignature, armLeftRef.current],
+      [nextSignature, armRightRef.current],
+    ] as const) {
+      if (!el || signature === outgoingSignature) continue;
       el.style.display = 'none';
       void el.offsetHeight;
       el.style.display = '';
@@ -906,6 +998,47 @@ export default function Grid({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [goToDelta]);
 
+  // Shared by both placements below (only one is ever non-null at a time,
+  // per slideDirection). Forward appends it as a normal trailing flex child
+  // — that doesn't disturb prev/current/next's own flow positions (nothing
+  // precedes them), so the existing offset math above still applies
+  // unchanged and the track's shared transform carries it along for free.
+  // Backward can't use the same trick: a LEADING flex child WOULD shift
+  // prev/current/next's flow positions by one slot, and "fixing" the offset
+  // math to compensate would cancel out the very transform-value change the
+  // CSS transition needs in order to animate at all (the sibling's own
+  // position shift is instant, not eased) — collapsing the slide into a
+  // snap. Taking it out of flow with an absolute left instead means it
+  // still inherits the track's transform (so it slides along identically)
+  // without touching prev/current/next's positions at all.
+  const lookaheadSlot = lookaheadPage ? (
+    <div
+      key={`${effectiveBreakpoint}:${lookaheadSignature}:lookahead`}
+      className={`grid-page-slot grid-page-slot--peek grid-page-slot--incoming${lookaheadVisible ? ' grid-page-slot--incoming-visible' : ''}${isEditMode ? ' grid-page-slot--editing' : ''}`}
+      style={
+        slideDirection < 0
+          ? { width: pageWidth, position: 'absolute', top: 0, left: -(pageWidth + slotGapPx) }
+          : { width: pageWidth }
+      }
+    >
+      <div className="grid-page-slot-content">
+        {lookaheadPage.kind === 'real' ? (
+          <GridPage
+            key={`${effectiveBreakpoint}:${lookaheadPage.page.id}:lookahead`}
+            page={lookaheadPage.page}
+            effectiveBreakpoint={effectiveBreakpoint}
+            isEditMode={isEditMode}
+            isSimulating={false}
+            gridWidth={pageWidth}
+            onWidgetHeightsChange={handleWidgetHeightsChange}
+          />
+        ) : (
+          <BlankPagePane variant="peek" />
+        )}
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="grid-canvas" ref={containerRef}>
       {mounted && (
@@ -915,6 +1048,8 @@ export default function Grid({
             className="grid-page-track"
             style={{ transform: `translateX(${trackOffsetPx}px)`, gap: slotGapPx }}
           >
+            {slideDirection < 0 && lookaheadSlot}
+
             {prev && (
               <div
                 // Keyed by page identity alone (no role prefix) so a page
@@ -953,8 +1088,9 @@ export default function Grid({
             )}
 
             <div
+              ref={activeSlotRef}
               key={`${effectiveBreakpoint}:${current.kind === 'real' ? current.page.id : 'blank'}`}
-              className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}`}
+              className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}${isSimulating ? ' grid-page-slot--simulating' : ''}`}
               style={{ width: pageWidth }}
             >
               {current.kind === 'real' ? (
@@ -973,6 +1109,16 @@ export default function Grid({
                   onDrag={isEditMode ? handleActiveDrag : undefined}
                   onDragStop={isEditMode ? handleActiveDragStop : undefined}
                 />
+              ) : isSimulating ? (
+                // Mirrors GridPage's own .grid-preview-frame wrapping for a
+                // real page — without it, the blank placeholder has no
+                // element for .grid-page-slot--simulating's CSS (see
+                // grid.scss) to paint the "being edited" background/outline
+                // onto, since that treatment lives on .grid-preview-frame
+                // rather than the (real-width) slot while simulating.
+                <div className="grid-preview-frame" style={{ width: pageWidth }}>
+                  <BlankPagePane variant="current" />
+                </div>
               ) : (
                 // Purely a placeholder — the blank page only ever becomes
                 // real via dragging a widget onto it (above) or clicking
@@ -1009,6 +1155,8 @@ export default function Grid({
                 </div>
               </div>
             )}
+
+            {slideDirection > 0 && lookaheadSlot}
           </div>
         </div>
       )}

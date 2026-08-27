@@ -1,0 +1,108 @@
+@use 'tokens' as *;
+
+// Floating edit-mode toggle + breakpoint-tab bar for a Grid instance.
+// Positioned fixed within whichever page hosts the grid — that page's own
+// wrapper needs bottom padding clearing this bar's footprint (see
+// pages/dashboard.scss's padding-bottom).
+.grid-status-bar {
+  position: fixed;
+  right: 1.5rem;
+  bottom: $toolbar-bottom-offset;
+  z-index: 500;
+  display: flex;
+  align-items: stretch;
+  // Fixed height (matches the toggle button) is the single source of truth
+  // for both children — without it the toggle didn't cover the row's full
+  // height, leaving slivers of the tab buttons visible.
+  height: $toolbar-height;
+  background: var(--background-primary-alt);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+  // Clipping to the same radius as the border means any child (like the
+  // toggle button below) reads as part of one seamless shape instead of
+  // a bordered button floating inside a bordered bar.
+  overflow: hidden;
+}
+
+// 0fr -> 1fr animates smoothly unlike `auto`. minmax(0, ...) is required —
+// a bare `0fr` track still floors at its content's min-content width, so
+// without it the collapsed tab buttons stay slightly visible.
+.grid-status-bar-expand {
+  display: grid;
+  grid-template-columns: minmax(0, 0fr);
+  // Flex items default to min-width: auto (a separate floor from the grid
+  // track's minmax(0, ...) above) — without this override, room stayed
+  // reserved for the collapsed tab buttons behind the toggle.
+  min-width: 0;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.grid-status-bar--expanded .grid-status-bar-expand {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.grid-status-bar-expand-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  // Left padding only: the add-widget button sits flush against the right
+  // edge (and therefore the toggle button next to it) with no gap.
+  padding: 0 0 0 0.5rem;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.grid-status-bar-add {
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: var(--color-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.grid-status-bar-toggle {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--text-normal);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.grid-status-bar-toggle--confirm {
+  color: var(--text-success);
+  background: var(--background-modifier-success);
+
+  &:hover {
+    background: color-mix(in srgb, var(--background-modifier-success) 70%, var(--text-success) 30%);
+  }
+}
