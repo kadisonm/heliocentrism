@@ -27,6 +27,10 @@ concurrency:
 jobs:
   # Build job
   build:
+    # Environment-scoped secrets are only exposed to jobs attached to the
+    # matching environment, and this build step needs them to bake the
+    # Firebase config into the static export.
+    environment: github-pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
