@@ -3,6 +3,7 @@
 ---
 
 # General Fixes
+- [ ] Add NEXT_PUBLIC_FIREBASE_* repo secrets in GitHub (Settings > Secrets and variables > Actions) so the Pages deploy can build with Firebase configured. See .env.example for the full var list.
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
 

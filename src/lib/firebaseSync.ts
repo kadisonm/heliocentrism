@@ -20,10 +20,8 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from './data';
-import { clearSetting, loadSetting, saveSetting } from './fileStorage';
-import type { DashboardState, FirebaseConfig, Subtask, SyncStatus, Task, TaskList } from './types';
-
-const FIREBASE_CONFIG_KEY = 'firebase_config';
+import type { DashboardState, Subtask, SyncStatus, Task, TaskList } from './types';
+import { loadGlobalFirebaseConfig } from './globalFirebaseConfig';
 
 type FirebaseServices = {
   app: FirebaseApp;
@@ -53,77 +51,8 @@ function formatAuthError(prefix: string, error: unknown): string {
   return `${prefix}: ${firebaseError.message || 'Unknown authentication error.'}`;
 }
 
-function normalizeConfig(config: FirebaseConfig): FirebaseConfig {
-  return {
-    apiKey: config.apiKey.trim(),
-    authDomain: config.authDomain.trim(),
-    projectId: config.projectId.trim(),
-    appId: config.appId.trim(),
-    storageBucket: config.storageBucket?.trim() || '',
-    messagingSenderId: config.messagingSenderId?.trim() || '',
-    measurementId: config.measurementId?.trim() || '',
-  };
-}
-
-export function validateFirebaseConfig(config: FirebaseConfig): {
-  valid: boolean;
-  missingFields: string[];
-} {
-  const required: Array<keyof FirebaseConfig> = [
-    'apiKey',
-    'authDomain',
-    'projectId',
-    'appId',
-  ];
-
-  const normalized = normalizeConfig(config);
-  const missingFields = required.filter((field) => !normalized[field]);
-
-  return {
-    valid: missingFields.length === 0,
-    missingFields,
-  };
-}
-
-export function saveFirebaseConfig(config: FirebaseConfig): {
-  success: boolean;
-  message: string;
-} {
-  const normalized = normalizeConfig(config);
-  const { valid, missingFields } = validateFirebaseConfig(normalized);
-
-  if (!valid) {
-    return {
-      success: false,
-      message: `Missing required fields: ${missingFields.join(', ')}`,
-    };
-  }
-
-  saveSetting(FIREBASE_CONFIG_KEY, normalized);
-  return {
-    success: true,
-    message: 'Firebase config saved.',
-  };
-}
-
-export function loadFirebaseConfig(): FirebaseConfig | null {
-  const config = loadSetting(FIREBASE_CONFIG_KEY, null);
-  if (!config) return null;
-
-  const normalized = normalizeConfig(config as FirebaseConfig);
-  return validateFirebaseConfig(normalized).valid ? normalized : null;
-}
-
-export function clearFirebaseConfig(): void {
-  clearSetting(FIREBASE_CONFIG_KEY);
-  // Otherwise getFirebaseServices() below would keep serving the stale
-  // cached instance and never notice config is gone — breaking the
-  // onboarding gate's "clear config re-blocks the app" behavior.
-  cachedServices = undefined;
-}
-
 export function isFirebaseConfigured(): boolean {
-  return !!loadFirebaseConfig();
+  return !!loadGlobalFirebaseConfig();
 }
 
 // The app/db pairing can't change mid-session, so cache the success case to
@@ -135,7 +64,7 @@ let cachedServices: FirebaseServices | null | undefined;
 function getFirebaseServices(): FirebaseServices | null {
   if (cachedServices !== undefined) return cachedServices;
 
-  const config = loadFirebaseConfig();
+  const config = loadGlobalFirebaseConfig();
   if (!config) return null;
 
   const app = getApps().length > 0 ? getApps()[0] : initializeApp(config);
