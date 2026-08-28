@@ -43,7 +43,11 @@
   }
 }
 
-.page-dot--blank {
+// :not(--active) since the blank dot IS the active one while sitting on it
+// (before it becomes a real page) — without this, equal specificity plus
+// this rule's later source position would let its muted background win over
+// --active's accent color for that dot.
+.page-dot--blank:not(.page-dot--active) {
   background: var(--background-modifier-hover);
 
   &:hover {

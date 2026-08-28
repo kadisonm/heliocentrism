@@ -84,11 +84,6 @@ export default function GridPage({
   onDragStop,
 }: GridPageProps) {
   const gridElRef = useRef<HTMLDivElement>(null);
-  // TEMP DEBUG
-  useEffect(() => {
-    console.log(`[gridpage ${page.id}] MOUNTED at ${performance.now().toFixed(1)}ms`);
-    return () => console.log(`[gridpage ${page.id}] UNMOUNTED at ${performance.now().toFixed(1)}ms`);
-  }, [page.id]);
 
   // page.id only changes when `page` itself does, which already forces a
   // full remount via Grid.tsx's `key` — so as long as the callback props
@@ -119,8 +114,6 @@ export default function GridPage({
         const patches = Array.from(pendingHeightsRef.current, ([id, h]) => ({ id, h }));
         pendingHeightsRef.current.clear();
         suppressLayoutTransitionRef.current = true;
-        // TEMP DEBUG
-        console.log(`[gridpage ${page.id}] flushing height patches ${JSON.stringify(patches)} at ${performance.now().toFixed(1)}ms`);
         onWidgetHeightsChange?.(page.id, patches);
       }, HEIGHT_COALESCE_MS);
     },
@@ -188,17 +181,17 @@ export default function GridPage({
 
   // Edit/view mode toggling on the SAME page shouldn't animate every widget
   // jumping to its new layout; a drag/resize settling into place should.
-  // Page/breakpoint switches already remount fresh (see Grid.tsx's `key`),
-  // so there's nothing to suppress for those cases — only this one remains.
   // Also keyed on gridWidth, not just isEditMode, since a width change can
   // happen without isEditMode itself changing (e.g. a window resize).
   //
+  // A peek<->active role flip needs the same treatment, but is handled by
+  // Grid.tsx instead (see its own snap effect) — that one has to coordinate
+  // BOTH the page losing active status and the one gaining it in a single
+  // shared reflow, which isn't possible from inside just one of them.
+  //
   // Skipped on the very first run (a fresh mount): the whole point of this
   // toggle is to cancel a transition already in flight on an
-  // already-painted element, which a just-mounted one never has — so the
-  // forced reflow below is pure unpaid cost on every page switch (GridPage
-  // remounts fresh per page) for a state that was never going to animate
-  // anyway.
+  // already-painted element, which a just-mounted one never has.
   const hasMountedRef = useRef(false);
   useLayoutEffect(() => {
     if (!hasMountedRef.current) {

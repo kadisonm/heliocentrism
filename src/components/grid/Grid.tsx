@@ -394,15 +394,47 @@ export default function Grid({
       applyDisplayedIndexInstantly(committedIndex);
       return;
     }
-    // TEMP DEBUG
-    console.log(`[slide] started at ${performance.now().toFixed(1)}ms, settling in ${PAGE_SLIDE_MS}ms`);
     slideTimeoutRef.current = setTimeout(() => {
       slideTimeoutRef.current = null;
-      // TEMP DEBUG
-      console.log(`[slide] SETTLED at ${performance.now().toFixed(1)}ms`);
       applyDisplayedIndexInstantly(committedIndex);
     }, PAGE_SLIDE_MS);
   }, [committedIndex, displayedIndex, applyDisplayedIndexInstantly]);
+
+  // react-grid-layout has its own internal "mounted" flag that permanently
+  // enables its CSS transforms/transitions after a <GridLayout>'s true first
+  // render. Since a page's GridPage now survives a peek<->active role change
+  // instead of remounting (see the shared-key comments below), that flag
+  // stays "on" for the rest of that instance's life — so EVERY later role
+  // handoff needs its own transition explicitly snapped off for one frame,
+  // on both the page losing active status and the one gaining it (a role
+  // change on either side can equally leave react-grid-layout free to
+  // animate something), or the settled slide is immediately followed by a
+  // second, unwanted mini-animation as items "jump" into place.
+  //
+  // Done here rather than inside GridPage itself so both affected pages
+  // share ONE forced layout read (via track.offsetHeight, which flushes
+  // pending layout for the whole subtree) instead of each forcing its own —
+  // two separate reflows for one role handoff was measurably slower,
+  // especially for a page with a lot of widget content.
+  //
+  // Skipped on the very first run (a fresh mount of Grid itself) — there's
+  // no prior role assignment yet for any of this to be canceling.
+  const hasSnappedRoleChangeRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!hasSnappedRoleChangeRef.current) {
+      hasSnappedRoleChangeRef.current = true;
+      return;
+    }
+    const track = trackRef.current;
+    const gridEls = track?.querySelectorAll<HTMLElement>('.grid-page-slot--active .grid, .grid-page-slot--peek .grid');
+    if (!track || !gridEls || gridEls.length === 0) return;
+    for (const el of gridEls) el.classList.add('grid--no-transition');
+    void track.offsetHeight; // one shared forced reflow, flushed for every affected page at once
+    const raf = requestAnimationFrame(() => {
+      for (const el of gridEls) el.classList.remove('grid--no-transition');
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [currentSignature]);
 
   useEffect(() => () => {
     if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
