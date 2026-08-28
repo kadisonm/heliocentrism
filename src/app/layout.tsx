@@ -68,10 +68,11 @@ export default function RootLayout({
           // default while the Firestore-backed setting loads.
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
-        <ThemeSync />
-        <Background />
         <SplashScreen />
+        {/* ThemeSync/Background read the Redux store, so they must be inside ClientRoot's Provider. */}
         <ClientRoot>
+          <ThemeSync />
+          <Background />
           <Nav />
           {children}
         </ClientRoot>
