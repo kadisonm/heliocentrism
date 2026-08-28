@@ -15,6 +15,7 @@ import {
   pageTrackWidth,
 } from '../../lib/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
+import { areGesturesLocked } from '../../lib/gestureLock';
 import { clampPageIndex } from '../../lib/pageNavigation';
 import BlankPagePane from './BlankPagePane';
 import GridPage from './GridPage';
@@ -30,6 +31,7 @@ const WHEEL_COOLDOWN_MS = 400; // ignore further wheel deltas for this long afte
 const PAGE_SLIDE_MS = 250; // kept in sync by hand with .grid-page-track's transition duration
 const RUBBER_BAND_MAX_PX = 80; // asymptotic cap on how far a drag can pull the track past an edge with no neighbor
 const RUBBER_BAND_RESISTANCE = 0.55; // 0..1 — lower = stiffer resistance past the edge
+const PAGE_HOP_HOLD_MS = 500; // how long a dragged widget must hover a peek neighbor before it hops onto that page
 
 // Diminishing-returns curve (same shape as UIScrollView's overscroll bounce)
 // for dragging the track past an edge with no neighbor to reveal — used only
@@ -456,6 +458,46 @@ export default function Grid({
     grabOffsetY: number;
   } | null>(null);
 
+  // Requires the cursor to keep sitting inside a peek neighbor's hitbox for
+  // PAGE_HOP_HOLD_MS before it actually triggers a hop, rather than firing
+  // the instant it enters — a bare hitbox test made brushing past a
+  // neighbor (or overshooting a drop target) on the way somewhere else read
+  // as an accidental page switch. Re-arming (not resetting) on repeated
+  // calls for the SAME side is what makes this a one-shot dwell timer
+  // rather than something that restarts every drag-move frame.
+  const hopHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hopHoldDirectionRef = useRef<'left' | 'right' | null>(null);
+  // Reassigned imperatively by whichever caller last armed the hold (same
+  // ref-callback pattern as beginRelocationRef below), rather than threaded
+  // through as a callback argument — lets armHopHold stay a plain, stable
+  // function while still always firing whatever the most recent hitbox
+  // frame decided should happen, not a stale closure from when the hold
+  // first started.
+  const hopHoldFireRef = useRef<(() => void) | null>(null);
+
+  const clearHopHold = useCallback(() => {
+    if (hopHoldTimeoutRef.current) {
+      clearTimeout(hopHoldTimeoutRef.current);
+      hopHoldTimeoutRef.current = null;
+    }
+    hopHoldDirectionRef.current = null;
+    hopHoldFireRef.current = null;
+  }, []);
+
+  const armHopHold = useCallback(
+    (direction: 'left' | 'right') => {
+      if (hopHoldDirectionRef.current === direction) return; // already counting down for this side
+      if (hopHoldTimeoutRef.current) clearTimeout(hopHoldTimeoutRef.current);
+      hopHoldDirectionRef.current = direction;
+      hopHoldTimeoutRef.current = setTimeout(() => {
+        hopHoldTimeoutRef.current = null;
+        hopHoldDirectionRef.current = null;
+        hopHoldFireRef.current?.();
+      }, PAGE_HOP_HOLD_MS);
+    },
+    []
+  );
+
   // Kept fresh after every render (via the layout effect below, never
   // written during render itself) so the imperative, gesture-scoped
   // listeners further down — added only while a cross-page relocation is
@@ -642,6 +684,25 @@ export default function Grid({
     const state = relocationRef.current;
     if (!state) return;
     updateGhostPosition(point);
+
+    // `.grid-page-slot--active` doesn't actually swap onto the target page
+    // until the hop's slide settles (state.pendingConfirmation clears — see
+    // relocationRef's big comment), so until then this selector still
+    // resolves to the page being slid AWAY from, which doesn't contain this
+    // widget's target-page siblings at all: every query below would just
+    // miss, while still paying for a forced layout read
+    // (getBoundingClientRect) on every single animation frame, fighting the
+    // track's own CSS transition for the main thread for zero visible
+    // benefit — this is what actually caused the frame drops and the
+    // pushed-aside-widgets preview freezing then jumping once the slide
+    // caught up. Skip the whole thing and let the ghost (already
+    // repositioned above) carry the cursor on its own meanwhile; a real
+    // drop still has to flush through once, even mid-slide, so it's exempt.
+    if (state.pendingConfirmation && !isDropping) {
+      placeholderElRef.current?.style.setProperty('display', 'none');
+      return;
+    }
+
     const { effectiveBreakpoint, pages, onLayoutChange } = liveRef.current;
     const gridEl = document.querySelector<HTMLElement>('.grid-page-slot--active .grid');
     if (!gridEl) return;
@@ -733,6 +794,7 @@ export default function Grid({
     const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
 
     const placeholderEl = ensurePlaceholder(gridEl);
+    placeholderEl.style.display = ''; // undo the pendingConfirmation hide above, now that there's somewhere real to show it
     const pos = calcGridItemPosition(positionParams, resolvedItem.x, resolvedItem.y, state.w, liveH);
     placeholderEl.style.left = `${pos.left}px`;
     placeholderEl.style.top = `${pos.top}px`;
@@ -777,7 +839,8 @@ export default function Grid({
     pendingPointRef.current = null;
     armLeftRef.current?.classList.remove('grid-page-slot--armed');
     armRightRef.current?.classList.remove('grid-page-slot--armed');
-  }, [applyRelocatedPosition, revealRelocatedWidget, destroyGhost, destroyPlaceholder]);
+    clearHopHold();
+  }, [applyRelocatedPosition, revealRelocatedWidget, destroyGhost, destroyPlaceholder, clearHopHold]);
 
   // Coalesced to at most once per animation frame — a raw mousemove/
   // touchmove can fire far faster than that, and each call already writes
@@ -814,11 +877,18 @@ export default function Grid({
       const inHitbox = overLeft || overRight;
       if (state.awaitingExit) {
         if (!inHitbox) state.awaitingExit = false; // cursor cleared the zone — a fresh entry can arm again
-      } else if (inHitbox) {
-        beginRelocationRef.current(overLeft ? 'left' : 'right', state.widgetId, state.w, state.h);
+        clearHopHold();
+        return;
       }
+      if (!inHitbox) {
+        clearHopHold();
+        return;
+      }
+      const direction = overLeft ? 'left' : 'right';
+      hopHoldFireRef.current = () => beginRelocationRef.current(direction, state.widgetId, state.w, state.h);
+      armHopHold(direction);
     },
-    [scheduleRelocatedPositionUpdate]
+    [scheduleRelocatedPositionUpdate, armHopHold, clearHopHold]
   );
 
   // Hands a widget off to the peek neighbor on `direction`, replicating
@@ -909,11 +979,19 @@ export default function Grid({
       const overRight = !!next && isPointInRect(point, armRightRef.current?.getBoundingClientRect());
       armLeftRef.current?.classList.toggle('grid-page-slot--armed', overLeft);
       armRightRef.current?.classList.toggle('grid-page-slot--armed', overRight);
-      if (overLeft || overRight) {
-        beginRelocation(overLeft ? 'left' : 'right', newItem.i, newItem.w, newItem.h, point, element);
+      if (!overLeft && !overRight) {
+        clearHopHold();
+        return;
       }
+      const direction = overLeft ? 'left' : 'right';
+      // Reassigned every frame spent hovering the hitbox, so whenever
+      // armHopHold's timer actually fires (PAGE_HOP_HOLD_MS later) it hands
+      // off the CURRENT cursor position/element to beginRelocation, not a
+      // stale one captured back when the hold first started.
+      hopHoldFireRef.current = () => beginRelocation(direction, newItem.i, newItem.w, newItem.h, point, element);
+      armHopHold(direction);
     },
-    [prev, next, beginRelocation]
+    [prev, next, beginRelocation, armHopHold, clearHopHold]
   );
 
   const handleActiveDragStop = useCallback(() => {
@@ -924,7 +1002,8 @@ export default function Grid({
     if (relocationRef.current) return;
     armLeftRef.current?.classList.remove('grid-page-slot--armed');
     armRightRef.current?.classList.remove('grid-page-slot--armed');
-  }, []);
+    clearHopHold();
+  }, [clearHopHold]);
 
   // Safety net: release the gesture-scoped window listeners if this
   // component unmounts mid-drag (e.g. navigating away).
@@ -1025,7 +1104,13 @@ export default function Grid({
 
     const handleTouchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
-      if (!touchStart || !touch || relocationRef.current) return;
+      // relocationRef: a cross-page WIDGET drag is already steering the
+      // view. areGesturesLocked: some widget's own internal gesture (today,
+      // dragging a task/subtask row — see gestureLock.ts) has claimed this
+      // touch instead; without this, the drag's own touchmove deltas were
+      // easily big enough to also trip this handler's lock-detection below,
+      // paging the whole track out from under the row being dragged.
+      if (!touchStart || !touch || relocationRef.current || areGesturesLocked()) return;
       const dx = touch.clientX - touchStart.x;
       const dy = touch.clientY - touchStart.y;
       if (touchLocked === null && Math.abs(dx) + Math.abs(dy) > 10) {

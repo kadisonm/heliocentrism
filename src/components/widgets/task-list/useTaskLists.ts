@@ -6,6 +6,7 @@ import { move } from '@dnd-kit/helpers';
 import { useEffect, useSyncExternalStore } from 'react';
 import { DEFAULT_SUBTASKS, DEFAULT_TASKS, DEFAULT_TASK_LISTS } from '../../../lib/data';
 import { readSubtasks, readTaskLists, readTasks, writeSubtasks, writeTaskLists, writeTasks } from '../../../lib/firebaseSync';
+import { lockGestures, unlockGestures } from '../../../lib/gestureLock';
 import { nextOrder } from '../../../lib/reorder';
 import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../../../lib/taskCascade';
 import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../../../lib/taskRepeat';
@@ -54,6 +55,14 @@ function getDraggingIdSnapshot() {
 }
 
 function setDraggingId(id: string | null) {
+  // Claims/releases the shared gesture lock exactly on the null<->non-null
+  // transition (see gestureLock.ts) — this is the one choke point both a
+  // task and a subtask drag already funnel through (TaskDragProvider's
+  // handleDragStart/handleDragEnd call it unconditionally for either type),
+  // so page-swipe paging backs off for the whole duration of either kind of
+  // row drag without needing to know the difference itself.
+  if (draggingId === null && id !== null) lockGestures();
+  else if (draggingId !== null && id === null) unlockGestures();
   draggingId = id;
   notify();
 }
