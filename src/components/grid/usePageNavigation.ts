@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { buildVirtualPages, clampPageIndex } from '../../lib/pageNavigation';
+import { buildVirtualPages, clampPageIndex } from '../../lib/grid/pageNavigation';
 import type { DashboardPage } from '../../lib/types';
 
 // Shared by Grid.tsx (peek carousel + gestures) and page.tsx (dots +

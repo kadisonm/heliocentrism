@@ -1,4 +1,4 @@
-import type { FirebaseConfig } from './types';
+import type { FirebaseConfig } from '../types';
 
 // The single Firebase project config for this deployment, baked in at build
 // time from NEXT_PUBLIC_* env vars (static export has no server to read

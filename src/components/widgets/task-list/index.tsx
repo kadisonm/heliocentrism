@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/react';
 import { Eye, EyeOff, Layers, Plus, RefreshCw, Calendar, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWidgetContext } from '../../grid/widgetContext';
-import { isTaskDone } from '../../../lib/taskCascade';
+import { isTaskDone } from '../../../lib/tasks/taskCascade';
 import type { Subtask, Task, TaskList } from '../../../lib/types';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';

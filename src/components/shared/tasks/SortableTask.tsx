@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { Subtask, Task } from '../../../lib/types';
-import { isTaskDone } from '../../../lib/taskCascade';
+import { isTaskDone } from '../../../lib/tasks/taskCascade';
 import TaskParent, { type TaskParentHandlers } from './TaskParent';
 import { TASK_TYPE } from './taskSortableTypes';
 import { useTaskSortable } from './useTaskSortable';

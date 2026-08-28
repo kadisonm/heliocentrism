@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createDefaultStages } from '../../../lib/taskCascade';
+import { createDefaultStages } from '../../../lib/tasks/taskCascade';
 import type { Task } from '../../../lib/types';
 import EditorActions from '../../shared/editor/EditorActions';
 import EditorDueField from '../../shared/editor/EditorDueField';

@@ -1,5 +1,5 @@
 import { Calendar, RefreshCw } from 'lucide-react';
-import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/taskRepeat';
+import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/tasks/taskRepeat';
 import type { Subtask, Task } from '../../../lib/types';
 import Badge from '../../common/Badge';
 import { dueBadgeColor, formatDue, formatDueFull, getDueUrgency } from './dueDate';

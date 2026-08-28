@@ -8,7 +8,7 @@ import {
   signInWithGoogle,
   signOutFirebaseUser,
   subscribeToAuthState,
-} from '../../../lib/firebaseSync';
+} from '../../../lib/firebase/firebaseSync';
 import SectionHeader from '../../common/SectionHeader';
 import SettingsField from '../../common/SettingsField';
 import StatusAlert, { type StatusTone } from '../../common/StatusAlert';

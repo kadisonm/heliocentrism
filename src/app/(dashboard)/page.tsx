@@ -7,7 +7,7 @@ import PageDots from '../../components/grid/PageDots';
 import { ALL_BREAKPOINTS, useGridState } from '../../components/grid/useGridState';
 import { usePageNavigation } from '../../components/grid/usePageNavigation';
 import { useDeviceTier } from '../../components/grid/useDeviceTier';
-import { clampPageIndex } from '../../lib/pageNavigation';
+import { clampPageIndex } from '../../lib/grid/pageNavigation';
 import TaskDragProvider from '../../components/widgets/task-list/TaskDragProvider';
 import type { DashboardBreakpoint } from '../../lib/types';
 

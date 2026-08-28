@@ -13,8 +13,8 @@ import {
   setWidgetHeights as setWidgetHeightsAction,
   updateWidget as updateWidgetAction,
 } from '../../lib/store/gridSlice';
-import { DEFAULT_WIDGET_SIZE } from '../../lib/gridConfig';
-import { findWidgetDefinition } from '../../lib/widgetRegistry';
+import { DEFAULT_WIDGET_SIZE } from '../../lib/grid/gridConfig';
+import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
 import type { DashboardBreakpoint, DashboardWidget } from '../../lib/types';
 
 export { ALL_BREAKPOINTS };

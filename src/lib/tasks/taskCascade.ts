@@ -1,4 +1,4 @@
-import type { Subtask, Task, TaskStageDef } from './types';
+import type { Subtask, Task, TaskStageDef } from '../types';
 
 export function getNextStageIndex(current: number, stagesLength: number): number {
   return (current + 1) % stagesLength;
@@ -79,5 +79,35 @@ export function clampTaskStages(task: Task, subtasks: Subtask[]): CascadeResult 
     task: { ...task, stage: Math.min(task.stage, maxIndex) },
     subtasks: subtasks.map((subtask) => ({ ...subtask, stage: Math.min(subtask.stage, maxIndex) })),
   };
+}
+
+// Compares done-ness before vs. after, not raw stage numbers — a stages
+// list shrinking can make the SAME numeric index mean "done" when it
+// didn't before, which a raw number comparison would miss.
+export function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; completedAt: string | null }>(
+  wasDone: boolean,
+  updated: T,
+  now: string
+): T {
+  const isDone = isTaskDone(updated);
+  if (wasDone === isDone) return updated;
+  return { ...updated, completedAt: isDone ? now : null };
+}
+
+// Mirrors withStageTimestamps for one subtask. Needed so a subtask with its
+// own repeat has an accurate completedAt to check against (shouldResetSubtask)
+// instead of reading null and being treated as immediately stale.
+export function withSubtaskCompletedAt(wasDone: boolean, subtask: Subtask, stages: TaskStageDef[], now: string): Subtask {
+  const isDone = isTaskDone({ stage: subtask.stage, stages });
+  if (wasDone === isDone) return subtask;
+  return { ...subtask, completedAt: isDone ? now : null };
+}
+
+// Replaces just the given task's own subtasks within the flat `subtasks`
+// array, leaving every other task's subtasks (and any non-matching id
+// within `updated`, which shouldn't happen) untouched.
+export function replaceSubtasks(subtasks: Subtask[], updated: Subtask[]): Subtask[] {
+  const updatedById = new Map(updated.map((s) => [s.id, s]));
+  return subtasks.map((subtask) => updatedById.get(subtask.id) ?? subtask);
 }
 

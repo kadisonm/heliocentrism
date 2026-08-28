@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { WIDGET_REGISTRY } from '../../lib/widgetRegistry';
+import { WIDGET_REGISTRY } from '../../lib/grid/widgetRegistry';
 import Modal from '../common/Modal';
 
 type AddWidgetModalProps = {

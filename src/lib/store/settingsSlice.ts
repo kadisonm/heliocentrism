@@ -6,7 +6,7 @@ import {
   DEFAULT_THEME_SETTINGS,
   type AppSettings,
 } from '../data';
-import { readAppSettings } from '../firebaseSync';
+import { readAppSettings } from '../firebase/firebaseSync';
 import type { AppDispatch } from './store';
 
 export type SettingsState = {

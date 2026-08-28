@@ -1,8 +1,8 @@
 'use client';
 
 import { createElement, useState } from 'react';
-import { BUILT_IN_STAGE_PRESETS } from '../../../lib/taskCascade';
-import { getTaskStageIcon } from '../../../lib/taskStageIcons';
+import { BUILT_IN_STAGE_PRESETS } from '../../../lib/tasks/taskCascade';
+import { getTaskStageIcon } from '../../../lib/tasks/taskStageIcons';
 import type { StageColor, StagePreset, TaskStageDef } from '../../../lib/types';
 import { useSettings } from '../settings/useSettings';
 import EditorField from './EditorField';

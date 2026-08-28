@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBreakpointForWidth } from '../../lib/gridConfig';
+import { getBreakpointForWidth } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint } from '../../lib/types';
 
 // Tracks the viewport's actual breakpoint tier — distinct from the grid's

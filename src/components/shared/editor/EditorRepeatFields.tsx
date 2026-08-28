@@ -1,4 +1,4 @@
-import { createDefaultRepeat } from '../../../lib/taskRepeat';
+import { createDefaultRepeat } from '../../../lib/tasks/taskRepeat';
 import type { RepeatUnit, TaskRepeat } from '../../../lib/types';
 import EditorField from './EditorField';
 

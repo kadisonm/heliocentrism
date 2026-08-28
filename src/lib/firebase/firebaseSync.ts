@@ -19,8 +19,8 @@ import {
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
-import type { AppData, AppSettings } from './data';
-import type { DashboardState, Subtask, SyncStatus, Task, TaskList } from './types';
+import type { AppData, AppSettings } from '../data';
+import type { DashboardState, Subtask, SyncStatus, Task, TaskList } from '../types';
 import { loadGlobalFirebaseConfig } from './globalFirebaseConfig';
 
 type FirebaseServices = {

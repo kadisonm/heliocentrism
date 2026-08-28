@@ -13,10 +13,10 @@ import {
   PAGE_PEEK_SLIVER_PX,
   pageSoftHeightRows,
   pageTrackWidth,
-} from '../../lib/gridConfig';
+} from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
 import { areGesturesLocked } from '../../lib/gestureLock';
-import { clampPageIndex } from '../../lib/pageNavigation';
+import { clampPageIndex } from '../../lib/grid/pageNavigation';
 import BlankPagePane from './BlankPagePane';
 import GridPage from './GridPage';
 import { usePageNavigation } from './usePageNavigation';

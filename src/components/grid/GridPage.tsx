@@ -9,9 +9,9 @@ import {
   GRID_ITEM_MARGIN,
   GRID_ROW_HEIGHT,
   DEFAULT_WIDGET_MIN_SIZE,
-} from '../../lib/gridConfig';
+} from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardPage, DashboardWidget } from '../../lib/types';
-import { findWidgetDefinition } from '../../lib/widgetRegistry';
+import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
 import WidgetShell from './WidgetShell';
 
 const RESIZE_HANDLES: Array<'se' | 'sw'> = ['se', 'sw'];

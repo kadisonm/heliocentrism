@@ -1,12 +1,12 @@
 import type { ComponentType } from 'react';
-import ClockWidget from '../components/widgets/clock';
-import OrbitWidget from '../components/widgets/orbit';
-import PhotoWidget from '../components/widgets/photo';
-import PhotoSettingsModal from '../components/widgets/photo/PhotoSettingsModal';
-import PomodoroTimerWidget from '../components/widgets/pomodoro-timer';
-import PomodoroSettingsModal from '../components/widgets/pomodoro-timer/PomodoroSettingsModal';
-import SpacerWidget from '../components/widgets/spacer';
-import TaskListWidget from '../components/widgets/task-list';
+import ClockWidget from '../../components/widgets/clock';
+import OrbitWidget from '../../components/widgets/orbit';
+import PhotoWidget from '../../components/widgets/photo';
+import PhotoSettingsModal from '../../components/widgets/photo/PhotoSettingsModal';
+import PomodoroTimerWidget from '../../components/widgets/pomodoro-timer';
+import PomodoroSettingsModal from '../../components/widgets/pomodoro-timer/PomodoroSettingsModal';
+import SpacerWidget from '../../components/widgets/spacer';
+import TaskListWidget from '../../components/widgets/task-list';
 
 export type WidgetType =
   | 'task-list'

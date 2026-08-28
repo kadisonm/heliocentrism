@@ -1,7 +1,7 @@
 'use client';
 
 import { createElement, useState } from 'react';
-import { TASK_STAGE_ICON_NAMES, getTaskStageIcon } from '../../../lib/taskStageIcons';
+import { TASK_STAGE_ICON_NAMES, getTaskStageIcon } from '../../../lib/tasks/taskStageIcons';
 
 type EditorIconPickerProps = {
   value?: string;

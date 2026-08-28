@@ -1,4 +1,4 @@
-import type { DashboardBreakpoint } from './types';
+import type { DashboardBreakpoint } from '../types';
 
 export const GRID_BREAKPOINTS: Record<DashboardBreakpoint, number> = {
   desktop: 1200,

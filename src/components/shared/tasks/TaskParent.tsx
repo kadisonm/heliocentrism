@@ -2,7 +2,7 @@
 
 import { useDragOperation, useDroppable } from '@dnd-kit/react';
 import type { ReactNode } from 'react';
-import { getNextStageIndex, isTaskDone } from '../../../lib/taskCascade';
+import { getNextStageIndex, isTaskDone } from '../../../lib/tasks/taskCascade';
 import type { Subtask, Task, TaskStageDef } from '../../../lib/types';
 import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import { subtaskType, subtasksZoneId } from './taskSortableTypes';

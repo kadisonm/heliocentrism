@@ -2,8 +2,8 @@
 
 import { GripVertical, Settings, UnfoldVertical, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { pxToGridRows } from '../../lib/gridConfig';
-import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/widgetRegistry';
+import { pxToGridRows } from '../../lib/grid/gridConfig';
+import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/grid/widgetRegistry';
 import type { DashboardWidget } from '../../lib/types';
 import { WidgetContext } from './widgetContext';
 

@@ -3,12 +3,20 @@ import type { DragEndEvent, DragOverEvent } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
 import { move } from '@dnd-kit/helpers';
 import { DEFAULT_SUBTASKS, DEFAULT_TASKS, DEFAULT_TASK_LISTS } from '../data';
-import { readSubtasks, readTaskLists, readTasks } from '../firebaseSync';
-import { nextOrder } from '../reorder';
-import { createDefaultStages, cycleSubtaskStage, cycleTaskStage, isTaskDone } from '../taskCascade';
-import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../taskRepeat';
+import { readSubtasks, readTaskLists, readTasks } from '../firebase/firebaseSync';
+import { nextOrder } from '../tasks/reorder';
+import {
+  cycleSubtaskStage,
+  cycleTaskStage,
+  isTaskDone,
+  replaceSubtasks,
+  withStageTimestamps,
+  withSubtaskCompletedAt,
+} from '../tasks/taskCascade';
+import { applySubtaskGroups, applyTaskGroups, groupedSubtaskIds, groupedTaskIds } from '../tasks/taskDragReorder';
+import { normalizeSubtask, normalizeTask } from '../tasks/taskNormalize';
+import { resetDueSubtasks, resetRepeatingTask, shouldResetTask } from '../tasks/taskRepeat';
 import type { Subtask, Task, TaskList, TaskRepeat, TaskStageDef } from '../types';
-import { subtasksZoneId } from '../../components/shared/tasks/taskSortableTypes';
 import type { AppDispatch, RootState } from './store';
 
 export type EditingRow = { type: 'task'; taskId: string } | { type: 'subtask'; taskId: string; subtaskId: string };
@@ -38,31 +46,6 @@ const initialState: TaskListsState = {
   dragSnapshot: null,
 };
 
-function normalizeTask(task: Task): Task {
-  const now = new Date().toISOString();
-  const hasStages = Array.isArray(task.stages) && task.stages.length >= 2;
-  const stages = hasStages ? task.stages : createDefaultStages();
-
-  return {
-    ...task,
-    stage: Math.min(task.stage, stages.length - 1),
-    stages,
-    order: task.order ?? 0,
-    createdAt: task.createdAt || now,
-    updatedAt: task.updatedAt || now,
-    completedAt: task.completedAt ?? null,
-  };
-}
-
-function normalizeSubtask(subtask: Subtask): Subtask {
-  return {
-    ...subtask,
-    order: subtask.order ?? 0,
-    due: subtask.due ?? '',
-    completedAt: subtask.completedAt ?? null,
-  };
-}
-
 let hasStartedLoad = false;
 
 export const loadTaskLists = createAsyncThunk('taskLists/load', async () => {
@@ -78,102 +61,6 @@ export function ensureTaskListsLoaded(dispatch: AppDispatch) {
   if (hasStartedLoad) return;
   hasStartedLoad = true;
   dispatch(loadTaskLists()).then(() => dispatch(runRepeatResetCheck()));
-}
-
-// Compares done-ness before vs. after, not raw stage numbers — a stages
-// list shrinking can make the SAME numeric index mean "done" when it
-// didn't before, which a raw number comparison would miss.
-function withStageTimestamps<T extends { stage: number; stages: TaskStageDef[]; completedAt: string | null }>(
-  wasDone: boolean,
-  updated: T,
-  now: string
-): T {
-  const isDone = isTaskDone(updated);
-  if (wasDone === isDone) return updated;
-  return { ...updated, completedAt: isDone ? now : null };
-}
-
-// Mirrors withStageTimestamps for one subtask. Needed so a subtask with its
-// own repeat has an accurate completedAt to check against (shouldResetSubtask)
-// instead of reading null and being treated as immediately stale.
-function withSubtaskCompletedAt(wasDone: boolean, subtask: Subtask, stages: TaskStageDef[], now: string): Subtask {
-  const isDone = isTaskDone({ stage: subtask.stage, stages });
-  if (wasDone === isDone) return subtask;
-  return { ...subtask, completedAt: isDone ? now : null };
-}
-
-// Replaces just the given task's own subtasks within the flat `subtasks`
-// array, leaving every other task's subtasks (and any non-matching id
-// within `updated`, which shouldn't happen) untouched.
-function replaceSubtasks(subtasks: Subtask[], updated: Subtask[]): Subtask[] {
-  const updatedById = new Map(updated.map((s) => [s.id, s]));
-  return subtasks.map((subtask) => updatedById.get(subtask.id) ?? subtask);
-}
-
-// Not-done tasks grouped by list id and ordered — the shape @dnd-kit/helpers'
-// move() expects. Done tasks are excluded unconditionally so every task's
-// sortable `index` stays consistent regardless of per-widget "show completed".
-function groupedTaskIds(state: TaskListsState): Record<string, string[]> {
-  const grouped: Record<string, string[]> = {};
-  for (const list of state.taskLists) grouped[list.id] = [];
-  for (const task of [...state.tasks].sort((a, b) => a.order - b.order)) {
-    if (isTaskDone(task)) continue;
-    (grouped[task.parentId] ??= []).push(task.id);
-  }
-  return grouped;
-}
-
-// Applies a new list->taskIds arrangement back onto the flat `tasks` array
-// (order/parentId). Done tasks are left exactly as they were — see
-// groupedTaskIds.
-function applyTaskGroups(tasks: Task[], grouped: Record<string, string[]>, now: string): Task[] {
-  const included = new Set(Object.values(grouped).flat());
-  const byId = new Map(tasks.map((t) => [t.id, t]));
-  const next: Task[] = [];
-
-  for (const [listId, ids] of Object.entries(grouped)) {
-    ids.forEach((id, order) => {
-      const task = byId.get(id);
-      if (!task) return;
-      next.push(task.parentId === listId && task.order === order ? task : { ...task, parentId: listId, order, updatedAt: now });
-    });
-  }
-  for (const task of tasks) if (!included.has(task.id)) next.push(task);
-  return next;
-}
-
-// Not-done subtasks grouped by parent task id — mirrors groupedTaskIds/
-// applyTaskGroups above. Subtasks never cross tasks (see SubtaskSortableRow's
-// per-task sortable `type`), so this only ever runs once, at drop.
-function groupedSubtaskIds(state: TaskListsState): Record<string, string[]> {
-  const grouped: Record<string, string[]> = {};
-  const stagesByTaskId = new Map(state.tasks.map((t) => [t.id, t.stages]));
-  for (const task of state.tasks) grouped[subtasksZoneId(task.id)] = [];
-  for (const subtask of [...state.subtasks].sort((a, b) => a.order - b.order)) {
-    const stages = stagesByTaskId.get(subtask.parentId);
-    if (!stages || isTaskDone({ stage: subtask.stage, stages })) continue;
-    (grouped[subtasksZoneId(subtask.parentId)] ??= []).push(subtask.id);
-  }
-  return grouped;
-}
-
-function applySubtaskGroups(state: TaskListsState, grouped: Record<string, string[]>): Subtask[] {
-  const included = new Set(Object.values(grouped).flat());
-  const byId = new Map(state.subtasks.map((s) => [s.id, s]));
-  const taskIdByZone = new Map(state.tasks.map((t) => [subtasksZoneId(t.id), t.id]));
-  const next: Subtask[] = [];
-
-  for (const [zoneId, ids] of Object.entries(grouped)) {
-    const taskId = taskIdByZone.get(zoneId);
-    if (!taskId) continue;
-    ids.forEach((id, order) => {
-      const subtask = byId.get(id);
-      if (!subtask) return;
-      next.push(subtask.parentId === taskId && subtask.order === order ? subtask : { ...subtask, parentId: taskId, order });
-    });
-  }
-  for (const subtask of state.subtasks) if (!included.has(subtask.id)) next.push(subtask);
-  return next;
 }
 
 // Resets any completed repeating task whose schedule has passed (see
@@ -427,7 +314,7 @@ const taskListsSlice = createSlice({
     },
 
     subtasksReordered: (state, action: PayloadAction<{ grouped: Record<string, string[]> }>) => {
-      state.subtasks = applySubtaskGroups(state, action.payload.grouped);
+      state.subtasks = applySubtaskGroups(state.tasks, state.subtasks, action.payload.grouped);
     },
   },
   extraReducers: (builder) => {
@@ -507,7 +394,7 @@ export const applyTaskDragOver = (event: DragOverEvent) => (dispatch: AppDispatc
   const state = getState().taskLists;
   const currentTask = state.tasks.find((t) => t.id === source.id);
   if (!currentTask || currentTask.parentId === source.group) return;
-  dispatch(taskReparentedOnDragOver({ grouped: move(groupedTaskIds(state), event) }));
+  dispatch(taskReparentedOnDragOver({ grouped: move(groupedTaskIds(state.taskLists, state.tasks), event) }));
 };
 
 export const endTaskDrag = (event: DragEndEvent) => (dispatch: AppDispatch, getState: () => RootState) => {
@@ -516,14 +403,14 @@ export const endTaskDrag = (event: DragEndEvent) => (dispatch: AppDispatch, getS
     return;
   }
   const state = getState().taskLists;
-  dispatch(tasksReordered({ grouped: move(groupedTaskIds(state), event) }));
+  dispatch(tasksReordered({ grouped: move(groupedTaskIds(state.taskLists, state.tasks), event) }));
   dispatch(dragEnded());
 };
 
 export const commitSubtaskDragEnd = (event: DragEndEvent) => (dispatch: AppDispatch, getState: () => RootState) => {
   if (event.canceled) return;
   const state = getState().taskLists;
-  dispatch(subtasksReordered({ grouped: move(groupedSubtaskIds(state), event) }));
+  dispatch(subtasksReordered({ grouped: move(groupedSubtaskIds(state.tasks, state.subtasks), event) }));
 };
 
 export default taskListsSlice.reducer;

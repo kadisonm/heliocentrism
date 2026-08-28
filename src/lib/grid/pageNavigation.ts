@@ -1,4 +1,4 @@
-import type { DashboardPage } from './types';
+import type { DashboardPage } from '../types';
 import { MAX_PAGES_PER_BREAKPOINT } from './gridConfig';
 
 export type VirtualPage = { kind: 'real'; page: DashboardPage } | { kind: 'blank' };

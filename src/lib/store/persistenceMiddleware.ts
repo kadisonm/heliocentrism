@@ -7,7 +7,7 @@ import {
   writeSubtasks,
   writeTaskLists,
   writeTasks,
-} from '../firebaseSync';
+} from '../firebase/firebaseSync';
 import { lockGestures, unlockGestures } from '../gestureLock';
 import type { AppDispatch, RootState } from './store';
 import {

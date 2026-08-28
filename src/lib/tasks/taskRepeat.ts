@@ -1,6 +1,6 @@
-import { formatRelativeDateTime } from './relativeDate';
+import { formatRelativeDateTime } from '../relativeDate';
 import { deriveStageFromSubtasks, isTaskDone } from './taskCascade';
-import type { RepeatUnit, Subtask, Task, TaskRepeat, TaskStageDef } from './types';
+import type { RepeatUnit, Subtask, Task, TaskRepeat, TaskStageDef } from '../types';
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();

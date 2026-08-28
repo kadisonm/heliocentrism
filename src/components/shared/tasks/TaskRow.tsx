@@ -1,7 +1,7 @@
 import { EllipsisVertical } from 'lucide-react';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
-import { getTaskStageIcon } from '../../../lib/taskStageIcons';
+import { getTaskStageIcon } from '../../../lib/tasks/taskStageIcons';
 import type { TaskStageDef } from '../../../lib/types';
 import Badge from '../../common/Badge';
 import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
