@@ -24,11 +24,33 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Heliocentrism",
   description: "Heliocentrism: the earth still orbits the sun. Every day, without fail, no matter what's happening down here. Heliocentrism helps you carry that same quiet steadiness — for the days you need reminding that this, too, keeps turning.",
+  // capable: true is what actually gets iOS to launch a home-screen icon in
+  // its own standalone window instead of just opening the bookmark in
+  // Safari — the manifest's display:"standalone" (see manifest.ts) covers
+  // Android/Chrome, but iOS Safari still keys off this specifically. This
+  // Next.js version only renders it as the standards-track
+  // "mobile-web-app-capable" tag (iOS 17.4+); `other` below adds the
+  // Apple-prefixed one back for iOS versions before that stopped shipping.
+  appleWebApp: {
+    capable: true,
+    title: "Heliocentrism",
+    statusBarStyle: "black-translucent",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // The dashboard is drag/swipe-driven throughout (widgets, page paging) —
+  // letting the OS pinch/double-tap zoom on top of that fights those
+  // gestures and stops feeling like a native app. Locks the page at 1x,
+  // particularly needed on iOS which otherwise zooms on its own.
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0b0b0b",
 };
 
 export default function RootLayout({

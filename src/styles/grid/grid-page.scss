@@ -8,6 +8,17 @@
 
 .grid {
   width: 100%;
+  // Isolates this page's own (potentially large — tasks, calendars, etc.)
+  // widget content from every forced synchronous reflow Grid.tsx triggers
+  // on page switch (the Chromium stale-flex-width workaround's display:none
+  // cycle, snapGridTransition's offsetHeight read, the outline-transition
+  // fix) — without this, each of those reads has to re-verify layout for
+  // every widget on every rendered page just to answer a query about an
+  // unrelated ancestor, which is what read as the whole page freezing for a
+  // beat on every navigation. `layout` only (not `paint`) so a dragged
+  // widget's own drop-shadow (see .react-draggable-dragging) can still
+  // bleed past this box instead of being clipped at the grid's edge.
+  contain: layout;
 }
 
 // Applied for exactly one render when edit/view mode (or the edit-mode

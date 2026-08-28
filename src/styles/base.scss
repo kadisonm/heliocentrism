@@ -52,6 +52,14 @@ body {
   color: var(--text-normal);
   font-family: Arial, Helvetica, sans-serif;
   color-scheme: var(--color-scheme, dark);
+  // Belt-and-suspenders alongside the viewport meta's maximumScale/
+  // userScalable (see layout.tsx): still allows normal one/two-finger
+  // panning, just drops double-tap-to-zoom and the ~300ms tap delay some
+  // mobile browsers add while waiting to see if a second tap is coming —
+  // both of which read as "not a native app" on iOS in particular. A
+  // descendant that needs stricter handling during its own gesture (e.g. a
+  // widget drag) can always narrow this further; it can't loosen it.
+  touch-action: manipulation;
 }
 
 // Browsers give buttons/inputs/selects their own default border/bezel —
