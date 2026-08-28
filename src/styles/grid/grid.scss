@@ -208,6 +208,13 @@
   opacity: 1;
 }
 
+// Present at the same nesting depth under every slot type (peek, active,
+// lookahead) purely so <GridPage> always sits one level deep regardless of
+// role — letting React's key-based reconciliation match the same instance
+// across a peek<->active transition instead of remounting it (a depth
+// mismatch defeats key matching even when the key itself is identical).
 .grid-page-slot-content {
-  pointer-events: none;
+  &--inert {
+    pointer-events: none;
+  }
 }

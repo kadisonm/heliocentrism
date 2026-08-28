@@ -84,6 +84,11 @@ export default function GridPage({
   onDragStop,
 }: GridPageProps) {
   const gridElRef = useRef<HTMLDivElement>(null);
+  // TEMP DEBUG
+  useEffect(() => {
+    console.log(`[gridpage ${page.id}] MOUNTED at ${performance.now().toFixed(1)}ms`);
+    return () => console.log(`[gridpage ${page.id}] UNMOUNTED at ${performance.now().toFixed(1)}ms`);
+  }, [page.id]);
 
   // page.id only changes when `page` itself does, which already forces a
   // full remount via Grid.tsx's `key` — so as long as the callback props
@@ -114,6 +119,8 @@ export default function GridPage({
         const patches = Array.from(pendingHeightsRef.current, ([id, h]) => ({ id, h }));
         pendingHeightsRef.current.clear();
         suppressLayoutTransitionRef.current = true;
+        // TEMP DEBUG
+        console.log(`[gridpage ${page.id}] flushing height patches ${JSON.stringify(patches)} at ${performance.now().toFixed(1)}ms`);
         onWidgetHeightsChange?.(page.id, patches);
       }, HEIGHT_COALESCE_MS);
     },

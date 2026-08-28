@@ -394,8 +394,12 @@ export default function Grid({
       applyDisplayedIndexInstantly(committedIndex);
       return;
     }
+    // TEMP DEBUG
+    console.log(`[slide] started at ${performance.now().toFixed(1)}ms, settling in ${PAGE_SLIDE_MS}ms`);
     slideTimeoutRef.current = setTimeout(() => {
       slideTimeoutRef.current = null;
+      // TEMP DEBUG
+      console.log(`[slide] SETTLED at ${performance.now().toFixed(1)}ms`);
       applyDisplayedIndexInstantly(committedIndex);
     }, PAGE_SLIDE_MS);
   }, [committedIndex, displayedIndex, applyDisplayedIndexInstantly]);
@@ -1245,7 +1249,7 @@ export default function Grid({
           : { width: pageWidth }
       }
     >
-      <div className="grid-page-slot-content">
+      <div className="grid-page-slot-content grid-page-slot-content--inert">
         {lookaheadPage.kind === 'real' ? (
           <GridPage
             // Keyed by page identity alone, matching the prev/current/next
@@ -1301,7 +1305,7 @@ export default function Grid({
                 onClick={() => goToIndex(activeIndex - 1)}
                 style={{ width: pageWidth }}
               >
-                <div className="grid-page-slot-content">
+                <div className="grid-page-slot-content grid-page-slot-content--inert">
                   {prev.kind === 'real' ? (
                     <GridPage
                       // Page identity alone (see lookahead's GridPage above)
@@ -1328,42 +1332,49 @@ export default function Grid({
               className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}${isSimulating ? ' grid-page-slot--simulating' : ''}`}
               style={{ width: pageWidth }}
             >
-              {current.kind === 'real' ? (
-                <GridPage
-                  // Page identity alone (see lookahead's GridPage above) —
-                  // lets this instance survive a role change (e.g. demoting
-                  // to a peek neighbor) instead of remounting.
-                  key={`${effectiveBreakpoint}:${current.page.id}`}
-                  page={current.page}
-                  effectiveBreakpoint={effectiveBreakpoint}
-                  isEditMode={isEditMode}
-                  isSimulating={isSimulating}
-                  gridWidth={pageWidth}
-                  softLimitRows={softLimitRows}
-                  onLayoutChange={isEditMode ? handleActiveLayoutChange : handleViewLayoutChange}
-                  onUpdateWidget={handleUpdateWidget}
-                  onRemoveWidget={handleRemove}
-                  onWidgetHeightsChange={handleWidgetHeightsChange}
-                  onDrag={isEditMode ? handleActiveDrag : undefined}
-                  onDragStop={isEditMode ? handleActiveDragStop : undefined}
-                />
-              ) : isSimulating ? (
-                // Mirrors GridPage's own .grid-preview-frame wrapping for a
-                // real page — without it, the blank placeholder has no
-                // element for .grid-page-slot--simulating's CSS (see
-                // grid.scss) to paint the "being edited" background/outline
-                // onto, since that treatment lives on .grid-preview-frame
-                // rather than the (real-width) slot while simulating.
-                <div className="grid-preview-frame" style={{ width: pageWidth }}>
+              {/* Same .grid-page-slot-content depth as the peek/lookahead
+                  slots (without --inert, so widgets stay clickable) — keeps
+                  <GridPage> one level deep under every role so its key
+                  actually gets matched across a peek<->active transition
+                  instead of the depth mismatch forcing a remount. */}
+              <div className="grid-page-slot-content">
+                {current.kind === 'real' ? (
+                  <GridPage
+                    // Page identity alone (see lookahead's GridPage above) —
+                    // lets this instance survive a role change (e.g. demoting
+                    // to a peek neighbor) instead of remounting.
+                    key={`${effectiveBreakpoint}:${current.page.id}`}
+                    page={current.page}
+                    effectiveBreakpoint={effectiveBreakpoint}
+                    isEditMode={isEditMode}
+                    isSimulating={isSimulating}
+                    gridWidth={pageWidth}
+                    softLimitRows={softLimitRows}
+                    onLayoutChange={isEditMode ? handleActiveLayoutChange : handleViewLayoutChange}
+                    onUpdateWidget={handleUpdateWidget}
+                    onRemoveWidget={handleRemove}
+                    onWidgetHeightsChange={handleWidgetHeightsChange}
+                    onDrag={isEditMode ? handleActiveDrag : undefined}
+                    onDragStop={isEditMode ? handleActiveDragStop : undefined}
+                  />
+                ) : isSimulating ? (
+                  // Mirrors GridPage's own .grid-preview-frame wrapping for a
+                  // real page — without it, the blank placeholder has no
+                  // element for .grid-page-slot--simulating's CSS (see
+                  // grid.scss) to paint the "being edited" background/outline
+                  // onto, since that treatment lives on .grid-preview-frame
+                  // rather than the (real-width) slot while simulating.
+                  <div className="grid-preview-frame" style={{ width: pageWidth }}>
+                    <BlankPagePane variant="current" />
+                  </div>
+                ) : (
+                  // Purely a placeholder — the blank page only ever becomes
+                  // real via dragging a widget onto it (above) or clicking
+                  // "Add Widget" while sitting on it (see page.tsx), never by
+                  // clicking this pane itself.
                   <BlankPagePane variant="current" />
-                </div>
-              ) : (
-                // Purely a placeholder — the blank page only ever becomes
-                // real via dragging a widget onto it (above) or clicking
-                // "Add Widget" while sitting on it (see page.tsx), never by
-                // clicking this pane itself.
-                <BlankPagePane variant="current" />
-              )}
+                )}
+              </div>
             </div>
 
             {next && (
@@ -1376,7 +1387,7 @@ export default function Grid({
                 onClick={() => goToIndex(activeIndex + 1)}
                 style={{ width: pageWidth }}
               >
-                <div className="grid-page-slot-content">
+                <div className="grid-page-slot-content grid-page-slot-content--inert">
                   {next.kind === 'real' ? (
                     <GridPage
                       // Page identity alone (see lookahead's GridPage above)

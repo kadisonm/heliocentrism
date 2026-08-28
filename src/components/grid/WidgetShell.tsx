@@ -54,12 +54,16 @@ function WidgetShell({
     if (!isAutoExpand) return;
     const target = bodyRef.current?.firstElementChild;
     if (!target) return;
+    // TEMP DEBUG
+    console.log(`[autoexpand ${widget.id}] effect (re)subscribed at ${performance.now().toFixed(1)}ms`);
 
     const minH = definition?.minSize.h;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let hasMeasured = false;
     const apply = (height: number) => {
       const rows = pxToGridRows(height);
+      // TEMP DEBUG
+      console.log(`[autoexpand ${widget.id}] apply height=${height.toFixed(1)} rows=${rows} at ${performance.now().toFixed(1)}ms`);
       onHeightChange(widget.id, minH ? Math.max(minH, rows) : rows);
     };
 
@@ -87,6 +91,9 @@ function WidgetShell({
       // right away means a freshly mounted page's true layout is already
       // settled well before any later slide brings it into view, instead of
       // visibly resizing right after that slide lands.
+      // TEMP DEBUG
+      console.log(`[autoexpand ${widget.id}] RO fired height=${height.toFixed(1)} hasMeasured=${hasMeasured} at ${performance.now().toFixed(1)}ms`);
+
       if (!hasMeasured) {
         hasMeasured = true;
         apply(height);
