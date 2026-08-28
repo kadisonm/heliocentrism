@@ -1,26 +1,21 @@
 # TODO
 
----
-
-# General Fixes
-- [ ] Add NEXT_PUBLIC_FIREBASE_* repo secrets in GitHub (Settings > Secrets and variables > Actions) so the Pages deploy can build with Firebase configured. See .env.example for the full var list.
+## General Fixes
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
-
-- Refactor all the css files to match a similar structure to the actual tsx files
 
 - When switching pages you can visibly see all the widgets slightly reload as they do a pixel jitter. (and the orbit animation restarts)
 
 - Make it so the pages navigation matches the figma mock
 - Make it so the edit button has a frosted glass effect
-- Make it so that the bottom of the screen has a slight vignette
-- Make it so that the background has a cool simple and optimised space background pattern (with the ability for this background to be changeable in the settings - with a preview)
-- Fix the outline transition abruptly complete suddenly whlie it is still fading (presumably the page is loading before the transition finishes causing it to suddenly appear solid)
 
 - Create mobile header
 - Create mobile navigation + edit button
 
-## Tasks
+- Make it so edit mode is forced on if the user has no widgets
+- Make it so the user must sign in otherwise they cant access the site
+
+### Tasks
 - Fix tasks minimum stage not being updated
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
@@ -31,23 +26,23 @@
 
 Make it so that adding a new task just adds a blank task to the bottom of the list and remove the old add task modal
 
-- Make it so that the stages can select colours from the extended colour css\
+- Make it so that the stages can select colours from the extended colour css
 
-- Dragging a thin task over a thicker task doesnt move the thicker task out the way and the tasks just overlap. It must pick to either move out the way up or down.
+- Dragging a thin task over a thicker task doesnt move the thicker task out the way and the tasks just overlap eachother. If there is a thinner task at all hovering over another task, that task must move. It must either move out the way up or down.
 
 ---
 
-# Data
+## Data
 - Figure out how to allow google accounts to also be connected to an email address and password. (For google calendar integration etc)
 - Add the option to export/ import user data
 - Add data backups and the option to export them/ change how often and how many are saved
 
 ---
 
-# Dashboard
+## Dashboard
 - Investigate tablet mode and turning the tablet to portrait
    
-## Widget Ideas
+### Widget Ideas
 - Date and time
 - Simple Time
 - Simple Clock
@@ -68,14 +63,14 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 
 - The current season, and if any pollen is active
 
-# Family
+## Family
 
-# Health
+## Health
 
-# Fitness
+## Fitness
 - Widget to track your weight
 - Macros, water?
 
-# Garden
+## Garden
 - Customisable garden layout, the current season and what plants do best.
 - Ideal planting time and estimated harvest time

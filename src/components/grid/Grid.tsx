@@ -21,12 +21,25 @@ import GridPage from './GridPage';
 import { usePageNavigation } from './usePageNavigation';
 import { useViewportHeight } from './useViewportHeight';
 
-const SWIPE_DISTANCE_PX = 50; // minimum horizontal travel to count as a swipe
+const SWIPE_DISTANCE_PX = 50; // minimum horizontal travel to count as a swipe (fast-flick path)
 const SWIPE_MAX_DURATION_MS = 300; // "quickly" — slower drags read as a scroll/hesitation, not a page-swipe
 const SWIPE_DIRECTION_LOCK_RATIO = 1.5; // |dx| must exceed |dy| by this much before a touch gesture locks horizontal
+const SWIPE_COMMIT_FRACTION = 0.4; // slow drag past this fraction of a page width also commits, flick or not
 const WHEEL_SWIPE_THRESHOLD = 60; // accumulated horizontal wheel delta to trigger a page change
 const WHEEL_COOLDOWN_MS = 400; // ignore further wheel deltas for this long after triggering
 const PAGE_SLIDE_MS = 250; // kept in sync by hand with .grid-page-track's transition duration
+const RUBBER_BAND_MAX_PX = 80; // asymptotic cap on how far a drag can pull the track past an edge with no neighbor
+const RUBBER_BAND_RESISTANCE = 0.55; // 0..1 — lower = stiffer resistance past the edge
+
+// Diminishing-returns curve (same shape as UIScrollView's overscroll bounce)
+// for dragging the track past an edge with no neighbor to reveal — used only
+// while the live drag has nowhere real to go; a valid target instead tracks
+// the finger 1:1 all the way (see handleTouchMove below).
+function rubberBand(dx: number): number {
+  const sign = dx < 0 ? -1 : 1;
+  const magnitude = Math.abs(dx);
+  return (sign * magnitude * RUBBER_BAND_RESISTANCE * RUBBER_BAND_MAX_PX) / (RUBBER_BAND_MAX_PX + RUBBER_BAND_RESISTANCE * magnitude);
+}
 
 // Pulls a client point out of either a mouse or touch event — react-grid-
 // layout's onDrag hands back the raw DOM event, which is one or the other
@@ -175,6 +188,19 @@ export default function Grid({
     Math.abs(slideDirection) === 1 ? virtualPages[activeIndex + slideDirection * 2] ?? null : null;
   const lookaheadSignature = slotSignature(lookaheadPage);
 
+  // Same idea as previousCurrentSignatureRef above, but for whichever page
+  // held the lookahead role a render ago — read by the Chromium reflow fix
+  // further down so it doesn't cycle display:none on a page that's simply
+  // being promoted from lookahead into prev/next (already on screen, riding
+  // the shared transform) as if it had just newly entered the track. Doing
+  // so would "fix" a layout bug by re-introducing the exact animation-restart
+  // problem the matching-key change above was meant to solve, just via a raw
+  // DOM display toggle instead of a React remount.
+  const previousLookaheadSignatureRef = useRef(lookaheadSignature);
+  useEffect(() => {
+    previousLookaheadSignatureRef.current = lookaheadSignature;
+  });
+
   // Resets to fully transparent the instant a NEW page takes on the
   // lookahead role, then fades it to opaque on the next frame — flipping
   // straight to the visible class on the same mount wouldn't transition at
@@ -317,13 +343,18 @@ export default function Grid({
     // transition before the browser ever gets to paint it, snapping the
     // border away instantly instead. Skip only that specific arm; a
     // genuinely different page entering the other side still gets fixed up
-    // as before.
+    // as before. Same reasoning for a page that was the LOOKAHEAD a render
+    // ago and just got promoted straight into this slot (see the matching
+    // lookaheadSlot key above) — it's already on screen and already correctly
+    // laid out, not a fresh arrival Chromium could have mis-measured, so
+    // cycling it would only serve to restart any CSS animation inside it.
     const outgoingSignature = previousCurrentSignatureRef.current;
+    const outgoingLookaheadSignature = previousLookaheadSignatureRef.current;
     for (const [signature, el] of [
       [prevSignature, armLeftRef.current],
       [nextSignature, armRightRef.current],
     ] as const) {
-      if (!el || signature === outgoingSignature) continue;
+      if (!el || signature === outgoingSignature || signature === outgoingLookaheadSignature) continue;
       el.style.display = 'none';
       void el.offsetHeight;
       el.style.display = '';
@@ -430,7 +461,11 @@ export default function Grid({
   // listeners further down — added only while a cross-page relocation is
   // in flight, so they can't be ordinary hook-dependency-tracked callbacks
   // — always read current values without needing to resubscribe
-  // mid-gesture.
+  // mid-gesture. Also doubles as the same escape hatch for the manual
+  // touch-drag paging further down (committedIndex/pageWidth/slotGapPx/
+  // restingTrackOffsetPx/goToDelta), for the same reason: those handlers are
+  // attached once and live for the component's lifetime, not re-attached on
+  // every render just because a page changed.
   const liveRef = useRef({
     current,
     prev,
@@ -442,6 +477,11 @@ export default function Grid({
     onMoveWidgetToPage,
     onLayoutChange,
     goToIndex,
+    goToDelta,
+    committedIndex,
+    pageWidth,
+    slotGapPx,
+    restingTrackOffsetPx,
   });
   useLayoutEffect(() => {
     liveRef.current = {
@@ -455,6 +495,11 @@ export default function Grid({
       onMoveWidgetToPage,
       onLayoutChange,
       goToIndex,
+      goToDelta,
+      committedIndex,
+      pageWidth,
+      slotGapPx,
+      restingTrackOffsetPx,
     };
     // Confirms an in-flight hop once `current` actually catches up to the
     // page it targeted — see the big comment on relocationRef above.
@@ -911,41 +956,120 @@ export default function Grid({
   );
 
   // --- Swipe / wheel / keyboard paging ---
+  // Touch paging tracks the finger 1:1 (like iOS's springboard) rather than
+  // committing on a single detected swipe gesture: the track's transform is
+  // driven imperatively off touchmove deltas (bypassing React entirely, same
+  // pattern as the cross-page drag ghost above) so it can follow the finger
+  // at 60fps without a render in between, then only on release does it
+  // either hand off to goToDelta (a fast flick, or a slow drag that crossed
+  // SWIPE_COMMIT_FRACTION of a page width — see handleTouchEnd) or animate
+  // back to rest itself. liveRef (declared above for the relocation gesture)
+  // supplies the current committedIndex/pageWidth/etc. without needing these
+  // handlers to be torn down and re-attached on every page change.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     let touchStart: { x: number; y: number; t: number } | null = null;
     let touchLocked: boolean | null = null;
+    let rawDx = 0;
+
+    // Cancels any programmatic slide still in flight so the drag starts from
+    // a fully-settled base, then takes over the track's transform by hand —
+    // not via applyDisplayedIndexInstantly's own no-transition toggle, which
+    // removes itself again one frame later (via rAF) and would start easing
+    // every subsequent touchmove frame instead of snapping straight to the
+    // finger.
+    const beginDrag = () => {
+      if (slideTimeoutRef.current) {
+        clearTimeout(slideTimeoutRef.current);
+        slideTimeoutRef.current = null;
+      }
+      setDisplayedIndex(liveRef.current.committedIndex);
+      trackRef.current?.classList.add('grid-page-track--no-transition');
+    };
+
+    const endDrag = () => {
+      touchStart = null;
+      touchLocked = null;
+      rawDx = 0;
+    };
+
+    // Animates the track back to its resting transform under its own steam
+    // (no page change committed) — duration scales down for a barely-dragged
+    // release so cancelling a small nudge snaps back quickly rather than
+    // taking the same time as a full page slide.
+    const snapBack = (fromDx: number) => {
+      const track = trackRef.current;
+      if (!track) return;
+      const fraction = Math.min(1, Math.abs(fromDx) / (liveRef.current.pageWidth || 1));
+      const duration = Math.max(80, PAGE_SLIDE_MS * fraction);
+      track.style.transitionDuration = `${duration}ms`;
+      track.classList.remove('grid-page-track--no-transition');
+      track.style.transform = `translateX(${liveRef.current.restingTrackOffsetPx}px)`;
+      const cleanup = () => {
+        track.style.transitionDuration = '';
+        track.removeEventListener('transitionend', cleanup);
+      };
+      track.addEventListener('transitionend', cleanup);
+      setTimeout(cleanup, duration + 50); // safety net if transitionend never fires (e.g. interrupted)
+    };
 
     const handleTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
       touchStart = { x: touch.clientX, y: touch.clientY, t: Date.now() };
       touchLocked = null;
+      rawDx = 0;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
-      if (!touchStart || !touch) return;
+      if (!touchStart || !touch || relocationRef.current) return;
       const dx = touch.clientX - touchStart.x;
       const dy = touch.clientY - touchStart.y;
       if (touchLocked === null && Math.abs(dx) + Math.abs(dy) > 10) {
         touchLocked = Math.abs(dx) > Math.abs(dy) * SWIPE_DIRECTION_LOCK_RATIO;
+        if (touchLocked) beginDrag();
       }
-      if (touchLocked) event.preventDefault();
+      if (!touchLocked) return;
+      event.preventDefault();
+      rawDx = dx;
+
+      const { next, prev, restingTrackOffsetPx } = liveRef.current;
+      const hasTarget = dx < 0 ? !!next : !!prev;
+      const appliedDx = hasTarget ? dx : rubberBand(dx);
+      const track = trackRef.current;
+      if (track) track.style.transform = `translateX(${restingTrackOffsetPx + appliedDx}px)`;
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
       const touch = event.changedTouches[0];
       const start = touchStart;
-      touchStart = null;
-      if (!start || !touch || !touchLocked) return;
-      const dx = touch.clientX - start.x;
-      const duration = Date.now() - start.t;
-      if (Math.abs(dx) >= SWIPE_DISTANCE_PX && duration <= SWIPE_MAX_DURATION_MS) {
-        goToDelta(dx < 0 ? 1 : -1);
+      if (!start || !touch || !touchLocked) {
+        endDrag();
+        return;
       }
+      const duration = Date.now() - start.t;
+      const { next, prev, pageWidth, goToDelta } = liveRef.current;
+      const hasTarget = rawDx < 0 ? !!next : !!prev;
+      const shouldCommit =
+        hasTarget &&
+        ((Math.abs(rawDx) >= SWIPE_DISTANCE_PX && duration <= SWIPE_MAX_DURATION_MS) ||
+          Math.abs(rawDx) >= pageWidth * SWIPE_COMMIT_FRACTION);
+
+      if (shouldCommit) {
+        trackRef.current?.classList.remove('grid-page-track--no-transition');
+        goToDelta(rawDx < 0 ? 1 : -1);
+      } else {
+        snapBack(rawDx);
+      }
+      endDrag();
+    };
+
+    const handleTouchCancel = () => {
+      if (touchLocked) snapBack(rawDx);
+      endDrag();
     };
 
     let wheelAccumulated = 0;
@@ -958,7 +1082,7 @@ export default function Grid({
 
       wheelAccumulated += event.deltaX;
       if (Math.abs(wheelAccumulated) >= WHEEL_SWIPE_THRESHOLD) {
-        goToDelta(wheelAccumulated > 0 ? 1 : -1);
+        liveRef.current.goToDelta(wheelAccumulated > 0 ? 1 : -1);
         wheelAccumulated = 0;
         wheelCooldownUntil = Date.now() + WHEEL_COOLDOWN_MS;
       }
@@ -967,15 +1091,20 @@ export default function Grid({
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
     el.addEventListener('touchend', handleTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     el.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       el.removeEventListener('touchstart', handleTouchStart);
       el.removeEventListener('touchmove', handleTouchMove);
       el.removeEventListener('touchend', handleTouchEnd);
+      el.removeEventListener('touchcancel', handleTouchCancel);
       el.removeEventListener('wheel', handleWheel);
     };
-  }, [containerRef, goToDelta]);
+    // Mounts once and reads everything live off liveRef/refs instead — see
+    // the comment atop this effect — so a page/index change doesn't tear
+    // down and re-attach these listeners mid-gesture.
+  }, [containerRef]);
 
   // Works in both edit and view mode — goToDelta already no-ops via
   // clampPageIndex when there's nowhere to go, so no extra guard is needed.
@@ -1013,7 +1142,17 @@ export default function Grid({
   // without touching prev/current/next's positions at all.
   const lookaheadSlot = lookaheadPage ? (
     <div
-      key={`${effectiveBreakpoint}:${lookaheadSignature}:lookahead`}
+      // Keyed the SAME as the prev/active/next slots below (no ":lookahead"
+      // suffix) — this page is about to be promoted straight into the prev
+      // or next role once the slide settles (see the effect above that nulls
+      // lookaheadPage out the instant displayedIndex catches up), and a
+      // matching key is what lets React treat that hand-off as an in-place
+      // update (move + prop change) instead of unmounting this whole subtree
+      // and mounting a fresh one under the prev/next key a frame later. That
+      // unmount/remount is what used to read as a jitter/reload on every
+      // ordinary page swipe — every widget re-measuring from scratch, any
+      // CSS animation inside them (e.g. Orbit) restarting from 0%.
+      key={`${effectiveBreakpoint}:${lookaheadSignature}`}
       className={`grid-page-slot grid-page-slot--peek grid-page-slot--incoming${lookaheadVisible ? ' grid-page-slot--incoming-visible' : ''}${isEditMode ? ' grid-page-slot--editing' : ''}`}
       style={
         slideDirection < 0

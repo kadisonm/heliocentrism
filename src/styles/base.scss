@@ -37,8 +37,17 @@ body {
   max-width: 100%;
   // Only vertical scrolling is intentional — anything wide enough to force
   // horizontal scroll/pan on a mobile viewport is a layout bug, not content
-  // to reveal by panning sideways.
+  // to reveal by panning sideways. Setting overflow-x alone also computes
+  // overflow-y as auto per spec, so the page already scrolls vertically
+  // whenever content needs it.
   overflow-x: hidden;
+  // Reserves the vertical scrollbar's gutter whether or not it's currently
+  // needed, so a page whose height happens to cross the viewport threshold
+  // (e.g. entering edit mode, which grows a page's min-height) doesn't
+  // change the available width the instant the scrollbar appears/disappears
+  // — that width shift is what read as every widget jittering by a couple
+  // pixels right as the page toggled.
+  scrollbar-gutter: stable;
   background: var(--background-primary);
   color: var(--text-normal);
   font-family: Arial, Helvetica, sans-serif;
