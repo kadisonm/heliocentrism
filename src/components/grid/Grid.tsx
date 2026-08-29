@@ -136,9 +136,22 @@ export default function Grid({
   const [displayedIndex, setDisplayedIndex] = useState(committedIndex);
   const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Exiting edit mode flips isEditMode (and so every page's own chrome —
+  // drag handles, geometry, etc.) instantly, straight away. But if
+  // displayedIndex is still lagging on the blank "create new page" slot
+  // (index === pages.length — see the committedIndex/displayedIndex
+  // comment above) when that happens, page.tsx has already clamped
+  // committedIndex down to the last real page in the very same commit —
+  // this is what keeps the blank slot itself in the virtual page set for
+  // exactly as long as that slide-back is still playing, instead of
+  // vanishing out from under it before the animation even gets a chance to
+  // run. Once displayedIndex catches up, this goes false right along with
+  // isEditMode and the blank slot drops out for good.
+  const showBlankSlot = isEditMode || displayedIndex === pages.length;
+
   const { activeIndex, current, prev, next, goToIndex, goToDelta, virtualPages } = usePageNavigation(
     pages,
-    isEditMode,
+    showBlankSlot,
     displayedIndex,
     handlePageIndexChange
   );
@@ -157,7 +170,7 @@ export default function Grid({
   // were built from. Lets the outline below start turning blue the instant
   // the hop commits, rather than waiting out the slide-settle delay that
   // prev/current/next's role reassignment (deliberately) still waits for.
-  const committedVirtualPage = virtualPages[clampPageIndex(committedIndex, pages.length, isEditMode)] ?? null;
+  const committedVirtualPage = virtualPages[clampPageIndex(committedIndex, pages.length, showBlankSlot)] ?? null;
   const committedSignature = slotSignature(committedVirtualPage);
   const isPrevCommitted = !!prev && slotSignature(prev) === committedSignature;
   const isCurrentCommitted = !!current && slotSignature(current) === committedSignature;
@@ -447,14 +460,21 @@ export default function Grid({
     if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
   }, []);
 
-  // A breakpoint switch (or entering/exiting edit mode, which changes
-  // reservePx/pageWidth) is a different page set or geometry entirely, not
-  // a slide — snap displayedIndex to match immediately, uncapped.
+  // A breakpoint switch is a different page set entirely, not a slide —
+  // snap displayedIndex to match immediately, uncapped. Deliberately NOT
+  // keyed on isEditMode too (despite it also changing reservePx/pageWidth):
+  // toggling edit mode alone, on the SAME breakpoint, either leaves
+  // committedIndex/displayedIndex equal (nothing to resync) or — exiting
+  // from the blank "new page" slot — puts them exactly one step apart,
+  // which the "drives the slide" effect above already animates correctly
+  // on its own via showBlankSlot. Snapping here too would win the race
+  // against that effect's own setTimeout (this one runs synchronously,
+  // same commit) and cut the animation short into an instant jump.
   useLayoutEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     applyDisplayedIndexInstantly(activePageIndex[effectiveBreakpoint] ?? 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveBreakpoint, isEditMode]);
+  }, [effectiveBreakpoint]);
 
   // Tracks a cross-page widget relocation while it's in flight (see
   // beginRelocation further down) — declared up here so the liveRef
@@ -956,17 +976,16 @@ export default function Grid({
       if (!target) return;
 
       const targetPageId = target.kind === 'real' ? target.page.id : onCreatePage(effectiveBreakpoint);
-      // Moving the source page's only widget away empties it, auto-deleting
-      // it (see withEmptyPageCollapsed) — unless it's the last page overall.
-      // That check runs against the page list AFTER a blank target has
-      // already been turned into a real page above, so "the last page
-      // overall" must be judged against pages.length + 1 in that case, not
-      // the pre-creation count — otherwise this comes out false right when
-      // it matters most (the source really is about to be deleted), and
-      // goToIndex below ends up one page short of the target once the
-      // source's removal shifts everything after it down by one.
-      const pagesLengthAfterCreate = target.kind === 'real' ? pages.length : pages.length + 1;
-      const sourceWillBeDeleted = current.page.widgets.length === 1 && pagesLengthAfterCreate > 1;
+      // Moving the source page's only widget away empties it — but per
+      // withEmptyPageCollapsed, an empty page only actually collapses if
+      // nothing inhabited sits after it. A right-drag always lands the
+      // widget on whatever occupies the very next page (an existing one, or
+      // one freshly created above), which ends up sitting right after the
+      // source either way — so the source never collapses on a right-drag.
+      // A left-drag doesn't add anything after the source, so it collapses
+      // only if the source was already the last page.
+      const sourceWillBeDeleted =
+        direction === 'left' && current.page.widgets.length === 1 && activeIndex === pages.length - 1;
 
       // The ghost (and its grab offset) is created once, from the widget's
       // real on-screen box at the moment of the FIRST hop — every hop after

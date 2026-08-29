@@ -23,16 +23,26 @@ function layoutsEqual(a: Layout, b: Layout): boolean {
   });
 }
 
-// A page needs >=1 widget or it's deleted, except the dashboard's last
-// remaining page is never auto-deleted even if emptied. Generic over the
-// page type (rather than fixed to DashboardPage, whose `layout: Layout` is
-// react-grid-layout's readonly array type) so callers building Immer-draft
-// pages here don't need to detour their mutable layout arrays through a
-// readonly-typed return.
+// An empty page only auto-deletes if nothing inhabited sits after it — one
+// sandwiched between real pages stays put as a placeholder instead of
+// vanishing out from under whatever's on the page after it. Collapses the
+// WHOLE trailing run of empty pages at once, not just `pageId` itself: an
+// earlier page already preserved because something inhabited followed it
+// becomes eligible too once that later page empties out in turn. The
+// dashboard's last remaining page is never auto-deleted even if emptied.
+// Generic over the page type (rather than fixed to DashboardPage, whose
+// `layout: Layout` is react-grid-layout's readonly array type) so callers
+// building Immer-draft pages here don't need to detour their mutable layout
+// arrays through a readonly-typed return.
 function withEmptyPageCollapsed<P extends { id: string; widgets: DashboardWidget[] }>(pages: P[], pageId: string): P[] {
-  const page = pages.find((p) => p.id === pageId);
-  if (!page || page.widgets.length > 0 || pages.length === 1) return pages;
-  return pages.filter((p) => p.id !== pageId);
+  const pageIndex = pages.findIndex((p) => p.id === pageId);
+  if (pageIndex === -1 || pages[pageIndex].widgets.length > 0 || pages.length === 1) return pages;
+  const hasInhabitedPageAfter = pages.slice(pageIndex + 1).some((p) => p.widgets.length > 0);
+  if (hasInhabitedPageAfter) return pages;
+
+  let end = pages.length;
+  while (end > 1 && pages[end - 1].widgets.length === 0) end--;
+  return pages.slice(0, end);
 }
 
 export type GridState = {

@@ -70,6 +70,26 @@ export default function DashboardPage() {
     });
   }, [dashboard.breakpoints, isEditMode]);
 
+  // Exiting edit mode while sitting on the blank "new page" slot needs to
+  // land on the last real page. The general clamp effect above already does
+  // that, but only a render later (it's a passive effect reacting to
+  // isEditMode) — leaving one commit where isEditMode has already flipped
+  // but activePageIndex still points past the last real page. Clamping it
+  // here too, in the same batch as the flip itself, closes that gap: Grid's
+  // showBlankSlot (see Grid.tsx) is what actually keeps the blank page on
+  // screen for exactly as long as this breakpoint's displayedIndex is still
+  // catching up to it, turning the exit into a clean one-step slide back
+  // instead of an instant snap.
+  const handleToggleEditMode = () => {
+    if (isEditMode) {
+      const pageCount = currentTier.pages.length;
+      if (pageCount > 0 && (activePageIndex[activeBreakpoint] ?? 0) === pageCount) {
+        setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: pageCount - 1 }));
+      }
+    }
+    setIsEditMode((current) => !current);
+  };
+
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard-container">
@@ -104,7 +124,7 @@ export default function DashboardPage() {
 
       <GridStatusBar
         isEditMode={isEditMode}
-        onToggleEditMode={() => setIsEditMode((current) => !current)}
+        onToggleEditMode={handleToggleEditMode}
         activeBreakpoint={activeBreakpoint}
         allowedBreakpoints={allowedBreakpoints}
         onBreakpointChange={setActiveBreakpoint}

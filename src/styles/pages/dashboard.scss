@@ -4,24 +4,6 @@
   color: var(--text-normal);
   display: flex;
   flex-direction: column;
-
-  // Soft fade so widget content scrolling up from underneath doesn't end
-  // abruptly at the screen edge — sits above the grid/widgets (which have
-  // no z-index of their own) but below the floating toolbar/page dots
-  // (z-index: 500), on every breakpoint. Fixed (not absolute) so it stays
-  // pinned to the actual viewport bottom regardless of scroll position,
-  // matching the toolbar/dots it's paired with.
-  &::after {
-    content: '';
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 5rem;
-    background: linear-gradient(to top, var(--background-primary) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 100;
-  }
 }
 
 // Lets shared/background (see Background component + data-background
