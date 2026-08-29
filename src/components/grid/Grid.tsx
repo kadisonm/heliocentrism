@@ -18,6 +18,7 @@ import {
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
 import { areGesturesLocked } from '../../lib/gestureLock';
 import { clampPageIndex } from '../../lib/grid/pageNavigation';
+import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
 import BlankPagePane from './BlankPagePane';
 import GridPage from './GridPage';
 import { usePageNavigation } from './usePageNavigation';
@@ -28,7 +29,6 @@ const SWIPE_MAX_DURATION_MS = 300; // "quickly" — slower drags read as a scrol
 const SWIPE_DIRECTION_LOCK_RATIO = 1.5; // |dx| must exceed |dy| by this much before a touch gesture locks horizontal
 const SWIPE_COMMIT_FRACTION = 0.4; // slow drag past this fraction of a page width also commits, flick or not
 const WHEEL_SWIPE_THRESHOLD = 60; // accumulated horizontal wheel delta to trigger a page change
-const WHEEL_COOLDOWN_MS = 400; // ignore further wheel deltas for this long after triggering
 const PAGE_SLIDE_MS = 250; // kept in sync by hand with .grid-page-track's transition duration
 const RUBBER_BAND_MAX_PX = 80; // asymptotic cap on how far a drag can pull the track past an edge with no neighbor
 const RUBBER_BAND_RESISTANCE = 0.55; // 0..1 — lower = stiffer resistance past the edge
@@ -192,6 +192,18 @@ export default function Grid({
     showBlankSlot,
     displayedIndex,
     handlePageIndexChange
+  );
+
+  // Clicking a peeking neighbor is a direct user navigation gesture — same
+  // shared cooldown as wheel/keyboard/swipe/dots (see
+  // lib/grid/pageChangeCooldown.ts), so alternating between clicking left
+  // and right neighbors can't spam page changes any faster than any other
+  // input method can.
+  const handlePeekClick = useCallback(
+    (index: number) => {
+      if (tryClaimPageChange()) goToIndex(index);
+    },
+    [goToIndex]
   );
 
   // Identifies a slot by its content (page id, or 'blank'/'none') rather
@@ -1251,7 +1263,7 @@ export default function Grid({
         ((Math.abs(rawDx) >= SWIPE_DISTANCE_PX && duration <= SWIPE_MAX_DURATION_MS) ||
           Math.abs(rawDx) >= pageWidth * SWIPE_COMMIT_FRACTION);
 
-      if (shouldCommit) {
+      if (shouldCommit && tryClaimPageChange()) {
         trackRef.current?.classList.remove('grid-page-track--no-transition');
         goToDelta(rawDx < 0 ? 1 : -1);
       } else {
@@ -1266,18 +1278,16 @@ export default function Grid({
     };
 
     let wheelAccumulated = 0;
-    let wheelCooldownUntil = 0;
 
     const handleWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return; // predominantly vertical — let it scroll/zoom normally
       event.preventDefault();
-      if (Date.now() < wheelCooldownUntil) return;
 
       wheelAccumulated += event.deltaX;
       if (Math.abs(wheelAccumulated) >= WHEEL_SWIPE_THRESHOLD) {
-        liveRef.current.goToDelta(wheelAccumulated > 0 ? 1 : -1);
+        const direction = wheelAccumulated > 0 ? 1 : -1;
         wheelAccumulated = 0;
-        wheelCooldownUntil = Date.now() + WHEEL_COOLDOWN_MS;
+        if (tryClaimPageChange()) liveRef.current.goToDelta(direction);
       }
     };
 
@@ -1313,8 +1323,9 @@ export default function Grid({
       ) {
         return;
       }
-      if (event.key === 'ArrowLeft') goToDelta(-1);
-      else if (event.key === 'ArrowRight') goToDelta(1);
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (!tryClaimPageChange()) return;
+      goToDelta(event.key === 'ArrowLeft' ? -1 : 1);
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -1406,7 +1417,7 @@ export default function Grid({
                 key={`${effectiveBreakpoint}:${prev.kind === 'real' ? prev.page.id : 'blank'}`}
                 className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isPrevCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armLeftRef}
-                onClick={() => goToIndex(activeIndex - 1)}
+                onClick={() => handlePeekClick(activeIndex - 1)}
                 style={{ width: pageWidth }}
               >
                 <div className="grid-page-slot-content grid-page-slot-content--inert">
@@ -1488,7 +1499,7 @@ export default function Grid({
                 key={`${effectiveBreakpoint}:${next.kind === 'real' ? next.page.id : 'blank'}`}
                 className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isNextCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armRightRef}
-                onClick={() => goToIndex(activeIndex + 1)}
+                onClick={() => handlePeekClick(activeIndex + 1)}
                 style={{ width: pageWidth }}
               >
                 <div className="grid-page-slot-content grid-page-slot-content--inert">

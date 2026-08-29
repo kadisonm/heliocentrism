@@ -60,6 +60,13 @@ export const DEFAULT_WIDGET_MIN_SIZE = { w: 2, h: 3 };
 
 export const MAX_PAGES_PER_BREAKPOINT = 30;
 
+// Rate-limits how often a user's own gesture (wheel, keyboard, dot click,
+// touch-swipe commit, clicking a peeking neighbor) can trigger a page
+// change — see lib/grid/pageChangeCooldown.ts. Matches the old wheel-only
+// cooldown's own duration, which already worked well for that one input
+// method; now shared across all of them instead of just wheel.
+export const PAGE_CHANGE_COOLDOWN_MS = 400;
+
 // Advisory-only per-page length ceiling (~10 viewport-heights of grid rows).
 // Never blocks placement/resize — only decides whether GridPage renders the
 // warning line under the active page.
