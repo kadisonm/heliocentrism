@@ -4,8 +4,6 @@
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
 
-- When switching pages you can visibly see all the widgets slightly reload as they do a pixel jitter. (and the orbit animation restarts)
-
 - Make it so the pages navigation matches the figma mock
 - Make it so the edit button has a frosted glass effect
 

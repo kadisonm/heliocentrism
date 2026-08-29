@@ -56,6 +56,44 @@ function getEventPoint(event: Event): { x: number; y: number } | null {
   return touch ? { x: touch.clientX, y: touch.clientY } : null;
 }
 
+// A drag-to-edge hop yanks the dragged widget's DOM node out from under
+// react-grid-layout's OWN native drag on the source page (see beginRelocation
+// below) mid-gesture — the widget moves to a different page's `widgets`
+// array, unmounting it. react-draggable's DraggableCore tears down its own
+// document-level move/stop listeners on unmount (componentWillUnmount)
+// without ever firing them, so its onStop callback — which is what clears
+// react-grid-layout's internal activeDrag state — never runs. Left alone,
+// that leaves the source page's native placeholder box stuck on screen
+// permanently (its rendering is driven straight off activeDrag) AND stops
+// that GridLayout instance from ever resyncing its layout against
+// prop/children changes again (its own resync effect bails out early
+// whenever activeDrag is set) — for as long as it stays mounted, which,
+// since GridPage survives a peek<->active role change instead of
+// remounting, can be indefinitely.
+//
+// Dispatching a synthetic stop event on the source element's own document
+// BEFORE the unmount — while the node and DraggableCore's listeners are
+// still live — lets it complete its own stop sequence normally instead,
+// exactly as if the gesture had ended right here. Reuses the real Touch
+// object off the original event (rather than constructing one) since
+// DraggableCore matches stop events back to the drag they started by the
+// touch's own identifier.
+function endNativeDrag(sourceElement: HTMLElement, nativeEvent: Event) {
+  const doc = sourceElement.ownerDocument;
+  if (typeof MouseEvent !== 'undefined' && nativeEvent instanceof MouseEvent) {
+    doc.dispatchEvent(
+      new MouseEvent('mouseup', { clientX: nativeEvent.clientX, clientY: nativeEvent.clientY, bubbles: true, cancelable: true })
+    );
+    return;
+  }
+  const touchEvent = nativeEvent as TouchEvent;
+  const touch = touchEvent.touches?.[0] ?? touchEvent.changedTouches?.[0];
+  if (!touch) return;
+  doc.dispatchEvent(
+    new TouchEvent('touchend', { changedTouches: [touch], targetTouches: [], touches: [], bubbles: true, cancelable: true })
+  );
+}
+
 function isPointInRect(point: { x: number; y: number }, rect: DOMRect | undefined): boolean {
   if (!rect) return false;
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
@@ -640,7 +678,8 @@ export default function Grid({
       w: number,
       h: number,
       point?: { x: number; y: number },
-      sourceElement?: HTMLElement | null
+      sourceElement?: HTMLElement | null,
+      nativeEvent?: Event
     ) => void
   >(() => {});
 
@@ -967,7 +1006,8 @@ export default function Grid({
       w: number,
       h: number,
       point?: { x: number; y: number },
-      sourceElement?: HTMLElement | null
+      sourceElement?: HTMLElement | null,
+      nativeEvent?: Event
     ) => {
       const { current, prev, next, pages, effectiveBreakpoint, activeIndex, onCreatePage, onMoveWidgetToPage, goToIndex } =
         liveRef.current;
@@ -991,10 +1031,16 @@ export default function Grid({
       // real on-screen box at the moment of the FIRST hop — every hop after
       // that just keeps steering the same ghost with the same offset, since
       // there's no fresh "real" box to recapture from once it's hidden.
-      const grabOffset =
-        ghostElRef.current || !sourceElement || !point
-          ? { grabOffsetX: relocationRef.current?.grabOffsetX ?? 0, grabOffsetY: relocationRef.current?.grabOffsetY ?? 0 }
-          : createGhost(sourceElement, point);
+      const isFreshHop = !ghostElRef.current && !!sourceElement && !!point;
+      const grabOffset = isFreshHop
+        ? createGhost(sourceElement, point)
+        : { grabOffsetX: relocationRef.current?.grabOffsetX ?? 0, grabOffsetY: relocationRef.current?.grabOffsetY ?? 0 };
+
+      // Only relevant on that same first hop — react-grid-layout's own
+      // native drag is still genuinely live on the source page at this
+      // point (see endNativeDrag above), and is about to be yanked out from
+      // under it by onMoveWidgetToPage below.
+      if (isFreshHop && nativeEvent) endNativeDrag(sourceElement, nativeEvent);
 
       relocationRef.current = {
         widgetId,
@@ -1048,9 +1094,9 @@ export default function Grid({
       const direction = overLeft ? 'left' : 'right';
       // Reassigned every frame spent hovering the hitbox, so whenever
       // armHopHold's timer actually fires (PAGE_HOP_HOLD_MS later) it hands
-      // off the CURRENT cursor position/element to beginRelocation, not a
-      // stale one captured back when the hold first started.
-      hopHoldFireRef.current = () => beginRelocation(direction, newItem.i, newItem.w, newItem.h, point, element);
+      // off the CURRENT cursor position/element/event to beginRelocation,
+      // not a stale one captured back when the hold first started.
+      hopHoldFireRef.current = () => beginRelocation(direction, newItem.i, newItem.w, newItem.h, point, element, event);
       armHopHold(direction);
     },
     [prev, next, beginRelocation, armHopHold, clearHopHold]
