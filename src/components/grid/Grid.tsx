@@ -13,6 +13,7 @@ import {
   PAGE_PEEK_SLIVER_PX,
   pageSoftHeightRows,
   pageTrackWidth,
+  VIEW_MODE_PEEK_GAP_PX,
 } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
 import { areGesturesLocked } from '../../lib/gestureLock';
@@ -243,10 +244,16 @@ export default function Grid({
   }, [isEditMode]);
 
   // Edit mode reserves room on each edge for a neighbor's sliver plus a gap
-  // before it; view mode reserves nothing, so a neighbor sits fully
-  // off-screen at rest and only passes through during the slide transition.
+  // before it; view mode reserves nothing (the active page keeps the full
+  // canvas width), so a neighbor sits fully off-screen at rest and only
+  // passes through during the slide transition. It still needs its OWN gap
+  // though — VIEW_MODE_PEEK_GAP_PX, not 0 — since a neighbor stays mounted
+  // (see GridPage below) and .grid-page-viewport never clips; without a gap
+  // wide enough to clear .dashboard-container's inline padding, sitting
+  // flush against the active page's edge would let it poke into that
+  // padding right at the screen edge instead of staying fully hidden.
   const reservePx = isEditMode ? PAGE_PEEK_SLIVER_PX + PAGE_GAP_PX : 0;
-  const slotGapPx = isEditMode ? PAGE_GAP_PX : 0;
+  const slotGapPx = isEditMode ? PAGE_GAP_PX : VIEW_MODE_PEEK_GAP_PX;
 
   // The local coordinate space the peek carousel lays out within: the real
   // canvas normally, but while simulating a device, the device's own width

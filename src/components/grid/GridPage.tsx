@@ -2,7 +2,7 @@
 
 import { GridLayout, verticalCompactor } from 'react-grid-layout';
 import type { EventCallback, Layout } from 'react-grid-layout';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   GRID_COLS,
   GRID_CONTAINER_PADDING,
@@ -69,7 +69,17 @@ type GridPageProps = {
 // One page's grid — extracted from what used to be the whole of Grid.tsx
 // (back when a breakpoint had exactly one page). Grid.tsx now mounts one of
 // these per visible page (active, and peeked neighbors while editing).
-export default function GridPage({
+//
+// Memoized because Grid.tsx re-renders on every page-nav commit/settle (and
+// other unrelated state changes); without it, every mounted GridPage —
+// including peek slots whose own props didn't change — would re-run its own
+// render plus react-grid-layout's internal GridLayout render, at a cost that
+// scales with that page's widget count. That's most noticeable leaving
+// whichever page you've been actively building up while editing, since it
+// tends to carry the most widgets. Relies on the same stable-reference
+// contract WidgetShell already does (page/callback props keep their
+// identity when nothing relevant to that slot changed).
+function GridPage({
   page,
   effectiveBreakpoint,
   isEditMode,
@@ -253,3 +263,5 @@ export default function GridPage({
     </div>
   );
 }
+
+export default memo(GridPage);

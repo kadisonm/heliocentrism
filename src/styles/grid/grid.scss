@@ -18,13 +18,14 @@
   box-shadow: 0 12px 30px var(--shadow-modifier);
 }
 
-// Edit-mode page carousel — the active page plus its immediate real/blank
-// neighbors, all rendered at full (unscaled) size (see Grid.tsx). The
-// viewport clips whatever doesn't fit, so a neighbor mostly slides off
-// the screen with only PAGE_PEEK_SLIVER_PX peeking in at the edge. Outside
-// edit mode none of this renders — the dashboard shows one full-width page.
+// The active page plus its immediate real/blank neighbors, all rendered at
+// full (unscaled) size (see Grid.tsx). Always visible (not clipped) so the
+// peek sliver and the slide itself can bleed past this box's own (inset)
+// edge to reach the full viewport width — view mode keeps a neighbor from
+// showing at rest by simply not mounting one (see Grid.tsx) rather than by
+// clipping here, since clipping would just as easily cut the slide short.
 .grid-page-viewport {
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 
   // The active page's outline bleeds a couple px outside its own box, so it

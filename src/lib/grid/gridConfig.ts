@@ -82,6 +82,16 @@ export const PAGE_PEEK_SLIVER_PX = 48;
 // grid.scss, same pattern as GRID_PREVIEW_FRAME_CHROME.
 export const PAGE_GAP_PX = 16;
 
+// View mode gives the active page the full canvas width (no reserved
+// sliver), so a peek neighbor sits exactly flush against its edge — which,
+// since .grid-page-viewport never clips (see grid.scss; the slide needs to
+// bleed to the full viewport width in edit mode), would otherwise poke into
+// .dashboard-container's own inline padding right at the screen edge. This
+// gap only needs to clear that padding (1.5rem — see dashboard.scss); sized
+// generously past it rather than importing that exact value so it stays
+// safe if that padding ever changes.
+export const VIEW_MODE_PEEK_GAP_PX = 48;
+
 // Each page (active or neighbor) renders at this same width — the canvas
 // width minus `reservePx` reserved on each edge for the neighbor peeking in
 // plus the gap before it. Centering the active page at this width against

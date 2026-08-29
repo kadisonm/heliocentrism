@@ -35,6 +35,28 @@ body {
   padding: 0;
   min-height: 100%;
   max-width: 100%;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-family: Arial, Helvetica, sans-serif;
+  color-scheme: var(--color-scheme, dark);
+  // Belt-and-suspenders alongside the viewport meta's maximumScale/
+  // userScalable (see layout.tsx): still allows normal one/two-finger
+  // panning, just drops double-tap-to-zoom and the ~300ms tap delay some
+  // mobile browsers add while waiting to see if a second tap is coming —
+  // both of which read as "not a native app" on iOS in particular. A
+  // descendant that needs stricter handling during its own gesture (e.g. a
+  // widget drag) can always narrow this further; it can't loosen it.
+  touch-action: manipulation;
+}
+
+// Scrolling/gutter properties belong on body alone, not html too: html has
+// no explicit overflow of its own, so per spec body's overflow-x/y here
+// propagates up to become the viewport's actual scrolling box — giving both
+// elements their own explicit overflow instead would make each establish a
+// SEPARATE scrolling box, each reserving its own scrollbar-gutter, doubling
+// the reserved width and leaving full-bleed chrome (.app-nav,
+// .dashboard-wrapper) short of the real right edge.
+body {
   // Only vertical scrolling is intentional — anything wide enough to force
   // horizontal scroll/pan on a mobile viewport is a layout bug, not content
   // to reveal by panning sideways. Setting overflow-x alone also computes
@@ -48,18 +70,6 @@ body {
   // — that width shift is what read as every widget jittering by a couple
   // pixels right as the page toggled.
   scrollbar-gutter: stable;
-  background: var(--background-primary);
-  color: var(--text-normal);
-  font-family: Arial, Helvetica, sans-serif;
-  color-scheme: var(--color-scheme, dark);
-  // Belt-and-suspenders alongside the viewport meta's maximumScale/
-  // userScalable (see layout.tsx): still allows normal one/two-finger
-  // panning, just drops double-tap-to-zoom and the ~300ms tap delay some
-  // mobile browsers add while waiting to see if a second tap is coming —
-  // both of which read as "not a native app" on iOS in particular. A
-  // descendant that needs stricter handling during its own gesture (e.g. a
-  // widget drag) can always narrow this further; it can't loosen it.
-  touch-action: manipulation;
 }
 
 // Browsers give buttons/inputs/selects their own default border/bezel —
