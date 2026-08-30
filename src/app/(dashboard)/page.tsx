@@ -138,6 +138,7 @@ export default function DashboardPage() {
         allowedBreakpoints={allowedBreakpoints}
         onBreakpointChange={setActiveBreakpoint}
         onAddWidget={(type) => {
+          const isNewPage = current.kind !== 'real';
           const pageId = current.kind === 'real' ? current.page.id : dashboard.createPage(activeBreakpoint);
           dashboard.addWidget(type, activeBreakpoint, pageId);
         }}

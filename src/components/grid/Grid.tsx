@@ -176,6 +176,24 @@ export default function Grid({
   const [displayedIndex, setDisplayedIndex] = useState(committedIndex);
   const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Accumulates extra delta-nav steps (keyboard/wheel) requested while a
+  // slide is already in flight (committedIndex !== displayedIndex). Landing
+  // a 2nd commit that far ahead of displayedIndex would read as a distant,
+  // unanimated jump to the state machine below (it only knows how to
+  // animate an adjacent step), snapping/cancelling the in-flight slide
+  // instead of smoothly continuing it — queuing here and draining one step
+  // per settle (see the "drives the slide" effect) chains them into
+  // separate, fully-animated slides instead, so a rapid press doesn't get
+  // silently dropped OR jar the in-flight animation.
+  const queuedDeltaRef = useRef(0);
+
+  // Gates whether the track's transform actually overshoots toward the new
+  // page yet (see trackOffsetPx and isLookaheadFreshMount below) — false
+  // for a couple of frames when a slide is about to mount a brand-new
+  // page's subtree, so that mount's cost lands while the track is still
+  // visually at rest instead of stealing frames from the CSS transition.
+  const [overshootReady, setOvershootReady] = useState(true);
+
   // Exiting edit mode flips isEditMode (and so every page's own chrome —
   // drag handles, geometry, etc.) instantly, straight away. But if
   // displayedIndex is still lagging on the blank "create new page" slot
@@ -253,6 +271,20 @@ export default function Grid({
   const lookaheadPage =
     Math.abs(slideDirection) === 1 ? virtualPages[activeIndex + slideDirection * 2] ?? null : null;
   const lookaheadSignature = slotSignature(lookaheadPage);
+
+  // True exactly when the lookahead page hasn't been mounted yet as prev/
+  // current/next — i.e. this slide is about to mount a brand-new page's
+  // whole subtree (GridLayout + every widget), not just promote one that
+  // was already sitting mounted as a peek neighbor. That mount can be
+  // heavy enough (widget count dependent) to blow through several frames
+  // of the slide's own budget if it lands mid-transition — see the
+  // overshootReady gating below, which defers starting the transform until
+  // this settles instead of racing it.
+  const isLookaheadFreshMount =
+    lookaheadSignature !== 'none' &&
+    lookaheadSignature !== slotSignature(prev) &&
+    lookaheadSignature !== slotSignature(current) &&
+    lookaheadSignature !== slotSignature(next);
 
   // Same idea as previousCurrentSignatureRef above, but for whichever page
   // held the lookahead role a render ago — read by the Chromium reflow fix
@@ -356,7 +388,8 @@ export default function Grid({
   // overshoot by one extra slot in that direction — see the comment above
   // committedIndex/displayedIndex for why this, rather than just jumping
   // straight to the new prev/active/next, is what actually animates.
-  const trackOffsetPx = restingTrackOffsetPx - (committedIndex - displayedIndex) * (pageWidth + slotGapPx);
+  const trackOffsetPx =
+    restingTrackOffsetPx - (overshootReady ? committedIndex - displayedIndex : 0) * (pageWidth + slotGapPx);
 
   const handleUpdateWidget = useCallback(
     (id: string, pageId: string, patch: Partial<Omit<DashboardWidget, 'id'>>) =>
@@ -422,15 +455,21 @@ export default function Grid({
     // cycling it would only serve to restart any CSS animation inside it.
     const outgoingSignature = previousCurrentSignatureRef.current;
     const outgoingLookaheadSignature = previousLookaheadSignatureRef.current;
+    // Collect first, then force ONE shared reflow for both arms — matches
+    // the role-change effect below, which found two separate forced
+    // reflows (one per arm) measurably slower than a single shared one.
+    const toggled: HTMLElement[] = [];
     for (const [signature, el] of [
       [prevSignature, armLeftRef.current],
       [nextSignature, armRightRef.current],
     ] as const) {
       if (!el || signature === outgoingSignature || signature === outgoingLookaheadSignature) continue;
       el.style.display = 'none';
-      void el.offsetHeight;
-      el.style.display = '';
+      toggled.push(el);
     }
+    if (toggled.length === 0) return;
+    void trackRef.current?.offsetHeight; // one shared forced reflow, flushed for both arms at once
+    for (const el of toggled) el.style.display = '';
   }, [prevSignature, nextSignature]);
 
   // Applies a new displayedIndex without animating — used both to settle a
@@ -456,19 +495,75 @@ export default function Grid({
       clearTimeout(slideTimeoutRef.current);
       slideTimeoutRef.current = null;
     }
-    if (committedIndex === displayedIndex) return;
+    if (committedIndex === displayedIndex) {
+      // guards against a leftover false from an aborted hold below
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      setOvershootReady(true);
+      return;
+    }
+
     if (Math.abs(committedIndex - displayedIndex) !== 1) {
       // Synchronizing displayed state to an external commit, paired with
       // the no-transition DOM toggle inside — not derivable during render.
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      // A distant jump (e.g. a dot click) supersedes any queued delta-nav
+      // steps rather than resuming them once it lands.
+      queuedDeltaRef.current = 0;
+      setOvershootReady(true);
       applyDisplayedIndexInstantly(committedIndex);
       return;
     }
-    slideTimeoutRef.current = setTimeout(() => {
-      slideTimeoutRef.current = null;
-      applyDisplayedIndexInstantly(committedIndex);
-    }, PAGE_SLIDE_MS);
-  }, [committedIndex, displayedIndex, applyDisplayedIndexInstantly]);
+    let armRaf1 = 0;
+    let armRaf2 = 0;
+
+    const startOvershoot = () => {
+      slideTimeoutRef.current = setTimeout(() => {
+        slideTimeoutRef.current = null;
+        applyDisplayedIndexInstantly(committedIndex);
+        // Drain one queued delta-nav step now that displayedIndex has
+        // caught up to committedIndex — batched with applyDisplayedIndexInstantly's
+        // setDisplayedIndex above into the same commit, so the next render
+        // sees an adjacent (not distant) gap and plays its own full slide.
+        if (queuedDeltaRef.current !== 0) {
+          const step = queuedDeltaRef.current > 0 ? 1 : -1;
+          queuedDeltaRef.current -= step;
+          const nextTarget = clampPageIndex(committedIndex + step, pages.length, showBlankSlot);
+          handlePageIndexChange(nextTarget);
+        }
+      }, PAGE_SLIDE_MS);
+    };
+
+    if (isLookaheadFreshMount) {
+      // Hold the track at rest for two frames so the browser can finish
+      // mounting/laying out the incoming page's subtree before the CSS
+      // transition starts competing with it for frame budget — see
+      // isLookaheadFreshMount and trackOffsetPx above. Two frames (not
+      // one) gives the just-mounted subtree's own layout effects a chance
+      // to flush too, not just its first render.
+      setOvershootReady(false);
+      armRaf1 = requestAnimationFrame(() => {
+        armRaf2 = requestAnimationFrame(() => {
+          setOvershootReady(true);
+          startOvershoot();
+        });
+      });
+    } else {
+      setOvershootReady(true);
+      startOvershoot();
+    }
+
+    return () => {
+      cancelAnimationFrame(armRaf1);
+      cancelAnimationFrame(armRaf2);
+    };
+  }, [
+    committedIndex,
+    displayedIndex,
+    applyDisplayedIndexInstantly,
+    isLookaheadFreshMount,
+    pages.length,
+    showBlankSlot,
+    handlePageIndexChange,
+  ]);
 
   // react-grid-layout has its own internal "mounted" flag that permanently
   // enables its CSS transforms/transitions after a <GridLayout>'s true first
@@ -521,6 +616,7 @@ export default function Grid({
   // against that effect's own setTimeout (this one runs synchronously,
   // same commit) and cut the animation short into an instant jump.
   useLayoutEffect(() => {
+    queuedDeltaRef.current = 0; // a different page set entirely — any queued delta-nav step no longer means anything
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     applyDisplayedIndexInstantly(activePageIndex[effectiveBreakpoint] ?? 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -637,6 +733,10 @@ export default function Grid({
     pageWidth,
     slotGapPx,
     restingTrackOffsetPx,
+    displayedIndex,
+    overshootReady,
+    showBlankSlot,
+    handlePageIndexChange,
   });
   useLayoutEffect(() => {
     liveRef.current = {
@@ -655,6 +755,10 @@ export default function Grid({
       pageWidth,
       slotGapPx,
       restingTrackOffsetPx,
+      displayedIndex,
+      overshootReady,
+      showBlankSlot,
+      handlePageIndexChange,
     };
     // Confirms an in-flight hop once `current` actually catches up to the
     // page it targeted — see the big comment on relocationRef above.
@@ -663,6 +767,19 @@ export default function Grid({
       state.pendingConfirmation = false;
     }
   });
+
+  // Shared by wheel and keyboard paging (see queuedDeltaRef above) — reads
+  // liveRef instead of taking committedIndex/displayedIndex/goToDelta as
+  // closed-over values so it stays referentially stable, letting both
+  // gesture listeners attach once instead of resubscribing on every commit.
+  const requestDelta = useCallback((delta: number) => {
+    const { committedIndex: liveCommitted, displayedIndex: liveDisplayed, goToDelta: liveGoToDelta } = liveRef.current;
+    if (liveCommitted !== liveDisplayed) {
+      queuedDeltaRef.current += delta;
+    } else {
+      liveGoToDelta(delta);
+    }
+  }, []);
 
   // Once a widget has been handed off to a neighboring page mid-drag (see
   // beginRelocation below), react-grid-layout's own drag tracking on the
@@ -1256,7 +1373,7 @@ export default function Grid({
         return;
       }
       const duration = Date.now() - start.t;
-      const { next, prev, pageWidth, goToDelta } = liveRef.current;
+      const { next, prev, pageWidth } = liveRef.current;
       const hasTarget = rawDx < 0 ? !!next : !!prev;
       const shouldCommit =
         hasTarget &&
@@ -1265,7 +1382,7 @@ export default function Grid({
 
       if (shouldCommit && tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS)) {
         trackRef.current?.classList.remove('grid-page-track--no-transition');
-        goToDelta(rawDx < 0 ? 1 : -1);
+        requestDelta(rawDx < 0 ? 1 : -1);
       } else {
         snapBack(rawDx);
       }
@@ -1287,7 +1404,7 @@ export default function Grid({
       if (Math.abs(wheelAccumulated) >= WHEEL_SWIPE_THRESHOLD) {
         const direction = wheelAccumulated > 0 ? 1 : -1;
         wheelAccumulated = 0;
-        if (tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS)) liveRef.current.goToDelta(direction);
+        if (tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS)) requestDelta(direction);
       }
     };
 
@@ -1307,7 +1424,7 @@ export default function Grid({
     // Mounts once and reads everything live off liveRef/refs instead — see
     // the comment atop this effect — so a page/index change doesn't tear
     // down and re-attach these listeners mid-gesture.
-  }, [containerRef]);
+  }, [containerRef, requestDelta]);
 
   // Works in both edit and view mode — goToDelta already no-ops via
   // clampPageIndex when there's nowhere to go, so no extra guard is needed.
@@ -1325,11 +1442,11 @@ export default function Grid({
       }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       if (!tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) return;
-      goToDelta(event.key === 'ArrowLeft' ? -1 : 1);
+      requestDelta(event.key === 'ArrowLeft' ? -1 : 1);
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [goToDelta]);
+  }, [requestDelta]);
 
   // Shared by both placements below (only one is ever non-null at a time,
   // per slideDirection). Forward appends it as a normal trailing flex child
