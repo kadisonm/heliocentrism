@@ -4,11 +4,13 @@ import { calcGridItemPosition, calcXY, cloneLayout, getLayoutItem, moveElement, 
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  DESKTOP_PAGE_CHANGE_COOLDOWN_MS,
   GRID_COLS,
   GRID_CONTAINER_PADDING,
   GRID_ITEM_MARGIN,
   GRID_PREVIEW_WIDTHS,
   GRID_ROW_HEIGHT,
+  PAGE_CHANGE_COOLDOWN_MS,
   PAGE_GAP_PX,
   PAGE_PEEK_SLIVER_PX,
   pageSoftHeightRows,
@@ -194,14 +196,12 @@ export default function Grid({
     handlePageIndexChange
   );
 
-  // Clicking a peeking neighbor is a direct user navigation gesture — same
-  // shared cooldown as wheel/keyboard/swipe/dots (see
-  // lib/grid/pageChangeCooldown.ts), so alternating between clicking left
-  // and right neighbors can't spam page changes any faster than any other
-  // input method can.
+  // Clicking a peeking neighbor is a direct, single-shot user navigation
+  // gesture, same as keyboard/dots — shares that shorter desktop cooldown
+  // (see lib/grid/pageChangeCooldown.ts), not the longer wheel/swipe one.
   const handlePeekClick = useCallback(
     (index: number) => {
-      if (tryClaimPageChange()) goToIndex(index);
+      if (tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) goToIndex(index);
     },
     [goToIndex]
   );
@@ -1263,7 +1263,7 @@ export default function Grid({
         ((Math.abs(rawDx) >= SWIPE_DISTANCE_PX && duration <= SWIPE_MAX_DURATION_MS) ||
           Math.abs(rawDx) >= pageWidth * SWIPE_COMMIT_FRACTION);
 
-      if (shouldCommit && tryClaimPageChange()) {
+      if (shouldCommit && tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS)) {
         trackRef.current?.classList.remove('grid-page-track--no-transition');
         goToDelta(rawDx < 0 ? 1 : -1);
       } else {
@@ -1287,7 +1287,7 @@ export default function Grid({
       if (Math.abs(wheelAccumulated) >= WHEEL_SWIPE_THRESHOLD) {
         const direction = wheelAccumulated > 0 ? 1 : -1;
         wheelAccumulated = 0;
-        if (tryClaimPageChange()) liveRef.current.goToDelta(direction);
+        if (tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS)) liveRef.current.goToDelta(direction);
       }
     };
 
@@ -1324,7 +1324,7 @@ export default function Grid({
         return;
       }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      if (!tryClaimPageChange()) return;
+      if (!tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) return;
       goToDelta(event.key === 'ArrowLeft' ? -1 : 1);
     };
     document.addEventListener('keydown', handleKeyDown);

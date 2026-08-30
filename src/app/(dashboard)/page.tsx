@@ -9,6 +9,7 @@ import { usePageNavigation } from '../../components/grid/usePageNavigation';
 import { useDeviceTier } from '../../components/grid/useDeviceTier';
 import { clampPageIndex } from '../../lib/grid/pageNavigation';
 import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
+import { DESKTOP_PAGE_CHANGE_COOLDOWN_MS } from '../../lib/grid/gridConfig';
 import TaskDragProvider from '../../components/widgets/task-list/TaskDragProvider';
 import type { DashboardBreakpoint } from '../../lib/types';
 
@@ -120,10 +121,12 @@ export default function DashboardPage() {
           activeIndex={activeIndex}
           showBlankDot={virtualPages.length > currentTier.pages.length}
           onSelect={(index) => {
-            // A dot click is a direct user navigation gesture — same shared
-            // cooldown as wheel/keyboard/swipe/peek-click (see
-            // lib/grid/pageChangeCooldown.ts).
-            if (tryClaimPageChange()) setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: index }));
+            // A dot click is a direct, single-shot navigation gesture, same
+            // as keyboard/peek-click — shares that shorter desktop cooldown
+            // (see lib/grid/pageChangeCooldown.ts), not the wheel/swipe one.
+            if (tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) {
+              setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: index }));
+            }
           }}
         />
       )}

@@ -60,12 +60,19 @@ export const DEFAULT_WIDGET_MIN_SIZE = { w: 2, h: 3 };
 
 export const MAX_PAGES_PER_BREAKPOINT = 30;
 
-// Rate-limits how often a user's own gesture (wheel, keyboard, dot click,
-// touch-swipe commit, clicking a peeking neighbor) can trigger a page
-// change — see lib/grid/pageChangeCooldown.ts. Matches the old wheel-only
-// cooldown's own duration, which already worked well for that one input
-// method; now shared across all of them instead of just wheel.
+// Rate-limits wheel and touch-swipe page changes — see
+// lib/grid/pageChangeCooldown.ts. Both fire a burst of raw events per
+// gesture (wheel deltas, touchmove ticks), so the window has to be long
+// enough to debounce that whole burst into a single change, not just outlast
+// the slide animation.
 export const PAGE_CHANGE_COOLDOWN_MS = 400;
+
+// Rate-limits keyboard, dot-click, and peek-click page changes — see
+// lib/grid/pageChangeCooldown.ts. These each commit exactly once per
+// gesture, so they only need to wait out the slide animation itself rather
+// than debounce a burst — kept in sync by hand with PAGE_SLIDE_MS in
+// Grid.tsx (== .grid-page-track's transition duration).
+export const DESKTOP_PAGE_CHANGE_COOLDOWN_MS = 250;
 
 // Advisory-only per-page length ceiling (~10 viewport-heights of grid rows).
 // Never blocks placement/resize — only decides whether GridPage renders the
