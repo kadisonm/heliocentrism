@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/grid/Grid';
+import type { GridHandle } from '../../components/grid/Grid';
 import GridStatusBar from '../../components/grid/GridStatusBar';
 import PageDots from '../../components/grid/PageDots';
 import { ALL_BREAKPOINTS, useGridState } from '../../components/grid/useGridState';
 import { usePageNavigation } from '../../components/grid/usePageNavigation';
 import { useDeviceTier } from '../../components/grid/useDeviceTier';
 import { clampPageIndex } from '../../lib/grid/pageNavigation';
-import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
-import { DESKTOP_PAGE_CHANGE_COOLDOWN_MS } from '../../lib/grid/gridConfig';
 import TaskDragProvider from '../../components/widgets/task-list/TaskDragProvider';
 import type { DashboardBreakpoint } from '../../lib/types';
 
@@ -24,6 +23,7 @@ export default function DashboardPage() {
 
   const dashboard = useGridState();
   const deviceTier = useDeviceTier();
+  const gridRef = useRef<GridHandle>(null);
 
   // A phone can't usefully preview or edit the desktop layout it can't see,
   // and a tablet has no reason to touch desktop either — each device can
@@ -98,6 +98,7 @@ export default function DashboardPage() {
         {!dashboard.isLoading && (
           <TaskDragProvider>
             <Grid
+              ref={gridRef}
               breakpoints={dashboard.breakpoints}
               isEditMode={isEditMode}
               activeBreakpoint={activeBreakpoint}
@@ -122,11 +123,11 @@ export default function DashboardPage() {
           showBlankDot={virtualPages.length > currentTier.pages.length}
           onSelect={(index) => {
             // A dot click is a direct, single-shot navigation gesture, same
-            // as keyboard/peek-click — shares that shorter desktop cooldown
-            // (see lib/grid/pageChangeCooldown.ts), not the wheel/swipe one.
-            if (tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) {
-              setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: index }));
-            }
+            // as keyboard/peek-click — routed through Grid's requestPage so
+            // a rapid run of clicks queues into separate animated slides
+            // instead of racing Grid's own slide-settle timing and skipping
+            // one (see GridHandle/usePageSlide in Grid.tsx).
+            gridRef.current?.requestPage(index);
           }}
         />
       )}

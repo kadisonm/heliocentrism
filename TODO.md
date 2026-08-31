@@ -34,6 +34,8 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Figure out how to allow google accounts to also be connected to an email address and password. (For google calendar integration etc)
 - Add the option to export/ import user data
 - Add data backups and the option to export them/ change how often and how many are saved
+- Maybe a buffer for data to be synced and limit the rate so the firestore cannot be spammed
+- Maybe look into a warning if data hasnt been synced yet when closing the browser
 
 ---
 

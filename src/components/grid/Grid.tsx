@@ -2,9 +2,9 @@
 
 import { calcGridItemPosition, calcXY, cloneLayout, getLayoutItem, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import type { Layout, LayoutItem } from 'react-grid-layout';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { Ref } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import {
-  DESKTOP_PAGE_CHANGE_COOLDOWN_MS,
   GRID_COLS,
   GRID_CONTAINER_PADDING,
   GRID_ITEM_MARGIN,
@@ -19,11 +19,13 @@ import {
 } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
 import { areGesturesLocked } from '../../lib/gestureLock';
-import { clampPageIndex } from '../../lib/grid/pageNavigation';
+import { clampPageIndex, virtualPageSignature } from '../../lib/grid/pageNavigation';
 import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
+import { waitForTransitionEnd } from '../../lib/grid/transitionSettle';
 import BlankPagePane from './BlankPagePane';
 import GridPage from './GridPage';
 import { usePageNavigation } from './usePageNavigation';
+import { usePageSlide } from './usePageSlide';
 import { useViewportHeight } from './useViewportHeight';
 
 const SWIPE_DISTANCE_PX = 50; // minimum horizontal travel to count as a swipe (fast-flick path)
@@ -129,20 +131,33 @@ type GridProps = {
   onMoveWidgetToPage: (id: string, breakpoint: DashboardBreakpoint, fromPageId: string, toPageId: string) => void;
 };
 
-export default function Grid({
-  breakpoints,
-  isEditMode,
-  activeBreakpoint,
-  deviceTier,
-  activePageIndex,
-  onPageIndexChange,
-  onLayoutChange,
-  onUpdateWidget,
-  onRemoveWidget,
-  onWidgetHeightsChange,
-  onCreatePage,
-  onMoveWidgetToPage,
-}: GridProps) {
+// Exposed so page.tsx's PageDots (a direct, single-shot click just like
+// peek-click, but living outside this component) shares the exact same
+// requestPage entry point — and so the exact same mid-slide queuing — as
+// every other navigation gesture here, instead of committing straight to
+// activePageIndex and risking a fast adjacent click misfiring the "distant
+// jump" snap. See usePageSlide's requestPage for the actual queuing rules.
+export type GridHandle = {
+  requestPage: (index: number) => void;
+};
+
+function Grid(
+  {
+    breakpoints,
+    isEditMode,
+    activeBreakpoint,
+    deviceTier,
+    activePageIndex,
+    onPageIndexChange,
+    onLayoutChange,
+    onUpdateWidget,
+    onRemoveWidget,
+    onWidgetHeightsChange,
+    onCreatePage,
+    onMoveWidgetToPage,
+  }: GridProps,
+  ref: Ref<GridHandle>
+) {
   const { width, containerRef, mounted } = useContainerWidth();
 
   // Skip the fixed preview width when editing your own actual tier (not
@@ -173,26 +188,20 @@ export default function Grid({
   // instantly (no-transition) to the same visual position. A non-adjacent
   // jump (e.g. a distant dot click) just cuts straight there, uncapped.
   const committedIndex = activePageIndex[effectiveBreakpoint] ?? 0;
-  const [displayedIndex, setDisplayedIndex] = useState(committedIndex);
-  const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Accumulates extra delta-nav steps (keyboard/wheel) requested while a
-  // slide is already in flight (committedIndex !== displayedIndex). Landing
-  // a 2nd commit that far ahead of displayedIndex would read as a distant,
-  // unanimated jump to the state machine below (it only knows how to
-  // animate an adjacent step), snapping/cancelling the in-flight slide
-  // instead of smoothly continuing it — queuing here and draining one step
-  // per settle (see the "drives the slide" effect) chains them into
-  // separate, fully-animated slides instead, so a rapid press doesn't get
-  // silently dropped OR jar the in-flight animation.
-  const queuedDeltaRef = useRef(0);
+  // DOM ref to .grid-page-track — declared up here (rather than down with
+  // the rest of the drag-to-edge refs) since usePageSlide needs it to drive
+  // the track's transform/transition directly.
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  // Gates whether the track's transform actually overshoots toward the new
-  // page yet (see trackOffsetPx and isLookaheadFreshMount below) — false
-  // for a couple of frames when a slide is about to mount a brand-new
-  // page's subtree, so that mount's cost lands while the track is still
-  // visually at rest instead of stealing frames from the CSS transition.
-  const [overshootReady, setOvershootReady] = useState(true);
+  const pageSlide = usePageSlide({
+    committedIndex,
+    pages,
+    isEditMode,
+    trackRef,
+    onCommit: handlePageIndexChange,
+  });
+  const { displayedIndex, trackOffsetReady } = pageSlide;
 
   // Exiting edit mode flips isEditMode (and so every page's own chrome —
   // drag handles, geometry, etc.) instantly, straight away. But if
@@ -207,42 +216,49 @@ export default function Grid({
   // isEditMode and the blank slot drops out for good.
   const showBlankSlot = isEditMode || displayedIndex === pages.length;
 
-  const { activeIndex, current, prev, next, goToIndex, goToDelta, virtualPages } = usePageNavigation(
+  const { activeIndex, current, prev, next, goToIndex, virtualPages } = usePageNavigation(
     pages,
     showBlankSlot,
     displayedIndex,
     handlePageIndexChange
   );
 
-  // Clicking a peeking neighbor is a direct, single-shot user navigation
-  // gesture, same as keyboard/dots — shares that shorter desktop cooldown
-  // (see lib/grid/pageChangeCooldown.ts), not the longer wheel/swipe one.
-  const handlePeekClick = useCallback(
+  // Corrective/programmatic repositioning (a drag-to-edge hop's own target
+  // correction, landing on the new last page once a trailing page auto-
+  // deletes, a breakpoint switch) — these have to land regardless of a
+  // recent user gesture or an in-flight slide, so they bypass requestPage's
+  // queuing/cooldown-adjacent logic entirely via forceLand, which snaps
+  // instantly rather than animating or queuing behind whatever's playing.
+  // Correctness beats smoothness here — see pageChangeCooldown.ts's own
+  // note on why these are excluded from its cooldown.
+  const forceGoToIndex = useCallback(
     (index: number) => {
-      if (tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) goToIndex(index);
+      pageSlide.forceLand(index);
+      goToIndex(index);
     },
-    [goToIndex]
+    [pageSlide, goToIndex]
   );
 
-  // Identifies a slot by its content (page id, or 'blank'/'none') rather
-  // than the prev/current/next/committed objects themselves — those are
-  // fresh references whenever usePageNavigation rebuilds its virtual page
-  // list, which would otherwise read as "changed" even when the actual
-  // page occupying a slot hasn't.
-  const slotSignature = (vp: typeof prev) => (vp ? (vp.kind === 'real' ? vp.page.id : 'blank') : 'none');
+  // Clicking a peeking neighbor is a direct, single-shot user navigation
+  // gesture, same as keyboard/dots — all three funnel through the same
+  // requestPage, which handles the mid-slide queuing itself (see
+  // usePageSlide.ts).
+  const handlePeekClick = useCallback((index: number) => pageSlide.requestPage(index), [pageSlide]);
+
+  useImperativeHandle(ref, () => ({ requestPage: pageSlide.requestPage }), [pageSlide.requestPage]);
 
   // Which page just got committed as active (e.g. a widget-drag hop's own
-  // goToIndex, or a click/swipe), independent of the lagging displayedIndex
+  // forceGoToIndex, or a click/swipe), independent of the lagging displayedIndex
   // above — virtualPages itself doesn't depend on which index is "current",
   // so this is safe to look up against the SAME array prev/current/next
   // were built from. Lets the outline below start turning blue the instant
   // the hop commits, rather than waiting out the slide-settle delay that
   // prev/current/next's role reassignment (deliberately) still waits for.
   const committedVirtualPage = virtualPages[clampPageIndex(committedIndex, pages.length, showBlankSlot)] ?? null;
-  const committedSignature = slotSignature(committedVirtualPage);
-  const isPrevCommitted = !!prev && slotSignature(prev) === committedSignature;
-  const isCurrentCommitted = !!current && slotSignature(current) === committedSignature;
-  const isNextCommitted = !!next && slotSignature(next) === committedSignature;
+  const committedSignature = virtualPageSignature(committedVirtualPage);
+  const isPrevCommitted = !!prev && virtualPageSignature(prev) === committedSignature;
+  const isCurrentCommitted = !!current && virtualPageSignature(current) === committedSignature;
+  const isNextCommitted = !!next && virtualPageSignature(next) === committedSignature;
 
   // Tracks whichever page was actually rendered as `current` as of the last
   // completed render, for the reflow-forcing effect further down to compare
@@ -253,7 +269,7 @@ export default function Grid({
   // slide) before `current` itself actually changes at settle — using it
   // here would start reflecting the new page far too early, defeating the
   // comparison below for the entire slide.
-  const currentSignature = slotSignature(current);
+  const currentSignature = virtualPageSignature(current);
   const previousCurrentSignatureRef = useRef(currentSignature);
   useEffect(() => {
     previousCurrentSignatureRef.current = currentSignature;
@@ -267,24 +283,14 @@ export default function Grid({
   // ride along with the shared track transform, instead of popping in at
   // full opacity the instant the slide settles and role-reassignment
   // reveals it as the real new prev/next.
+  // usePageSlide independently recomputes this same lookahead page (via
+  // isLookaheadFreshMount in pageNavigation.ts) to decide whether to hold
+  // the track at rest for a couple of frames before animating — see that
+  // function's own comment for why it's not simply handed this value.
   const slideDirection = committedIndex - displayedIndex;
   const lookaheadPage =
     Math.abs(slideDirection) === 1 ? virtualPages[activeIndex + slideDirection * 2] ?? null : null;
-  const lookaheadSignature = slotSignature(lookaheadPage);
-
-  // True exactly when the lookahead page hasn't been mounted yet as prev/
-  // current/next — i.e. this slide is about to mount a brand-new page's
-  // whole subtree (GridLayout + every widget), not just promote one that
-  // was already sitting mounted as a peek neighbor. That mount can be
-  // heavy enough (widget count dependent) to blow through several frames
-  // of the slide's own budget if it lands mid-transition — see the
-  // overshootReady gating below, which defers starting the transform until
-  // this settles instead of racing it.
-  const isLookaheadFreshMount =
-    lookaheadSignature !== 'none' &&
-    lookaheadSignature !== slotSignature(prev) &&
-    lookaheadSignature !== slotSignature(current) &&
-    lookaheadSignature !== slotSignature(next);
+  const lookaheadSignature = virtualPageSignature(lookaheadPage);
 
   // Same idea as previousCurrentSignatureRef above, but for whichever page
   // held the lookahead role a render ago — read by the Chromium reflow fix
@@ -324,9 +330,9 @@ export default function Grid({
   // .grid-page-slot--editing (see grid.scss) turned out not to reliably win
   // once other transitionable properties are ALSO changing on the exact
   // same render (min-height, --editing itself). Forcing it via the same
-  // toggle-a-class/reflow/next-frame-remove trick already used elsewhere in
-  // this file (see applyDisplayedIndexInstantly and the Chromium reflow fix
-  // below) sidesteps that ambiguity entirely, at the cost of one extra ref.
+  // toggle-a-class/reflow/next-frame-remove trick already used elsewhere
+  // (see usePageSlide's applyInstant and the Chromium reflow fix below)
+  // sidesteps that ambiguity entirely, at the cost of one extra ref.
   const activeSlotRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (isEditMode) return;
@@ -389,7 +395,7 @@ export default function Grid({
   // committedIndex/displayedIndex for why this, rather than just jumping
   // straight to the new prev/active/next, is what actually animates.
   const trackOffsetPx =
-    restingTrackOffsetPx - (overshootReady ? committedIndex - displayedIndex : 0) * (pageWidth + slotGapPx);
+    restingTrackOffsetPx - (trackOffsetReady ? committedIndex - displayedIndex : 0) * (pageWidth + slotGapPx);
 
   const handleUpdateWidget = useCallback(
     (id: string, pageId: string, patch: Partial<Omit<DashboardWidget, 'id'>>) =>
@@ -407,9 +413,9 @@ export default function Grid({
       // on "create a new page" as a side effect of a deletion.
       const willDeletePage = !!targetPage && targetPage.widgets.length === 1 && pages.length > 1 && pageIndex === pages.length - 1;
       onRemoveWidget(id, effectiveBreakpoint, pageId);
-      if (willDeletePage) goToIndex(pageIndex - 1);
+      if (willDeletePage) forceGoToIndex(pageIndex - 1);
     },
-    [onRemoveWidget, effectiveBreakpoint, pages, goToIndex]
+    [onRemoveWidget, effectiveBreakpoint, pages, forceGoToIndex]
   );
   // --- Drag-to-edge: dragging a widget onto a peek neighbor's actual
   // hitbox (its rendered bounding box — see isPointInRect below, not a
@@ -424,7 +430,6 @@ export default function Grid({
   const armLeftRef = useRef<HTMLDivElement>(null);
   const armRightRef = useRef<HTMLDivElement>(null);
   const suppressNextLayoutChangeRef = useRef(false);
-  const trackRef = useRef<HTMLDivElement>(null);
 
   // Chromium can mis-layout .grid-page-track on the very first paint after
   // a slot's content changes (e.g. a neighbor's presence toggling) at the
@@ -438,8 +443,8 @@ export default function Grid({
   // though the active slot's content never actually changed. Keyed by
   // slotSignature (see above) so this only re-fires when a slot's actual
   // page changes, not on every prev/next reference change.
-  const prevSignature = slotSignature(prev);
-  const nextSignature = slotSignature(next);
+  const prevSignature = virtualPageSignature(prev);
+  const nextSignature = virtualPageSignature(next);
   useLayoutEffect(() => {
     // The page that was JUST active a render ago demoting into this peek
     // slot is a real page-change too (so it'd normally get the toggle below
@@ -471,99 +476,6 @@ export default function Grid({
     void trackRef.current?.offsetHeight; // one shared forced reflow, flushed for both arms at once
     for (const el of toggled) el.style.display = '';
   }, [prevSignature, nextSignature]);
-
-  // Applies a new displayedIndex without animating — used both to settle a
-  // slide (transform reset to its resting value at the same moment
-  // prev/active/next reassign, which visually cancel out) and to cut
-  // straight to a non-adjacent target (no slide to play at all).
-  const applyDisplayedIndexInstantly = useCallback((index: number) => {
-    const el = trackRef.current;
-    el?.classList.add('grid-page-track--no-transition');
-    setDisplayedIndex(index);
-    requestAnimationFrame(() => el?.classList.remove('grid-page-track--no-transition'));
-  }, []);
-
-  // Drives the slide: an adjacent-step change to the committed index keeps
-  // displayedIndex (and so prev/active/next) on the OLD page one extra
-  // beat, while trackOffsetPx above already overshoots by one slot — once
-  // that overshoot finishes animating, swap prev/active/next to the new
-  // page and reset the transform in the same instant. A non-adjacent jump
-  // (e.g. a distant dot click) has no adjacent overshoot to play, so it
-  // just cuts straight there.
-  useLayoutEffect(() => {
-    if (slideTimeoutRef.current) {
-      clearTimeout(slideTimeoutRef.current);
-      slideTimeoutRef.current = null;
-    }
-    if (committedIndex === displayedIndex) {
-      // guards against a leftover false from an aborted hold below
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setOvershootReady(true);
-      return;
-    }
-
-    if (Math.abs(committedIndex - displayedIndex) !== 1) {
-      // Synchronizing displayed state to an external commit, paired with
-      // the no-transition DOM toggle inside — not derivable during render.
-      // A distant jump (e.g. a dot click) supersedes any queued delta-nav
-      // steps rather than resuming them once it lands.
-      queuedDeltaRef.current = 0;
-      setOvershootReady(true);
-      applyDisplayedIndexInstantly(committedIndex);
-      return;
-    }
-    let armRaf1 = 0;
-    let armRaf2 = 0;
-
-    const startOvershoot = () => {
-      slideTimeoutRef.current = setTimeout(() => {
-        slideTimeoutRef.current = null;
-        applyDisplayedIndexInstantly(committedIndex);
-        // Drain one queued delta-nav step now that displayedIndex has
-        // caught up to committedIndex — batched with applyDisplayedIndexInstantly's
-        // setDisplayedIndex above into the same commit, so the next render
-        // sees an adjacent (not distant) gap and plays its own full slide.
-        if (queuedDeltaRef.current !== 0) {
-          const step = queuedDeltaRef.current > 0 ? 1 : -1;
-          queuedDeltaRef.current -= step;
-          const nextTarget = clampPageIndex(committedIndex + step, pages.length, showBlankSlot);
-          handlePageIndexChange(nextTarget);
-        }
-      }, PAGE_SLIDE_MS);
-    };
-
-    if (isLookaheadFreshMount) {
-      // Hold the track at rest for two frames so the browser can finish
-      // mounting/laying out the incoming page's subtree before the CSS
-      // transition starts competing with it for frame budget — see
-      // isLookaheadFreshMount and trackOffsetPx above. Two frames (not
-      // one) gives the just-mounted subtree's own layout effects a chance
-      // to flush too, not just its first render.
-      setOvershootReady(false);
-      armRaf1 = requestAnimationFrame(() => {
-        armRaf2 = requestAnimationFrame(() => {
-          setOvershootReady(true);
-          startOvershoot();
-        });
-      });
-    } else {
-      setOvershootReady(true);
-      startOvershoot();
-    }
-
-    return () => {
-      cancelAnimationFrame(armRaf1);
-      cancelAnimationFrame(armRaf2);
-    };
-  }, [
-    committedIndex,
-    displayedIndex,
-    applyDisplayedIndexInstantly,
-    isLookaheadFreshMount,
-    pages.length,
-    showBlankSlot,
-    handlePageIndexChange,
-  ]);
 
   // react-grid-layout has its own internal "mounted" flag that permanently
   // enables its CSS transforms/transitions after a <GridLayout>'s true first
@@ -601,24 +513,20 @@ export default function Grid({
     return () => cancelAnimationFrame(raf);
   }, [currentSignature]);
 
-  useEffect(() => () => {
-    if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
-  }, []);
-
   // A breakpoint switch is a different page set entirely, not a slide —
-  // snap displayedIndex to match immediately, uncapped. Deliberately NOT
-  // keyed on isEditMode too (despite it also changing reservePx/pageWidth):
-  // toggling edit mode alone, on the SAME breakpoint, either leaves
-  // committedIndex/displayedIndex equal (nothing to resync) or — exiting
-  // from the blank "new page" slot — puts them exactly one step apart,
-  // which the "drives the slide" effect above already animates correctly
-  // on its own via showBlankSlot. Snapping here too would win the race
-  // against that effect's own setTimeout (this one runs synchronously,
-  // same commit) and cut the animation short into an instant jump.
+  // force-land on it immediately, uncapped, regardless of whether the gap
+  // to the new breakpoint's own remembered index happens to look adjacent.
+  // Deliberately NOT keyed on isEditMode too (despite it also changing
+  // reservePx/pageWidth): toggling edit mode alone, on the SAME breakpoint,
+  // either leaves committedIndex/displayedIndex equal (nothing to resync)
+  // or — exiting from the blank "new page" slot — puts them exactly one
+  // step apart, which usePageSlide's own effect above already animates
+  // correctly on its own via showBlankSlot. Forcing a land here too would
+  // win that race (this effect runs after usePageSlide's own, same commit,
+  // and forceLand's dispatch cancels whatever that effect just started) and
+  // cut the animation short into an instant jump.
   useLayoutEffect(() => {
-    queuedDeltaRef.current = 0; // a different page set entirely — any queued delta-nav step no longer means anything
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
-    applyDisplayedIndexInstantly(activePageIndex[effectiveBreakpoint] ?? 0);
+    pageSlide.forceLand(activePageIndex[effectiveBreakpoint] ?? 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBreakpoint]);
 
@@ -639,18 +547,19 @@ export default function Grid({
   // - pendingConfirmation: closing the exit/re-entry gap fast enough (a
   //   quick flick back toward the original page) can satisfy awaitingExit
   //   before React has actually re-rendered to reflect the FIRST hop —
-  //   goToIndex/onMoveWidgetToPage only take effect on some later render,
-  //   not synchronously inside beginRelocation. A second hop firing in that
-  //   gap reads liveRef.current still holding the pre-hop snapshot,
-  //   computing a goToIndex target from data that's already stale by the
-  //   time it lands, which desyncs activePageIndex from the actual page
+  //   forceGoToIndex/onMoveWidgetToPage only take effect on some later
+  //   render, not synchronously inside beginRelocation. A second hop firing
+  //   in that gap reads liveRef.current still holding the pre-hop snapshot,
+  //   computing a forceGoToIndex target from data that's already stale by
+  //   the time it lands, which desyncs activePageIndex from the actual page
   //   list — and page.tsx's own clamp effect (which corrects
-  //   activePageIndex against the real page count) and Grid's slide-settle
-  //   effect (which reacts to activePageIndex) then fight over the result,
-  //   which is what actually trips React's "Maximum update depth exceeded"
-  //   guard, not a direct loop in this file. Blocking any new hop until the
-  //   previous one is confirmed landed (current page id === its target)
-  //   closes this regardless of how fast the mouse moves.
+  //   activePageIndex against the real page count) and usePageSlide's own
+  //   slide-settle effect (which reacts to activePageIndex via
+  //   committedIndex) then fight over the result, which is what actually
+  //   trips React's "Maximum update depth exceeded" guard, not a direct
+  //   loop in this file. Blocking any new hop until the previous one is
+  //   confirmed landed (current page id === its target) closes this
+  //   regardless of how fast the mouse moves.
   // grabOffsetX/Y: the cursor's pixel offset from the widget's own
   // top-left, captured once from its real on-screen box the instant the
   // first hop fires (see the ghost element created in beginRelocation) —
@@ -714,9 +623,9 @@ export default function Grid({
   // — always read current values without needing to resubscribe
   // mid-gesture. Also doubles as the same escape hatch for the manual
   // touch-drag paging further down (committedIndex/pageWidth/slotGapPx/
-  // restingTrackOffsetPx/goToDelta), for the same reason: those handlers are
-  // attached once and live for the component's lifetime, not re-attached on
-  // every render just because a page changed.
+  // restingTrackOffsetPx), for the same reason: those handlers are attached
+  // once and live for the component's lifetime, not re-attached on every
+  // render just because a page changed.
   const liveRef = useRef({
     current,
     prev,
@@ -727,14 +636,11 @@ export default function Grid({
     onCreatePage,
     onMoveWidgetToPage,
     onLayoutChange,
-    goToIndex,
-    goToDelta,
+    forceGoToIndex,
     committedIndex,
     pageWidth,
     slotGapPx,
     restingTrackOffsetPx,
-    displayedIndex,
-    overshootReady,
     showBlankSlot,
     handlePageIndexChange,
   });
@@ -749,14 +655,11 @@ export default function Grid({
       onCreatePage,
       onMoveWidgetToPage,
       onLayoutChange,
-      goToIndex,
-      goToDelta,
+      forceGoToIndex,
       committedIndex,
       pageWidth,
       slotGapPx,
       restingTrackOffsetPx,
-      displayedIndex,
-      overshootReady,
       showBlankSlot,
       handlePageIndexChange,
     };
@@ -768,18 +671,21 @@ export default function Grid({
     }
   });
 
-  // Shared by wheel and keyboard paging (see queuedDeltaRef above) — reads
-  // liveRef instead of taking committedIndex/displayedIndex/goToDelta as
-  // closed-over values so it stays referentially stable, letting both
-  // gesture listeners attach once instead of resubscribing on every commit.
-  const requestDelta = useCallback((delta: number) => {
-    const { committedIndex: liveCommitted, displayedIndex: liveDisplayed, goToDelta: liveGoToDelta } = liveRef.current;
-    if (liveCommitted !== liveDisplayed) {
-      queuedDeltaRef.current += delta;
-    } else {
-      liveGoToDelta(delta);
-    }
-  }, []);
+  // Shared by wheel and keyboard paging — resolves a step against
+  // usePageSlide's own queue/committedIndex (see resolveDeltaTarget), then
+  // clamps it into the valid page range before handing it to requestPage,
+  // which handles the mid-slide queuing itself. Reads liveRef instead of
+  // taking pages/showBlankSlot as closed-over values so it stays
+  // referentially stable, letting both gesture listeners attach once
+  // instead of resubscribing on every commit.
+  const requestDelta = useCallback(
+    (delta: number) => {
+      const { pages: livePages, showBlankSlot: liveShowBlankSlot } = liveRef.current;
+      const target = clampPageIndex(pageSlide.resolveDeltaTarget(delta), livePages.length, liveShowBlankSlot);
+      pageSlide.requestPage(target);
+    },
+    [pageSlide]
+  );
 
   // Once a widget has been handed off to a neighboring page mid-drag (see
   // beginRelocation below), react-grid-layout's own drag tracking on the
@@ -1138,7 +1044,7 @@ export default function Grid({
       sourceElement?: HTMLElement | null,
       nativeEvent?: Event
     ) => {
-      const { current, prev, next, pages, effectiveBreakpoint, activeIndex, onCreatePage, onMoveWidgetToPage, goToIndex } =
+      const { current, prev, next, pages, effectiveBreakpoint, activeIndex, onCreatePage, onMoveWidgetToPage, forceGoToIndex } =
         liveRef.current;
       if (current.kind !== 'real') return;
       const target = direction === 'left' ? prev : next;
@@ -1182,7 +1088,7 @@ export default function Grid({
       };
       suppressNextLayoutChangeRef.current = true;
       onMoveWidgetToPage(widgetId, effectiveBreakpoint, current.page.id, targetPageId);
-      goToIndex(direction === 'left' ? activeIndex - 1 : sourceWillBeDeleted ? activeIndex : activeIndex + 1);
+      forceGoToIndex(direction === 'left' ? activeIndex - 1 : sourceWillBeDeleted ? activeIndex : activeIndex + 1);
 
       if (!attachedRelocationListenersRef.current) {
         const move = handleRelocationPointerMove;
@@ -1277,7 +1183,7 @@ export default function Grid({
   // driven imperatively off touchmove deltas (bypassing React entirely, same
   // pattern as the cross-page drag ghost above) so it can follow the finger
   // at 60fps without a render in between, then only on release does it
-  // either hand off to goToDelta (a fast flick, or a slow drag that crossed
+  // either hand off to requestDelta (a fast flick, or a slow drag that crossed
   // SWIPE_COMMIT_FRACTION of a page width — see handleTouchEnd) or animate
   // back to rest itself. liveRef (declared above for the relocation gesture)
   // supplies the current committedIndex/pageWidth/etc. without needing these
@@ -1292,16 +1198,12 @@ export default function Grid({
 
     // Cancels any programmatic slide still in flight so the drag starts from
     // a fully-settled base, then takes over the track's transform by hand —
-    // not via applyDisplayedIndexInstantly's own no-transition toggle, which
+    // not via usePageSlide's own applyInstant no-transition toggle, which
     // removes itself again one frame later (via rAF) and would start easing
     // every subsequent touchmove frame instead of snapping straight to the
     // finger.
     const beginDrag = () => {
-      if (slideTimeoutRef.current) {
-        clearTimeout(slideTimeoutRef.current);
-        slideTimeoutRef.current = null;
-      }
-      setDisplayedIndex(liveRef.current.committedIndex);
+      pageSlide.resetToCommitted();
       trackRef.current?.classList.add('grid-page-track--no-transition');
     };
 
@@ -1323,12 +1225,9 @@ export default function Grid({
       track.style.transitionDuration = `${duration}ms`;
       track.classList.remove('grid-page-track--no-transition');
       track.style.transform = `translateX(${liveRef.current.restingTrackOffsetPx}px)`;
-      const cleanup = () => {
+      waitForTransitionEnd(track, 'transform', duration + 50, () => {
         track.style.transitionDuration = '';
-        track.removeEventListener('transitionend', cleanup);
-      };
-      track.addEventListener('transitionend', cleanup);
-      setTimeout(cleanup, duration + 50); // safety net if transitionend never fires (e.g. interrupted)
+      });
     };
 
     const handleTouchStart = (event: TouchEvent) => {
@@ -1423,11 +1322,20 @@ export default function Grid({
     };
     // Mounts once and reads everything live off liveRef/refs instead — see
     // the comment atop this effect — so a page/index change doesn't tear
-    // down and re-attach these listeners mid-gesture.
-  }, [containerRef, requestDelta]);
+    // down and re-attach these listeners mid-gesture. pageSlide.resetToCommitted
+    // itself is stable (see its useCallback in usePageSlide.ts) even though
+    // the pageSlide object it's read off isn't — listing the whole object
+    // here would defeat that and re-attach on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef, requestDelta, pageSlide.resetToCommitted]);
 
-  // Works in both edit and view mode — goToDelta already no-ops via
-  // clampPageIndex when there's nowhere to go, so no extra guard is needed.
+  // Works in both edit and view mode — clampPageIndex (inside requestDelta)
+  // already no-ops when there's nowhere to go, so no extra guard is needed.
+  // No cooldown here (unlike wheel/touch): a held arrow key's OS-level
+  // repeat is rate-limited by requestPage's own bounded queue (see
+  // usePageSlide.ts / pageSlideMachine.ts), the same way a rapid burst of
+  // discrete dot/peek clicks is — a wall-clock cooldown on top would just
+  // drop legitimate rapid presses instead of queuing them.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -1441,7 +1349,6 @@ export default function Grid({
         return;
       }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      if (!tryClaimPageChange(DESKTOP_PAGE_CHANGE_COOLDOWN_MS)) return;
       requestDelta(event.key === 'ArrowLeft' ? -1 : 1);
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -1647,3 +1554,5 @@ export default function Grid({
     </div>
   );
 }
+
+export default forwardRef(Grid);

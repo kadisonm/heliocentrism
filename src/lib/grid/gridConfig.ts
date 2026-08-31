@@ -64,15 +64,12 @@ export const MAX_PAGES_PER_BREAKPOINT = 30;
 // lib/grid/pageChangeCooldown.ts. Both fire a burst of raw events per
 // gesture (wheel deltas, touchmove ticks), so the window has to be long
 // enough to debounce that whole burst into a single change, not just outlast
-// the slide animation.
+// the slide animation. Keyboard, dot-click, and peek-click don't need an
+// equivalent constant — each commits exactly once per gesture, so
+// usePageSlide's own bounded request queue (see pageSlideMachine.ts) rate-
+// limits them without a wall-clock cooldown, and without dropping rapid
+// presses/clicks a cooldown alone would.
 export const PAGE_CHANGE_COOLDOWN_MS = 400;
-
-// Rate-limits keyboard, dot-click, and peek-click page changes — see
-// lib/grid/pageChangeCooldown.ts. These each commit exactly once per
-// gesture, so they only need to wait out the slide animation itself rather
-// than debounce a burst — kept in sync by hand with PAGE_SLIDE_MS in
-// Grid.tsx (== .grid-page-track's transition duration).
-export const DESKTOP_PAGE_CHANGE_COOLDOWN_MS = 250;
 
 // Advisory-only per-page length ceiling (~10 viewport-heights of grid rows).
 // Never blocks placement/resize — only decides whether GridPage renders the
