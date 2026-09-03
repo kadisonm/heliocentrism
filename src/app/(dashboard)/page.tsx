@@ -3,18 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/grid/Grid';
 import type { GridHandle } from '../../components/grid/Grid';
-import GridStatusBar from '../../components/grid/GridStatusBar';
 import PageDots from '../../components/grid/PageDots';
 import { ALL_BREAKPOINTS, useGridState } from '../../components/grid/useGridState';
-import { usePageNavigation } from '../../components/grid/usePageNavigation';
 import { useDeviceTier } from '../../components/grid/useDeviceTier';
 import { clampPageIndex } from '../../lib/grid/pageNavigation';
 import TaskDragProvider from '../../components/widgets/task-list/TaskDragProvider';
 import type { DashboardBreakpoint } from '../../lib/types';
 
 export default function DashboardPage() {
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [activeBreakpoint, setActiveBreakpoint] = useState<DashboardBreakpoint>('desktop');
+  // Persists across gestures — set via Grid's canvas context menu ("Preview
+  // as"), replacing the old edit-toolbar's breakpoint Tabs. null means "not
+  // simulating any tier — show whatever the real device is."
+  const [previewBreakpoint, setPreviewBreakpoint] = useState<DashboardBreakpoint | null>(null);
   const [activePageIndex, setActivePageIndex] = useState<Record<DashboardBreakpoint, number>>({
     desktop: 0,
     tablet: 0,
@@ -25,9 +25,9 @@ export default function DashboardPage() {
   const deviceTier = useDeviceTier();
   const gridRef = useRef<GridHandle>(null);
 
-  // A phone can't usefully preview or edit the desktop layout it can't see,
-  // and a tablet has no reason to touch desktop either — each device can
-  // only edit its own tier and narrower ones.
+  // A phone can't usefully preview the desktop layout it can't see, and a
+  // tablet has no reason to touch desktop either — each device can only
+  // preview its own tier and narrower ones.
   const allowedBreakpoints = useMemo<DashboardBreakpoint[]>(() => {
     if (deviceTier === 'mobile') return ['mobile'];
     if (deviceTier === 'tablet') return ['mobile', 'tablet'];
@@ -35,34 +35,32 @@ export default function DashboardPage() {
   }, [deviceTier]);
 
   useEffect(() => {
-    if (!allowedBreakpoints.includes(activeBreakpoint)) {
-      // Sync activeBreakpoint back into the allowed set whenever the device
-      // tier changes (e.g. resizing across a breakpoint mid-edit) — land on
-      // the widest tier still allowed, closest to what was selected.
+    if (previewBreakpoint !== null && !allowedBreakpoints.includes(previewBreakpoint)) {
+      // The device tier changed (e.g. resizing across a breakpoint) out from
+      // under a preview that's no longer allowed — stop previewing rather
+      // than snapping to some other tier the user didn't ask for.
       /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setActiveBreakpoint(allowedBreakpoints[allowedBreakpoints.length - 1]);
+      setPreviewBreakpoint(null);
     }
-  }, [allowedBreakpoints, activeBreakpoint]);
+  }, [allowedBreakpoints, previewBreakpoint]);
 
-  const currentTier = dashboard.breakpoints[activeBreakpoint];
-  const { activeIndex, current, virtualPages } = usePageNavigation(
-    currentTier.pages,
-    isEditMode,
-    activePageIndex[activeBreakpoint] ?? 0,
-    (index) => setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: index }))
-  );
+  const effectiveBreakpoint = previewBreakpoint ?? deviceTier;
+  const currentTier = dashboard.breakpoints[effectiveBreakpoint];
 
-  // Catches (a) a page-delete cascade shrinking a breakpoint's page count
-  // while it isn't even the one being viewed, and (b) exiting edit mode
-  // while on the blank page for whichever breakpoint that applies to.
-  // Bails via unchanged reference, same style as setLayout's guard.
+  // Catches a page-delete cascade shrinking a breakpoint's page count while
+  // it isn't even the one being viewed. The blank "new page" slot is only
+  // ever reachable mid-drag now (see Grid.tsx's isDragActive/showBlankSlot,
+  // entirely internal to Grid) — activePageIndex itself never legitimately
+  // points past the last real page outside of that, so every breakpoint
+  // clamps the same way regardless of what's happening in Grid. Bails via
+  // unchanged reference, same style as setLayout's guard.
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setActivePageIndex((current) => {
       let changed = false;
       const next = { ...current };
       for (const bp of ALL_BREAKPOINTS) {
-        const clamped = clampPageIndex(current[bp] ?? 0, dashboard.breakpoints[bp].pages.length, isEditMode);
+        const clamped = clampPageIndex(current[bp] ?? 0, dashboard.breakpoints[bp].pages.length, false);
         if (clamped !== current[bp]) {
           next[bp] = clamped;
           changed = true;
@@ -70,27 +68,7 @@ export default function DashboardPage() {
       }
       return changed ? next : current;
     });
-  }, [dashboard.breakpoints, isEditMode]);
-
-  // Exiting edit mode while sitting on the blank "new page" slot needs to
-  // land on the last real page. The general clamp effect above already does
-  // that, but only a render later (it's a passive effect reacting to
-  // isEditMode) — leaving one commit where isEditMode has already flipped
-  // but activePageIndex still points past the last real page. Clamping it
-  // here too, in the same batch as the flip itself, closes that gap: Grid's
-  // showBlankSlot (see Grid.tsx) is what actually keeps the blank page on
-  // screen for exactly as long as this breakpoint's displayedIndex is still
-  // catching up to it, turning the exit into a clean one-step slide back
-  // instead of an instant snap.
-  const handleToggleEditMode = () => {
-    if (isEditMode) {
-      const pageCount = currentTier.pages.length;
-      if (pageCount > 0 && (activePageIndex[activeBreakpoint] ?? 0) === pageCount) {
-        setActivePageIndex((prev) => ({ ...prev, [activeBreakpoint]: pageCount - 1 }));
-      }
-    }
-    setIsEditMode((current) => !current);
-  };
+  }, [dashboard.breakpoints]);
 
   return (
     <div className="dashboard-wrapper">
@@ -100,12 +78,14 @@ export default function DashboardPage() {
             <Grid
               ref={gridRef}
               breakpoints={dashboard.breakpoints}
-              isEditMode={isEditMode}
-              activeBreakpoint={activeBreakpoint}
+              previewBreakpoint={previewBreakpoint}
+              allowedBreakpoints={allowedBreakpoints}
+              onPreviewBreakpointChange={setPreviewBreakpoint}
               deviceTier={deviceTier}
               activePageIndex={activePageIndex}
               onPageIndexChange={(bp, index) => setActivePageIndex((prev) => ({ ...prev, [bp]: index }))}
               onLayoutChange={dashboard.setLayout}
+              onAddWidget={dashboard.addWidget}
               onUpdateWidget={dashboard.updateWidget}
               onRemoveWidget={dashboard.removeWidget}
               onWidgetHeightsChange={dashboard.setWidgetHeights}
@@ -116,11 +96,11 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {!dashboard.isLoading && (currentTier.pages.length > 1 || isEditMode) && (
+      {!dashboard.isLoading && currentTier.pages.length > 1 && (
         <PageDots
           pageCount={currentTier.pages.length}
-          activeIndex={activeIndex}
-          showBlankDot={virtualPages.length > currentTier.pages.length}
+          activeIndex={clampPageIndex(activePageIndex[effectiveBreakpoint] ?? 0, currentTier.pages.length, false)}
+          showBlankDot={false}
           onSelect={(index) => {
             // A dot click is a direct, single-shot navigation gesture, same
             // as keyboard/peek-click — routed through Grid's requestPage so
@@ -131,19 +111,6 @@ export default function DashboardPage() {
           }}
         />
       )}
-
-      <GridStatusBar
-        isEditMode={isEditMode}
-        onToggleEditMode={handleToggleEditMode}
-        activeBreakpoint={activeBreakpoint}
-        allowedBreakpoints={allowedBreakpoints}
-        onBreakpointChange={setActiveBreakpoint}
-        onAddWidget={(type) => {
-          const isNewPage = current.kind !== 'real';
-          const pageId = current.kind === 'real' ? current.page.id : dashboard.createPage(activeBreakpoint);
-          dashboard.addWidget(type, activeBreakpoint, pageId);
-        }}
-      />
     </div>
   );
 }

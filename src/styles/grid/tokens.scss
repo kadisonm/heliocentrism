@@ -1,16 +1,64 @@
-// Single source of truth for .grid-status-bar/.page-dots' own fixed
-// position, and for $page-min-height below (which needs every page panel
-// to reach exactly that far). Shared across several grid/ files — @use
-// this as * rather than duplicating the values.
-$toolbar-bottom-offset: 1.5rem;
-$toolbar-height: 2.75rem;
+// Single source of truth for .page-dots' own fixed position, and for
+// $page-min-height below (which needs every page panel to reach exactly
+// that far). Shared across several grid/ files — @use this as * rather
+// than duplicating the values.
+$page-dots-bottom-offset: 1.5rem;
+$page-dots-height: 2.75rem;
 
 // Matches .dashboard-container's own padding-top (see pages/dashboard.scss)
-// — a page's top always sits exactly this far from the viewport.
-$page-top-offset: 2rem;
+// — a page's top always sits exactly this far below it at rest.
+$page-top-offset: 1rem;
 
 // Every page panel (active or peeking, real or the blank "new page"
-// placeholder) should be tall enough to reach the toolbar floating near the
-// bottom of the viewport, so it never ends with the toolbar floating over
+// placeholder) should be tall enough to reach PageDots floating near the
+// bottom of the viewport, so it never ends with the dots floating over
 // empty space below a short page.
-$page-min-height: calc(100vh - #{$page-top-offset} - #{$toolbar-bottom-offset} - #{$toolbar-height});
+$page-min-height: calc(100vh - #{$page-top-offset} - #{$page-dots-bottom-offset} - #{$page-dots-height});
+
+// How far .grid-page-viewport shrinks while dragging a widget (see
+// grid.scss's .grid-page-viewport--drag-shrink) — scaled from the TOP, so
+// the shrink itself never moves the viewport's own top edge (see that
+// rule's own comment on why: a bottom origin would add a scale-proportional,
+// viewport-height-dependent shift on top of $remove-drop-zone-space's own
+// exact math below, throwing it off). Deliberately subtle: the actual room
+// for RemoveDropZone comes from $remove-drop-zone-space, a fixed
+// reservation, not from however much this particular scale happens to open
+// up — so this can stay purely a "something's different now" visual cue.
+// Applied one level inside .grid-canvas (not on .grid-canvas itself)
+// specifically so RemoveDropZone — a sibling of .grid-page-viewport, not a
+// descendant of it — never becomes subject to this transform itself; see
+// .grid-canvas's own comment.
+$canvas-drag-scale: 0.96;
+
+// RemoveDropZone's own gap from .app-nav (its `top`, measured from
+// .dashboard-container's padding-box, which already sits directly below the
+// nav) — and, by construction (see $remove-drop-zone-space below), the SAME
+// gap from its own bottom edge down to the pushed-down page. Fixed and
+// independent of the page's own push-down amount, per instruction: this one
+// stays put; the page is what moves to match it.
+$remove-drop-zone-gap: 1rem;
+// RemoveDropZone's own height is fixed (not content-driven — see its own
+// `height` rule) specifically so $remove-drop-zone-space below can be
+// computed exactly, rather than guessed: with a known button height, "push
+// the page down far enough that the gap below the button equals the gap
+// above it" has an exact answer instead of an approximation.
+$remove-drop-zone-height: 2.2rem;
+
+// Reserved vertical space for RemoveDropZone while dragging, applied as
+// .grid-page-viewport--drag-shrink's own margin-top (real layout space,
+// pushing the viewport down, not just a visual illusion) — see grid.scss.
+// The active page's own min-height is reduced by the same amount in the
+// same rule, so its bottom edge doesn't creep further down toward PageDots
+// than it already sits at rest.
+//
+// Derived, not guessed: the viewport's normal (unpushed) top already sits
+// $page-top-offset below the nav (.dashboard-container's own padding-top).
+// The extra `- 8px` matches .grid-page-viewport's own padding-block (see
+// grid.scss — its outline-bleed reservation, added whenever ANY
+// .grid-page-slot--dragging exists inside it, which a move-drag always
+// has), since that's real space between the viewport's own top edge and the
+// page content actually visible below it. Net effect: pushing the viewport
+// down by exactly this amount lands the PAGE CONTENT's own visible top
+// exactly $remove-drop-zone-gap below RemoveDropZone's bottom edge — the
+// same gap RemoveDropZone keeps above itself, to the nav.
+$remove-drop-zone-space: calc(2 * #{$remove-drop-zone-gap} + #{$remove-drop-zone-height} - #{$page-top-offset} - 8px);

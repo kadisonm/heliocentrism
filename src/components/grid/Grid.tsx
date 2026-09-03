@@ -1,10 +1,11 @@
 'use client';
 
-import { calcGridItemPosition, calcXY, cloneLayout, getLayoutItem, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
-import type { Layout, LayoutItem } from 'react-grid-layout';
+import { calcGridItemPosition, calcWH, calcXY, cloneLayout, getLayoutItem, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
 import type { Ref } from 'react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import {
+  DEFAULT_WIDGET_MIN_SIZE,
   GRID_COLS,
   GRID_CONTAINER_PADDING,
   GRID_ITEM_MARGIN,
@@ -18,12 +19,20 @@ import {
   VIEW_MODE_PEEK_GAP_PX,
 } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } from '../../lib/types';
-import { areGesturesLocked } from '../../lib/gestureLock';
+import { areGesturesLocked, lockGestures, unlockGestures } from '../../lib/gestureLock';
 import { clampPageIndex, virtualPageSignature } from '../../lib/grid/pageNavigation';
 import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
 import { waitForTransitionEnd } from '../../lib/grid/transitionSettle';
+import { getEventPoint, isPointInRect, type Point } from '../../lib/grid/pointerEvents';
+import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
+import type { ResizeCorner } from './ResizeHandle';
+import AddWidgetModal from './AddWidgetModal';
 import BlankPagePane from './BlankPagePane';
+import CanvasContextMenu from './CanvasContextMenu';
 import GridPage from './GridPage';
+import RemoveDropZone from './RemoveDropZone';
+import { useCloseMenuOnOutsideClick } from './useCloseMenuOnOutsideClick';
+import { useLongPress, WIDGET_GESTURE_SKIP_SELECTOR } from './useLongPress';
 import { usePageNavigation } from './usePageNavigation';
 import { usePageSlide } from './usePageSlide';
 import { useViewportHeight } from './useViewportHeight';
@@ -48,73 +57,36 @@ function rubberBand(dx: number): number {
   return (sign * magnitude * RUBBER_BAND_RESISTANCE * RUBBER_BAND_MAX_PX) / (RUBBER_BAND_MAX_PX + RUBBER_BAND_RESISTANCE * magnitude);
 }
 
-// Pulls a client point out of either a mouse or touch event — react-grid-
-// layout's onDrag hands back the raw DOM event, which is one or the other
-// depending on input device.
-function getEventPoint(event: Event): { x: number; y: number } | null {
-  if (typeof MouseEvent !== 'undefined' && event instanceof MouseEvent) {
-    return { x: event.clientX, y: event.clientY };
-  }
-  const touchEvent = event as TouchEvent;
-  const touch = touchEvent.touches?.[0] ?? touchEvent.changedTouches?.[0];
-  return touch ? { x: touch.clientX, y: touch.clientY } : null;
-}
-
-// A drag-to-edge hop yanks the dragged widget's DOM node out from under
-// react-grid-layout's OWN native drag on the source page (see beginRelocation
-// below) mid-gesture — the widget moves to a different page's `widgets`
-// array, unmounting it. react-draggable's DraggableCore tears down its own
-// document-level move/stop listeners on unmount (componentWillUnmount)
-// without ever firing them, so its onStop callback — which is what clears
-// react-grid-layout's internal activeDrag state — never runs. Left alone,
-// that leaves the source page's native placeholder box stuck on screen
-// permanently (its rendering is driven straight off activeDrag) AND stops
-// that GridLayout instance from ever resyncing its layout against
-// prop/children changes again (its own resync effect bails out early
-// whenever activeDrag is set) — for as long as it stays mounted, which,
-// since GridPage survives a peek<->active role change instead of
-// remounting, can be indefinitely.
-//
-// Dispatching a synthetic stop event on the source element's own document
-// BEFORE the unmount — while the node and DraggableCore's listeners are
-// still live — lets it complete its own stop sequence normally instead,
-// exactly as if the gesture had ended right here. Reuses the real Touch
-// object off the original event (rather than constructing one) since
-// DraggableCore matches stop events back to the drag they started by the
-// touch's own identifier.
-function endNativeDrag(sourceElement: HTMLElement, nativeEvent: Event) {
-  const doc = sourceElement.ownerDocument;
-  if (typeof MouseEvent !== 'undefined' && nativeEvent instanceof MouseEvent) {
-    doc.dispatchEvent(
-      new MouseEvent('mouseup', { clientX: nativeEvent.clientX, clientY: nativeEvent.clientY, bubbles: true, cancelable: true })
-    );
-    return;
-  }
-  const touchEvent = nativeEvent as TouchEvent;
-  const touch = touchEvent.touches?.[0] ?? touchEvent.changedTouches?.[0];
-  if (!touch) return;
-  doc.dispatchEvent(
-    new TouchEvent('touchend', { changedTouches: [touch], targetTouches: [], touches: [], bubbles: true, cancelable: true })
-  );
-}
-
-function isPointInRect(point: { x: number; y: number }, rect: DOMRect | undefined): boolean {
-  if (!rect) return false;
-  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+// Shared by the drag and resize engines below — both compute grid<->pixel
+// positions against a page's own measured grid box, otherwise identically.
+function buildPositionParams(containerWidth: number, cols: number) {
+  return {
+    margin: GRID_ITEM_MARGIN,
+    containerPadding: GRID_CONTAINER_PADDING,
+    containerWidth,
+    cols,
+    rowHeight: GRID_ROW_HEIGHT,
+    maxRows: Infinity,
+  };
 }
 
 type GridProps = {
   breakpoints: Record<DashboardBreakpoint, DashboardBreakpointState>;
-  isEditMode: boolean;
-  activeBreakpoint: DashboardBreakpoint;
+  // Persists across gestures (page.tsx state) — replaces the old edit-
+  // toolbar's breakpoint Tabs; null means "not simulating any tier, show
+  // whatever the real device is." Set via CanvasContextMenu's "Preview as".
+  previewBreakpoint: DashboardBreakpoint | null;
+  allowedBreakpoints: DashboardBreakpoint[];
+  onPreviewBreakpointChange: (breakpoint: DashboardBreakpoint | null) => void;
   // The device's own real tier (from useDeviceTier), distinct from
-  // activeBreakpoint (which in edit mode can be switched to preview a
-  // *different* tier). Used to tell "genuinely simulating another device"
-  // apart from "editing the tier you're actually on" — see isSimulating below.
+  // previewBreakpoint (which can simulate a *different* tier). Used to tell
+  // "genuinely simulating another device" apart from "on the tier you're
+  // actually on" — see isSimulating below.
   deviceTier: DashboardBreakpoint;
   activePageIndex: Record<DashboardBreakpoint, number>;
   onPageIndexChange: (breakpoint: DashboardBreakpoint, index: number) => void;
   onLayoutChange: (breakpoint: DashboardBreakpoint, pageId: string, layout: Layout) => void;
+  onAddWidget: (type: string, breakpoint: DashboardBreakpoint, pageId: string) => void;
   onUpdateWidget: (
     id: string,
     breakpoint: DashboardBreakpoint,
@@ -144,12 +116,14 @@ export type GridHandle = {
 function Grid(
   {
     breakpoints,
-    isEditMode,
-    activeBreakpoint,
+    previewBreakpoint,
+    allowedBreakpoints,
+    onPreviewBreakpointChange,
     deviceTier,
     activePageIndex,
     onPageIndexChange,
     onLayoutChange,
+    onAddWidget,
     onUpdateWidget,
     onRemoveWidget,
     onWidgetHeightsChange,
@@ -160,16 +134,37 @@ function Grid(
 ) {
   const { width, containerRef, mounted } = useContainerWidth();
 
-  // Skip the fixed preview width when editing your own actual tier (not
+  // True only while a widget move/resize gesture is actually in flight —
+  // was isEditMode's persistent toggle; the whole point of this refactor is
+  // that edit-mode chrome/geometry now exists only for the duration of an
+  // actual drag, not a standing session. Set by beginDrag/beginResize below,
+  // cleared by their matching endDrag/endResize.
+  const [isDragActive, setIsDragActive] = useState(false);
+  // Narrower than isDragActive — true only while a whole-widget MOVE is in
+  // flight (beginDrag/endDrag), never during a resize. Drives the
+  // canvas-shrink visual (see .grid-page-viewport--drag-shrink in grid.scss)
+  // and RemoveDropZone. Deliberately excludes resize: that engine captures a
+  // pixel baseline once (state.startWidthPx) and adds raw cursor deltas to
+  // it every frame, which assumes a stable coordinate system for the whole
+  // gesture — a canvas that's still mid-transition when resizing starts (a
+  // continuously-changing scale, not a fixed before/after value) would
+  // throw that baseline off for as long as the shrink animation plays.
+  // Dragging has no such baseline (applyRelocatedPosition re-measures the
+  // grid fresh every frame via calcXY), so it doesn't have this problem.
+  const [isMoveDragActive, setIsMoveDragActive] = useState(false);
+
+  // Skip the fixed preview width when on your own actual tier (not
   // simulating another) — real devices can be narrower than the simulated
-  // width, which would otherwise overflow the screen.
-  const isSimulating = isEditMode && activeBreakpoint !== deviceTier;
+  // width, which would otherwise overflow the screen. Independent of
+  // isDragActive now — previewing a tier is its own persistent concern, not
+  // scoped to a single gesture.
+  const isSimulating = previewBreakpoint !== null && previewBreakpoint !== deviceTier;
 
   // Each breakpoint owns its full page set, swapped wholesale rather than
   // using react-grid-layout's built-in breakpoint switching. View mode keys
   // off deviceTier (window width), not measured container width, to avoid a
   // feedback loop where height-driven scrollbars change the width.
-  const effectiveBreakpoint = isEditMode ? activeBreakpoint : deviceTier;
+  const effectiveBreakpoint = previewBreakpoint ?? deviceTier;
   const { pages } = breakpoints[effectiveBreakpoint];
 
   const handlePageIndexChange = useCallback(
@@ -197,24 +192,24 @@ function Grid(
   const pageSlide = usePageSlide({
     committedIndex,
     pages,
-    isEditMode,
+    allowBlankSlot: isDragActive,
     trackRef,
     onCommit: handlePageIndexChange,
   });
   const { displayedIndex, trackOffsetReady } = pageSlide;
 
-  // Exiting edit mode flips isEditMode (and so every page's own chrome —
-  // drag handles, geometry, etc.) instantly, straight away. But if
-  // displayedIndex is still lagging on the blank "create new page" slot
-  // (index === pages.length — see the committedIndex/displayedIndex
-  // comment above) when that happens, page.tsx has already clamped
-  // committedIndex down to the last real page in the very same commit —
-  // this is what keeps the blank slot itself in the virtual page set for
-  // exactly as long as that slide-back is still playing, instead of
-  // vanishing out from under it before the animation even gets a chance to
-  // run. Once displayedIndex catches up, this goes false right along with
-  // isEditMode and the blank slot drops out for good.
-  const showBlankSlot = isEditMode || displayedIndex === pages.length;
+  // A drag/resize ending flips isDragActive off (and so every page's own
+  // geometry) instantly, straight away. But if displayedIndex is still
+  // lagging on the blank "create new page" slot (index === pages.length —
+  // see the committedIndex/displayedIndex comment above) when that happens,
+  // endDrag has already clamped committedIndex down to the last real page in
+  // the very same commit — this is what keeps the blank slot itself in the
+  // virtual page set for exactly as long as that slide-back is still
+  // playing, instead of vanishing out from under it before the animation
+  // even gets a chance to run. Once displayedIndex catches up, this goes
+  // false right along with isDragActive and the blank slot drops out for
+  // good.
+  const showBlankSlot = isDragActive || displayedIndex === pages.length;
 
   const { activeIndex, current, prev, next, goToIndex, virtualPages } = usePageNavigation(
     pages,
@@ -323,38 +318,60 @@ function Grid(
   }, [lookaheadSignature]);
 
   const viewportHeight = useViewportHeight();
-  const softLimitRows = isEditMode && viewportHeight > 0 ? pageSoftHeightRows(viewportHeight) : undefined;
+  // Advisory-only (see gridConfig.ts) — no longer scoped to an editing
+  // session (there isn't a standing one anymore), so it's just always shown
+  // once there's a real viewport height to measure against.
+  const softLimitRows = viewportHeight > 0 ? pageSoftHeightRows(viewportHeight) : undefined;
 
-  // Exiting edit mode should hide the border immediately rather than fading
-  // it out — plainly giving outline-color a 0s duration outside of
-  // .grid-page-slot--editing (see grid.scss) turned out not to reliably win
+  // A drag/resize ending should hide the border immediately rather than
+  // fading it out — plainly giving outline-color a 0s duration outside of
+  // .grid-page-slot--dragging (see grid.scss) turned out not to reliably win
   // once other transitionable properties are ALSO changing on the exact
-  // same render (min-height, --editing itself). Forcing it via the same
+  // same render (min-height, --dragging itself). Forcing it via the same
   // toggle-a-class/reflow/next-frame-remove trick already used elsewhere
   // (see usePageSlide's applyInstant and the Chromium reflow fix below)
   // sidesteps that ambiguity entirely, at the cost of one extra ref.
   const activeSlotRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (isEditMode) return;
+    if (isDragActive) return;
     const el = activeSlotRef.current;
     if (!el) return;
     el.classList.add('grid-page-slot--no-outline-transition');
     void el.offsetHeight; // force a reflow so the disable actually takes effect
     const raf = requestAnimationFrame(() => el.classList.remove('grid-page-slot--no-outline-transition'));
     return () => cancelAnimationFrame(raf);
-  }, [isEditMode]);
+  }, [isDragActive]);
 
-  // Edit mode reserves room on each edge for a neighbor's sliver plus a gap
-  // before it; view mode reserves nothing (the active page keeps the full
-  // canvas width), so a neighbor sits fully off-screen at rest and only
-  // passes through during the slide transition. It still needs its OWN gap
-  // though — VIEW_MODE_PEEK_GAP_PX, not 0 — since a neighbor stays mounted
-  // (see GridPage below) and .grid-page-viewport never clips; without a gap
-  // wide enough to clear .dashboard-container's inline padding, sitting
-  // flush against the active page's edge would let it poke into that
-  // padding right at the screen edge instead of staying fully hidden.
-  const reservePx = isEditMode ? PAGE_PEEK_SLIVER_PX + PAGE_GAP_PX : 0;
-  const slotGapPx = isEditMode ? PAGE_GAP_PX : VIEW_MODE_PEEK_GAP_PX;
+  // isDragActive flipping changes reservePx/pageWidth below, which shifts
+  // restingTrackOffsetPx (the track needs room for a peek-neighbor sliver
+  // while a drag might hop onto one) — without this, that shift plays as an
+  // unwanted 250ms slide on the track's own CSS transition (see grid.scss's
+  // .grid-page-track) firing in the middle of the drag/resize gesture that
+  // just started or ended, instead of snapping instantly the way every other
+  // isDragActive-driven geometry change already does. Same toggle-a-class/
+  // reflow/next-frame-remove trick as usePageSlide's applyInstant.
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.classList.add('grid-page-track--no-transition');
+    void track.offsetHeight; // force a reflow so the disable actually takes effect
+    const raf = requestAnimationFrame(() => track.classList.remove('grid-page-track--no-transition'));
+    return () => cancelAnimationFrame(raf);
+  }, [isDragActive]);
+
+  // While a drag/resize is in flight, reserve room on each edge for a
+  // neighbor's sliver plus a gap before it — needed so a dragged widget has
+  // a peeking neighbor to hop onto (see the drag-to-edge block further
+  // down). At rest, reserve nothing (the active page keeps the full canvas
+  // width), so a neighbor sits fully off-screen and only passes through
+  // during the slide transition. It still needs its OWN gap though —
+  // VIEW_MODE_PEEK_GAP_PX, not 0 — since a neighbor stays mounted (see
+  // GridPage below) and .grid-page-viewport never clips; without a gap wide
+  // enough to clear .dashboard-container's inline padding, sitting flush
+  // against the active page's edge would let it poke into that padding
+  // right at the screen edge instead of staying fully hidden.
+  const reservePx = isDragActive ? PAGE_PEEK_SLIVER_PX + PAGE_GAP_PX : 0;
+  const slotGapPx = isDragActive ? PAGE_GAP_PX : VIEW_MODE_PEEK_GAP_PX;
 
   // The local coordinate space the peek carousel lays out within: the real
   // canvas normally, but while simulating a device, the device's own width
@@ -362,7 +379,7 @@ function Grid(
   // canvas, so a peeking neighbor reads at the same size as the device
   // being simulated rather than the real screen.
   const localCanvasWidth = isSimulating
-    ? GRID_PREVIEW_WIDTHS[activeBreakpoint] + 2 * reservePx
+    ? GRID_PREVIEW_WIDTHS[effectiveBreakpoint] + 2 * reservePx
     : width;
 
   // Every page (active or neighbor) renders at this same full, unscaled
@@ -420,16 +437,16 @@ function Grid(
   // --- Drag-to-edge: dragging a widget onto a peek neighbor's actual
   // hitbox (its rendered bounding box — see isPointInRect below, not a
   // column-count threshold) relocates it onto that page immediately and
-  // the view follows, while the same mouse-down gesture keeps going so the
-  // user can choose exactly where to drop it (see the relocation block
-  // further down). Only wired on the active page — peek panes do share
-  // isEditMode's true value (so an incoming page already looks edit-ready
-  // mid-slide, not "normal" until it lands), but their wrapping
-  // .grid-page-slot-content is pointer-events:none, so no mouse event ever
-  // reaches their drag handles regardless of dragConfig.enabled.
+  // the view follows, while the same gesture keeps going so the user can
+  // choose exactly where to drop it (see the drag block further down).
+  // Only wired on the active page — peek panes do share isDragActive's true
+  // value (so an incoming page already looks drag-ready mid-slide, not
+  // "normal" until it lands), but their wrapping .grid-page-slot-content is
+  // pointer-events:none, so no pointer event ever reaches their widgets
+  // regardless.
   const armLeftRef = useRef<HTMLDivElement>(null);
   const armRightRef = useRef<HTMLDivElement>(null);
-  const suppressNextLayoutChangeRef = useRef(false);
+  const removeZoneRef = useRef<HTMLDivElement>(null);
 
   // Chromium can mis-layout .grid-page-track on the very first paint after
   // a slot's content changes (e.g. a neighbor's presence toggling) at the
@@ -516,23 +533,24 @@ function Grid(
   // A breakpoint switch is a different page set entirely, not a slide —
   // force-land on it immediately, uncapped, regardless of whether the gap
   // to the new breakpoint's own remembered index happens to look adjacent.
-  // Deliberately NOT keyed on isEditMode too (despite it also changing
-  // reservePx/pageWidth): toggling edit mode alone, on the SAME breakpoint,
-  // either leaves committedIndex/displayedIndex equal (nothing to resync)
-  // or — exiting from the blank "new page" slot — puts them exactly one
-  // step apart, which usePageSlide's own effect above already animates
-  // correctly on its own via showBlankSlot. Forcing a land here too would
-  // win that race (this effect runs after usePageSlide's own, same commit,
-  // and forceLand's dispatch cancels whatever that effect just started) and
-  // cut the animation short into an instant jump.
+  // Deliberately NOT keyed on isDragActive too (despite it also changing
+  // reservePx/pageWidth): a drag starting/ending alone, on the SAME
+  // breakpoint, either leaves committedIndex/displayedIndex equal (nothing
+  // to resync) or — exiting from the blank "new page" slot — puts them
+  // exactly one step apart, which usePageSlide's own effect above already
+  // animates correctly on its own via showBlankSlot. Forcing a land here too
+  // would win that race (this effect runs after usePageSlide's own, same
+  // commit, and forceLand's dispatch cancels whatever that effect just
+  // started) and cut the animation short into an instant jump.
   useLayoutEffect(() => {
     pageSlide.forceLand(activePageIndex[effectiveBreakpoint] ?? 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBreakpoint]);
 
-  // Tracks a cross-page widget relocation while it's in flight (see
-  // beginRelocation further down) — declared up here so the liveRef
-  // confirmation effect right below can reference it.
+  // Tracks a widget drag while it's in flight (see beginDrag further down)
+  // — declared up here so the liveRef confirmation effect right below can
+  // reference it. Starts out targeting the SOURCE page (a plain same-page
+  // drag); hopping onto a neighbor (see hopToNeighbor) just retargets it.
   // awaitingExit and pendingConfirmation each guard a different race:
   // - awaitingExit: the peek hitbox is a fixed screen region that doesn't
   //   move just because a hop changed which page occupies it, so a hop
@@ -548,7 +566,7 @@ function Grid(
   //   quick flick back toward the original page) can satisfy awaitingExit
   //   before React has actually re-rendered to reflect the FIRST hop —
   //   forceGoToIndex/onMoveWidgetToPage only take effect on some later
-  //   render, not synchronously inside beginRelocation. A second hop firing
+  //   render, not synchronously inside hopToNeighbor. A second hop firing
   //   in that gap reads liveRef.current still holding the pre-hop snapshot,
   //   computing a forceGoToIndex target from data that's already stale by
   //   the time it lands, which desyncs activePageIndex from the actual page
@@ -561,17 +579,21 @@ function Grid(
   //   confirmed landed (current page id === its target) closes this
   //   regardless of how fast the mouse moves.
   // grabOffsetX/Y: the cursor's pixel offset from the widget's own
-  // top-left, captured once from its real on-screen box the instant the
-  // first hop fires (see the ghost element created in beginRelocation) —
-  // preserved across every subsequent hop so the ghost keeps tracking the
-  // cursor at the exact same spot within it a native drag would have.
-  const relocationRef = useRef<{
+  // top-left, captured once from its real on-screen box when the drag
+  // starts (see the ghost element created in beginDrag) — preserved across
+  // every subsequent hop so the ghost keeps tracking the cursor at the
+  // exact same spot within it the whole time.
+  // armedForRemove: whether the ghost is currently hovering RemoveDropZone
+  // — re-evaluated every pointer-move frame (see handleDragPointerMove);
+  // endDrag reads it once, at release, to decide delete vs. commit-position.
+  const dragRef = useRef<{
     widgetId: string;
     w: number;
     h: number;
     targetPageId: string;
     awaitingExit: boolean;
     pendingConfirmation: boolean;
+    armedForRemove: boolean;
     grabOffsetX: number;
     grabOffsetY: number;
   } | null>(null);
@@ -586,7 +608,7 @@ function Grid(
   const hopHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hopHoldDirectionRef = useRef<'left' | 'right' | null>(null);
   // Reassigned imperatively by whichever caller last armed the hold (same
-  // ref-callback pattern as beginRelocationRef below), rather than threaded
+  // ref-callback pattern as hopToNeighborRef below), rather than threaded
   // through as a callback argument — lets armHopHold stay a plain, stable
   // function while still always firing whatever the most recent hitbox
   // frame decided should happen, not a stale closure from when the hold
@@ -664,8 +686,8 @@ function Grid(
       handlePageIndexChange,
     };
     // Confirms an in-flight hop once `current` actually catches up to the
-    // page it targeted — see the big comment on relocationRef above.
-    const state = relocationRef.current;
+    // page it targeted — see the big comment on dragRef above.
+    const state = dragRef.current;
     if (state?.pendingConfirmation && current.kind === 'real' && current.page.id === state.targetPageId) {
       state.pendingConfirmation = false;
     }
@@ -688,35 +710,26 @@ function Grid(
   );
 
   // Once a widget has been handed off to a neighboring page mid-drag (see
-  // beginRelocation below), react-grid-layout's own drag tracking on the
-  // SOURCE page goes dead — its DOM node is gone, removed from that page's
-  // layout. This tracks the live cursor ourselves from that point on,
-  // translating it into grid units on whichever page is now active with
-  // the same pixel<->grid math react-grid-layout uses internally, so the
-  // widget keeps following the mouse and the user can still choose exactly
-  // where to drop it.
-  const pendingPointRef = useRef<{ x: number; y: number } | null>(null);
-  const relocationRafRef = useRef(false);
+  // hopToNeighbor below), there's no native drag on that page to track —
+  // this tracks the live cursor ourselves for the whole gesture (same-page
+  // or hopped), translating it into grid units on whichever page is now
+  // active with the same pixel<->grid math react-grid-layout uses
+  // internally, so the widget keeps following the cursor and the user can
+  // still choose exactly where to drop it.
+  const pendingPointRef = useRef<Point | null>(null);
+  const dragRafRef = useRef(false);
   // Holds whichever move/up functions are currently registered on window —
   // captured once, at attach time, purely so the detach side can remove the
-  // exact same references (see beginRelocation) without the two ends
-  // needing to name each other directly.
-  const attachedRelocationListenersRef = useRef<{ move: (e: Event) => void; up: () => void } | null>(null);
-  // Always points at the latest beginRelocation (assigned in the layout
-  // effect just below it) so the move-listener created inside beginRelocation
-  // can trigger another hop without having to reference beginRelocation by
-  // name from inside its own definition.
-  const beginRelocationRef = useRef<
-    (
-      direction: 'left' | 'right',
-      widgetId: string,
-      w: number,
-      h: number,
-      point?: { x: number; y: number },
-      sourceElement?: HTMLElement | null,
-      nativeEvent?: Event
-    ) => void
-  >(() => {});
+  // exact same references (see beginDrag) without the two ends needing to
+  // name each other directly.
+  const attachedDragListenersRef = useRef<{ move: (e: Event) => void; up: (e: Event) => void } | null>(null);
+  // Always points at the latest hopToNeighbor (assigned in the layout
+  // effect just below it) so the pointer-move listener created inside
+  // beginDrag can trigger a hop without having to reference hopToNeighbor
+  // by name from inside its own definition.
+  const hopToNeighborRef = useRef<(direction: 'left' | 'right', widgetId: string, w: number, h: number) => void>(
+    () => {}
+  );
 
   // A relocated widget's own data (x/y in grid units) still has to update
   // for compaction/persistence to work, but rendering it at that quantized
@@ -724,15 +737,14 @@ function Grid(
   // cursor mid-gesture — the exact "changed position" the widget shouldn't
   // do. Instead its real DOM node is hidden (see applyRelocatedPosition)
   // and this floating clone — captured once from its actual on-screen box
-  // via getBoundingClientRect the instant the first hop fires, so it starts
-  // out pixel-identical to what react-grid-layout's own native drag was
-  // already showing — stands in for it, tracking the cursor 1:1 by the
-  // grabOffsetX/Y captured at that same moment. Dropping just removes it
-  // and reveals the real widget, already sitting at its final committed
-  // position.
+  // via getBoundingClientRect the instant the drag starts, so it starts out
+  // pixel-identical to the widget it's standing in for — tracks the cursor
+  // 1:1 by the grabOffsetX/Y captured at that same moment, for the whole
+  // gesture (same-page or hopped). Dropping just removes it and reveals the
+  // real widget, already sitting at its final committed position.
   const ghostElRef = useRef<HTMLDivElement | null>(null);
 
-  const createGhost = useCallback((sourceElement: HTMLElement, point: { x: number; y: number }) => {
+  const createGhost = useCallback((sourceElement: HTMLElement, point: Point) => {
     const rect = sourceElement.getBoundingClientRect();
     const ghost = document.createElement('div');
     ghost.className = 'grid-drag-ghost';
@@ -760,9 +772,9 @@ function Grid(
     return { grabOffsetX: point.x - rect.left, grabOffsetY: point.y - rect.top };
   }, []);
 
-  const updateGhostPosition = useCallback((point: { x: number; y: number }) => {
+  const updateGhostPosition = useCallback((point: Point) => {
     const ghost = ghostElRef.current;
-    const state = relocationRef.current;
+    const state = dragRef.current;
     if (!ghost || !state) return;
     ghost.style.left = `${point.x - state.grabOffsetX}px`;
     ghost.style.top = `${point.y - state.grabOffsetY}px`;
@@ -817,14 +829,14 @@ function Grid(
   // depth-faking planets do exactly this) regardless of what an ancestor
   // says — and writes that snapped x/y to app state anyway, needed for
   // compaction/persistence, just not for anything on screen.
-  const applyRelocatedPosition = useCallback((point: { x: number; y: number }, isDropping = false) => {
-    const state = relocationRef.current;
+  const applyRelocatedPosition = useCallback((point: Point, isDropping = false) => {
+    const state = dragRef.current;
     if (!state) return;
     updateGhostPosition(point);
 
     // `.grid-page-slot--active` doesn't actually swap onto the target page
     // until the hop's slide settles (state.pendingConfirmation clears — see
-    // relocationRef's big comment), so until then this selector still
+    // dragRef's big comment), so until then this selector still
     // resolves to the page being slid AWAY from, which doesn't contain this
     // widget's target-page siblings at all: every query below would just
     // miss, while still paying for a forced layout read
@@ -840,20 +852,23 @@ function Grid(
       return;
     }
 
-    const { effectiveBreakpoint, pages, onLayoutChange } = liveRef.current;
+    const { effectiveBreakpoint, pages, pageWidth, onLayoutChange } = liveRef.current;
     const gridEl = document.querySelector<HTMLElement>('.grid-page-slot--active .grid');
     if (!gridEl) return;
     const widgetEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${state.widgetId}"]`);
     if (widgetEl) widgetEl.style.display = 'none';
+    const cols = GRID_COLS[effectiveBreakpoint];
+    // gridEl's measured rect reflects .grid-canvas's own drag-shrink CSS
+    // transform (see grid.scss's --dragging), so it's the right basis for
+    // anything working in CURSOR/viewport space (below) — but calcGridItemPosition's
+    // OUTPUT becomes a LOCAL style on elements that are THEMSELVES inside
+    // that same scaled ancestor, so feeding it the scaled width would
+    // double-apply the shrink visually. Those calls use layoutPositionParams
+    // (liveRef's own intrinsic pageWidth, unaffected by the transform)
+    // instead — see each call site below.
     const rect = gridEl.getBoundingClientRect();
-    const positionParams = {
-      margin: GRID_ITEM_MARGIN,
-      containerPadding: GRID_CONTAINER_PADDING,
-      containerWidth: rect.width,
-      cols: GRID_COLS[effectiveBreakpoint],
-      rowHeight: GRID_ROW_HEIGHT,
-      maxRows: Infinity,
-    };
+    const positionParams = buildPositionParams(rect.width, cols);
+    const layoutPositionParams = buildPositionParams(pageWidth, cols);
     const targetPage = pages.find((p) => p.id === state.targetPageId);
     const rawItem = targetPage?.layout.find((it) => it.i === state.widgetId);
     if (!targetPage || !rawItem) return;
@@ -926,13 +941,13 @@ function Grid(
     const item = getLayoutItem(clonedLayout, state.widgetId);
     if (!item) return;
 
-    const moved = moveElement(clonedLayout, item, x, y, true, false, verticalCompactor.type, positionParams.cols, false);
-    const nextLayout = verticalCompactor.compact(moved, positionParams.cols);
+    const moved = moveElement(clonedLayout, item, x, y, true, false, verticalCompactor.type, cols, false);
+    const nextLayout = verticalCompactor.compact(moved, cols);
     const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
 
     const placeholderEl = ensurePlaceholder(gridEl);
     placeholderEl.style.display = ''; // undo the pendingConfirmation hide above, now that there's somewhere real to show it
-    const pos = calcGridItemPosition(positionParams, resolvedItem.x, resolvedItem.y, state.w, liveH);
+    const pos = calcGridItemPosition(layoutPositionParams, resolvedItem.x, resolvedItem.y, state.w, liveH);
     placeholderEl.style.left = `${pos.left}px`;
     placeholderEl.style.top = `${pos.top}px`;
     placeholderEl.style.width = `${pos.width}px`;
@@ -942,7 +957,7 @@ function Grid(
       if (otherItem.i === state.widgetId) continue;
       const otherEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${otherItem.i}"]`);
       if (!otherEl) continue;
-      const otherPos = calcGridItemPosition(positionParams, otherItem.x, otherItem.y, otherItem.w, otherItem.h);
+      const otherPos = calcGridItemPosition(layoutPositionParams, otherItem.x, otherItem.y, otherItem.w, otherItem.h);
       otherEl.style.transform = `translate(${otherPos.left}px, ${otherPos.top}px)`;
       otherEl.style.width = `${otherPos.width}px`;
       otherEl.style.height = `${otherPos.height}px`;
@@ -952,44 +967,63 @@ function Grid(
     onLayoutChange(effectiveBreakpoint, state.targetPageId, nextLayout);
   }, [updateGhostPosition, ensurePlaceholder]);
 
-  const detachRelocationListeners = useCallback(() => {
-    const listeners = attachedRelocationListenersRef.current;
+  // Ends a widget drag (release, or a safety-net unmount) — either commits
+  // its final position, or, if the ghost was released over RemoveDropZone,
+  // deletes the widget outright instead.
+  const endDrag = useCallback(() => {
+    const listeners = attachedDragListenersRef.current;
     if (listeners) {
       window.removeEventListener('mousemove', listeners.move);
       window.removeEventListener('touchmove', listeners.move);
       window.removeEventListener('mouseup', listeners.up);
       window.removeEventListener('touchend', listeners.up);
-      attachedRelocationListenersRef.current = null;
+      attachedDragListenersRef.current = null;
     }
-    // Flush whatever position the cursor was last known to be at before
-    // tearing the relocation state down. isDropping=true is what makes this
-    // call actually commit to React state — every earlier frame this drag
-    // only computed a local preview (see applyRelocatedPosition), so this
-    // is also the FIRST write for this gesture, landing the dragged widget
-    // and anything it pushed out of the way in one atomic step.
-    const finalPoint = pendingPointRef.current;
-    if (finalPoint) applyRelocatedPosition(finalPoint, true);
-    if (relocationRef.current) revealRelocatedWidget(relocationRef.current.widgetId);
+    const state = dragRef.current;
+    if (state?.armedForRemove) {
+      handleRemove(state.widgetId, state.targetPageId);
+    } else {
+      // Flush whatever position the cursor was last known to be at before
+      // tearing the drag state down. isDropping=true is what makes this
+      // call actually commit to React state — every earlier frame this
+      // drag only computed a local preview (see applyRelocatedPosition), so
+      // this is also the FIRST write for this gesture, landing the dragged
+      // widget and anything it pushed out of the way in one atomic step.
+      const finalPoint = pendingPointRef.current;
+      if (finalPoint) applyRelocatedPosition(finalPoint, true);
+      if (state) revealRelocatedWidget(state.widgetId);
+    }
     destroyGhost();
     destroyPlaceholder();
-    relocationRef.current = null;
+    dragRef.current = null;
     pendingPointRef.current = null;
     armLeftRef.current?.classList.remove('grid-page-slot--armed');
     armRightRef.current?.classList.remove('grid-page-slot--armed');
+    removeZoneRef.current?.classList.remove('remove-drop-zone--armed');
     clearHopHold();
-  }, [applyRelocatedPosition, revealRelocatedWidget, destroyGhost, destroyPlaceholder, clearHopHold]);
+    setIsDragActive(false);
+    setIsMoveDragActive(false);
+    unlockGestures();
+    // Defensive: if this drag's own hop logic (see hopToNeighbor) somehow
+    // left committedIndex pointing past the last real page, land back on it
+    // — mirrors the old persistent-edit-mode toggle's own clamp for the
+    // same "don't strand the view on a slot that no longer needs to be
+    // shown" case.
+    const { pages: livePages, committedIndex: liveCommittedIndex, forceGoToIndex: liveForceGoToIndex } = liveRef.current;
+    if (liveCommittedIndex >= livePages.length) liveForceGoToIndex(Math.max(0, livePages.length - 1));
+  }, [applyRelocatedPosition, revealRelocatedWidget, destroyGhost, destroyPlaceholder, clearHopHold, handleRemove]);
 
   // Coalesced to at most once per animation frame — a raw mousemove/
   // touchmove can fire far faster than that, and each call already writes
   // through to app state (debounced further downstream before it ever
   // reaches Firestore — see useGridState's write debounce).
   const scheduleRelocatedPositionUpdate = useCallback(
-    (point: { x: number; y: number }) => {
+    (point: Point) => {
       pendingPointRef.current = point;
-      if (relocationRafRef.current) return;
-      relocationRafRef.current = true;
+      if (dragRafRef.current) return;
+      dragRafRef.current = true;
       requestAnimationFrame(() => {
-        relocationRafRef.current = false;
+        dragRafRef.current = false;
         if (pendingPointRef.current) applyRelocatedPosition(pendingPointRef.current);
       });
     },
@@ -997,20 +1031,29 @@ function Grid(
   );
 
   // Re-checks the hitbox test on every move (not just at entry) so a drag
-  // that keeps going can hop across more than one page boundary in a row.
-  const handleRelocationPointerMove = useCallback(
+  // that keeps going can hop across more than one page boundary in a row,
+  // and so RemoveDropZone's armed state always reflects where the ghost
+  // currently is.
+  const handleDragPointerMove = useCallback(
     (event: Event) => {
-      if (!relocationRef.current) return;
+      const state = dragRef.current;
+      if (!state) return;
       const point = getEventPoint(event);
       if (!point) return;
+      if (event.cancelable) event.preventDefault();
       scheduleRelocatedPositionUpdate(point);
+
+      const overRemove = isPointInRect(point, removeZoneRef.current?.getBoundingClientRect());
+      ghostElRef.current?.classList.toggle('grid-drag-ghost--remove-armed', overRemove);
+      removeZoneRef.current?.classList.toggle('remove-drop-zone--armed', overRemove);
+      state.armedForRemove = overRemove;
+
       const { prev, next } = liveRef.current;
       const overLeft = !!prev && isPointInRect(point, armLeftRef.current?.getBoundingClientRect());
       const overRight = !!next && isPointInRect(point, armRightRef.current?.getBoundingClientRect());
       armLeftRef.current?.classList.toggle('grid-page-slot--armed', overLeft);
       armRightRef.current?.classList.toggle('grid-page-slot--armed', overRight);
-      const state = relocationRef.current;
-      if (state.pendingConfirmation) return; // previous hop hasn't landed in a render yet — see relocationRef's comment
+      if (state.pendingConfirmation) return; // previous hop hasn't landed in a render yet — see dragRef's comment
       const inHitbox = overLeft || overRight;
       if (state.awaitingExit) {
         if (!inHitbox) state.awaitingExit = false; // cursor cleared the zone — a fresh entry can arm again
@@ -1022,135 +1065,306 @@ function Grid(
         return;
       }
       const direction = overLeft ? 'left' : 'right';
-      hopHoldFireRef.current = () => beginRelocationRef.current(direction, state.widgetId, state.w, state.h);
+      hopHoldFireRef.current = () => hopToNeighborRef.current(direction, state.widgetId, state.w, state.h);
       armHopHold(direction);
     },
     [scheduleRelocatedPositionUpdate, armHopHold, clearHopHold]
   );
 
-  // Hands a widget off to the peek neighbor on `direction`, replicating
-  // handleActiveDragStop's old drop-time logic (page creation, the
-  // source-page-collapses-so-shift-the-target-index case) but firing the
-  // instant the cursor enters that neighbor's actual hitbox instead of
-  // waiting for the drop — and, unlike a drop, leaving the gesture live so
-  // scheduleRelocatedPositionUpdate can keep steering the widget afterward.
-  const beginRelocation = useCallback(
-    (
-      direction: 'left' | 'right',
-      widgetId: string,
-      w: number,
-      h: number,
-      point?: { x: number; y: number },
-      sourceElement?: HTMLElement | null,
-      nativeEvent?: Event
-    ) => {
-      const { current, prev, next, pages, effectiveBreakpoint, activeIndex, onCreatePage, onMoveWidgetToPage, forceGoToIndex } =
-        liveRef.current;
+  // Hands a widget off to the peek neighbor on `direction` — fires the
+  // instant the cursor enters that neighbor's actual hitbox (after
+  // PAGE_HOP_HOLD_MS dwell — see armHopHold), not on drop, and leaves the
+  // gesture live so handleDragPointerMove keeps steering the same ghost
+  // afterward. The ghost/grab-offset were already captured once, at drag
+  // start (see beginDrag below) — every hop just keeps steering that same
+  // ghost, so there's nothing left to (re)create here.
+  const hopToNeighbor = useCallback((direction: 'left' | 'right', widgetId: string, w: number, h: number) => {
+    const { current, prev, next, pages, effectiveBreakpoint, activeIndex, onCreatePage, onMoveWidgetToPage, forceGoToIndex } =
+      liveRef.current;
+    if (current.kind !== 'real') return;
+    const target = direction === 'left' ? prev : next;
+    if (!target) return;
+
+    const targetPageId = target.kind === 'real' ? target.page.id : onCreatePage(effectiveBreakpoint);
+    // Moving the source page's only widget away empties it — but per
+    // withEmptyPageCollapsed, an empty page only actually collapses if
+    // nothing inhabited sits after it. A right-drag always lands the
+    // widget on whatever occupies the very next page (an existing one, or
+    // one freshly created above), which ends up sitting right after the
+    // source either way — so the source never collapses on a right-drag.
+    // A left-drag doesn't add anything after the source, so it collapses
+    // only if the source was already the last page.
+    const sourceWillBeDeleted =
+      direction === 'left' && current.page.widgets.length === 1 && activeIndex === pages.length - 1;
+
+    dragRef.current = {
+      widgetId,
+      w,
+      h,
+      targetPageId,
+      awaitingExit: true,
+      pendingConfirmation: true,
+      armedForRemove: dragRef.current?.armedForRemove ?? false,
+      grabOffsetX: dragRef.current?.grabOffsetX ?? 0,
+      grabOffsetY: dragRef.current?.grabOffsetY ?? 0,
+    };
+    onMoveWidgetToPage(widgetId, effectiveBreakpoint, current.page.id, targetPageId);
+    forceGoToIndex(direction === 'left' ? activeIndex - 1 : sourceWillBeDeleted ? activeIndex : activeIndex + 1);
+  }, []);
+  useLayoutEffect(() => {
+    hopToNeighborRef.current = hopToNeighbor;
+  });
+
+  // Starts a widget drag from a long-press hand-off (see WidgetShell's
+  // useLongPress) — always begins on the CURRENT (source) page; hopping
+  // onto a neighbor is a separate, later event (see hopToNeighbor above)
+  // triggered once the cursor dwells in a peek neighbor's hitbox, not
+  // something a drag has to already be doing to start.
+  const beginDrag = useCallback(
+    (widgetId: string, point: Point, sourceElement: HTMLElement) => {
+      const { current } = liveRef.current;
       if (current.kind !== 'real') return;
-      const target = direction === 'left' ? prev : next;
-      if (!target) return;
+      const rawItem = current.page.layout.find((item) => item.i === widgetId);
+      if (!rawItem) return;
 
-      const targetPageId = target.kind === 'real' ? target.page.id : onCreatePage(effectiveBreakpoint);
-      // Moving the source page's only widget away empties it — but per
-      // withEmptyPageCollapsed, an empty page only actually collapses if
-      // nothing inhabited sits after it. A right-drag always lands the
-      // widget on whatever occupies the very next page (an existing one, or
-      // one freshly created above), which ends up sitting right after the
-      // source either way — so the source never collapses on a right-drag.
-      // A left-drag doesn't add anything after the source, so it collapses
-      // only if the source was already the last page.
-      const sourceWillBeDeleted =
-        direction === 'left' && current.page.widgets.length === 1 && activeIndex === pages.length - 1;
-
-      // The ghost (and its grab offset) is created once, from the widget's
-      // real on-screen box at the moment of the FIRST hop — every hop after
-      // that just keeps steering the same ghost with the same offset, since
-      // there's no fresh "real" box to recapture from once it's hidden.
-      const isFreshHop = !ghostElRef.current && !!sourceElement && !!point;
-      const grabOffset = isFreshHop
-        ? createGhost(sourceElement, point)
-        : { grabOffsetX: relocationRef.current?.grabOffsetX ?? 0, grabOffsetY: relocationRef.current?.grabOffsetY ?? 0 };
-
-      // Only relevant on that same first hop — react-grid-layout's own
-      // native drag is still genuinely live on the source page at this
-      // point (see endNativeDrag above), and is about to be yanked out from
-      // under it by onMoveWidgetToPage below.
-      if (isFreshHop && nativeEvent) endNativeDrag(sourceElement, nativeEvent);
-
-      relocationRef.current = {
+      const grabOffset = createGhost(sourceElement, point);
+      dragRef.current = {
         widgetId,
-        w,
-        h,
-        targetPageId,
-        awaitingExit: true,
-        pendingConfirmation: true,
+        w: rawItem.w,
+        h: rawItem.h,
+        targetPageId: current.page.id,
+        awaitingExit: false,
+        pendingConfirmation: false,
+        armedForRemove: false,
         ...grabOffset,
       };
-      suppressNextLayoutChangeRef.current = true;
-      onMoveWidgetToPage(widgetId, effectiveBreakpoint, current.page.id, targetPageId);
-      forceGoToIndex(direction === 'left' ? activeIndex - 1 : sourceWillBeDeleted ? activeIndex : activeIndex + 1);
+      setIsDragActive(true);
+      setIsMoveDragActive(true);
+      lockGestures();
 
-      if (!attachedRelocationListenersRef.current) {
-        const move = handleRelocationPointerMove;
-        const up = detachRelocationListeners;
-        attachedRelocationListenersRef.current = { move, up };
+      if (!attachedDragListenersRef.current) {
+        const move = handleDragPointerMove;
+        const up = endDrag;
+        attachedDragListenersRef.current = { move, up };
         window.addEventListener('mousemove', move);
-        window.addEventListener('touchmove', move, { passive: true });
+        window.addEventListener('touchmove', move, { passive: false });
         window.addEventListener('mouseup', up);
         window.addEventListener('touchend', up);
       }
     },
-    [handleRelocationPointerMove, detachRelocationListeners, createGhost]
+    [createGhost, handleDragPointerMove, endDrag]
   );
-  useLayoutEffect(() => {
-    beginRelocationRef.current = beginRelocation;
-  });
-
-  const handleActiveDrag = useCallback(
-    (
-      _layout: Layout,
-      _oldItem: LayoutItem | null,
-      newItem: LayoutItem | null,
-      _placeholder: LayoutItem | null,
-      event: Event,
-      element: HTMLElement | null
-    ) => {
-      if (!newItem || relocationRef.current) return;
-      const point = getEventPoint(event);
-      if (!point) return;
-      const overLeft = !!prev && isPointInRect(point, armLeftRef.current?.getBoundingClientRect());
-      const overRight = !!next && isPointInRect(point, armRightRef.current?.getBoundingClientRect());
-      armLeftRef.current?.classList.toggle('grid-page-slot--armed', overLeft);
-      armRightRef.current?.classList.toggle('grid-page-slot--armed', overRight);
-      if (!overLeft && !overRight) {
-        clearHopHold();
-        return;
-      }
-      const direction = overLeft ? 'left' : 'right';
-      // Reassigned every frame spent hovering the hitbox, so whenever
-      // armHopHold's timer actually fires (PAGE_HOP_HOLD_MS later) it hands
-      // off the CURRENT cursor position/element/event to beginRelocation,
-      // not a stale one captured back when the hold first started.
-      hopHoldFireRef.current = () => beginRelocation(direction, newItem.i, newItem.w, newItem.h, point, element, event);
-      armHopHold(direction);
-    },
-    [prev, next, beginRelocation, armHopHold, clearHopHold]
-  );
-
-  const handleActiveDragStop = useCallback(() => {
-    // A relocation in progress means this gesture was already taken over —
-    // the widget's DOM node on this page is gone, so whatever react-grid-
-    // layout thinks it's dropping here is stale. The global mouseup/
-    // touchend listener (detachRelocationListeners) is the real finalizer.
-    if (relocationRef.current) return;
-    armLeftRef.current?.classList.remove('grid-page-slot--armed');
-    armRightRef.current?.classList.remove('grid-page-slot--armed');
-    clearHopHold();
-  }, [clearHopHold]);
 
   // Safety net: release the gesture-scoped window listeners if this
-  // component unmounts mid-drag (e.g. navigating away).
-  useEffect(() => detachRelocationListeners, [detachRelocationListeners]);
+  // component unmounts mid-drag (e.g. navigating away). Deliberately NOT
+  // `useEffect(() => endDrag, [endDrag])` — endDrag depends on handleRemove,
+  // which depends on `pages`, which gets a new reference on almost any
+  // Redux update (including totally unrelated ones, e.g. a different
+  // widget's auto-expand height settling). That form doesn't mean "call
+  // endDrag on unmount" — it means "every time endDrag's reference changes,
+  // call the PREVIOUS endDrag as this effect's own cleanup", which was
+  // tearing down a real, in-progress drag (dragRef.current = null,
+  // setIsDragActive(false)) the instant anything touched Redux, mid-gesture,
+  // with the user's finger still down — the "edit mode flashes and
+  // immediately reverts" bug. Reading the latest endDrag off a ref, and
+  // only ever calling it from THIS effect's own cleanup (which only runs on
+  // actual unmount, since the effect itself has no dependencies), fixes it.
+  const endDragRef = useRef(endDrag);
+  useLayoutEffect(() => {
+    endDragRef.current = endDrag;
+  });
+  useEffect(() => () => endDragRef.current(), []);
+
+  // --- Resize: a resize handle's own press is a fresh, unambiguous gesture
+  // (it only exists once a widget's menu is already open — see
+  // ResizeHandle/WidgetShell), so unlike a drag it never needs a long-press
+  // hand-off. No ghost/placeholder/cross-page hop either — the widget
+  // resizes in place, using the same local-preview-then-commit-on-drop
+  // technique as the drag engine above: a fresh w/h/x is computed and
+  // compacted every frame, written straight to DOM, only committed to
+  // React state (onLayoutChange) once, on release.
+  const resizeRef = useRef<{
+    widgetId: string;
+    pageId: string;
+    corner: ResizeCorner;
+    startPoint: Point;
+    startWidthPx: number;
+    startHeightPx: number;
+    startX: number;
+    startY: number;
+    startW: number;
+    minW: number;
+    minH: number;
+  } | null>(null);
+  const attachedResizeListenersRef = useRef<{ move: (e: Event) => void; up: (e: Event) => void } | null>(null);
+  const pendingResizePointRef = useRef<Point | null>(null);
+  const resizeRafRef = useRef(false);
+  const pendingResizeLayoutRef = useRef<Layout | null>(null);
+
+  const applyResizePosition = useCallback((point: Point, isDropping = false) => {
+    const state = resizeRef.current;
+    if (!state) return;
+    const { effectiveBreakpoint, pages, pageWidth, onLayoutChange } = liveRef.current;
+    const targetPage = pages.find((p) => p.id === state.pageId);
+    const gridEl = document.querySelector<HTMLElement>('.grid-page-slot--active .grid');
+    const rawItem = targetPage?.layout.find((it) => it.i === state.widgetId);
+    if (!targetPage || !gridEl || !rawItem) return;
+
+    const cols = GRID_COLS[effectiveBreakpoint];
+    // See applyRelocatedPosition's identical split: positionParams (measured,
+    // reflects .grid-canvas's drag-shrink transform) for anything working in
+    // cursor/viewport space (calcWH below); layoutPositionParams (intrinsic
+    // pageWidth) for calcGridItemPosition calls that set LOCAL styles on
+    // elements inside that same scaled ancestor.
+    const rect = gridEl.getBoundingClientRect();
+    const positionParams = buildPositionParams(rect.width, cols);
+    const layoutPositionParams = buildPositionParams(pageWidth, cols);
+
+    const dx = point.x - state.startPoint.x;
+    const dy = point.y - state.startPoint.y;
+    const isWest = state.corner === 'sw' || state.corner === 'w';
+    const isSouth = state.corner === 'se' || state.corner === 'sw';
+    const rawWidthPx = Math.max(1, isWest ? state.startWidthPx - dx : state.startWidthPx + dx);
+    const rawHeightPx = Math.max(1, isSouth ? state.startHeightPx + dy : state.startHeightPx);
+
+    // calcWH does the pixel->grid-unit rounding/clamping (relaxing the
+    // width clamp against the full column count, not cols - x, for a
+    // west-anchored handle — see its own doc comment); the x shift for a
+    // west handle is then just "keep the right edge fixed" in grid units,
+    // mirroring react-grid-layout's own resizeWest.
+    const { w: wholeW, h: wholeH } = calcWH(positionParams, rawWidthPx, rawHeightPx, state.startX, state.startY, state.corner);
+    const w = Math.max(state.minW, wholeW);
+    const h = isSouth ? Math.max(state.minH, wholeH) : rawItem.h;
+    const x = isWest ? Math.max(0, state.startX + state.startW - w) : state.startX;
+
+    // Same local-preview technique as applyRelocatedPosition above: cloned,
+    // compacted, written straight to DOM every frame; only committed to
+    // React state (onLayoutChange) once, on drop.
+    const clonedLayout = cloneLayout(targetPage.layout);
+    const item = getLayoutItem(clonedLayout, state.widgetId);
+    if (!item) return;
+    item.x = x;
+    item.w = w;
+    item.h = h;
+    const nextLayout = verticalCompactor.compact(clonedLayout, cols);
+    const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
+
+    const widgetEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${state.widgetId}"]`);
+    if (widgetEl) {
+      const pos = calcGridItemPosition(layoutPositionParams, resolvedItem.x, resolvedItem.y, resolvedItem.w, resolvedItem.h);
+      widgetEl.style.transform = `translate(${pos.left}px, ${pos.top}px)`;
+      widgetEl.style.width = `${pos.width}px`;
+      widgetEl.style.height = `${pos.height}px`;
+    }
+    for (const otherItem of nextLayout) {
+      if (otherItem.i === state.widgetId) continue;
+      const otherEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${otherItem.i}"]`);
+      if (!otherEl) continue;
+      const otherPos = calcGridItemPosition(layoutPositionParams, otherItem.x, otherItem.y, otherItem.w, otherItem.h);
+      otherEl.style.transform = `translate(${otherPos.left}px, ${otherPos.top}px)`;
+      otherEl.style.width = `${otherPos.width}px`;
+      otherEl.style.height = `${otherPos.height}px`;
+    }
+
+    pendingResizeLayoutRef.current = nextLayout;
+    if (!isDropping) return;
+    onLayoutChange(effectiveBreakpoint, state.pageId, nextLayout);
+  }, []);
+
+  const scheduleResizeUpdate = useCallback(
+    (point: Point) => {
+      pendingResizePointRef.current = point;
+      if (resizeRafRef.current) return;
+      resizeRafRef.current = true;
+      requestAnimationFrame(() => {
+        resizeRafRef.current = false;
+        if (pendingResizePointRef.current) applyResizePosition(pendingResizePointRef.current);
+      });
+    },
+    [applyResizePosition]
+  );
+
+  const endResize = useCallback(() => {
+    const listeners = attachedResizeListenersRef.current;
+    if (listeners) {
+      window.removeEventListener('mousemove', listeners.move);
+      window.removeEventListener('touchmove', listeners.move);
+      window.removeEventListener('mouseup', listeners.up);
+      window.removeEventListener('touchend', listeners.up);
+      attachedResizeListenersRef.current = null;
+    }
+    const finalPoint = pendingResizePointRef.current;
+    if (finalPoint) applyResizePosition(finalPoint, true);
+    resizeRef.current = null;
+    pendingResizePointRef.current = null;
+    pendingResizeLayoutRef.current = null;
+    setIsDragActive(false);
+    unlockGestures();
+  }, [applyResizePosition]);
+
+  const handleResizeMove = useCallback(
+    (event: Event) => {
+      if (!resizeRef.current) return;
+      const point = getEventPoint(event);
+      if (!point) return;
+      if (event.cancelable) event.preventDefault();
+      scheduleResizeUpdate(point);
+    },
+    [scheduleResizeUpdate]
+  );
+
+  const beginResize = useCallback(
+    (widgetId: string, corner: ResizeCorner, point: Point) => {
+      const { current, effectiveBreakpoint } = liveRef.current;
+      if (current.kind !== 'real') return;
+      const widget = current.page.widgets.find((w) => w.id === widgetId);
+      const rawItem = current.page.layout.find((item) => item.i === widgetId);
+      const gridEl = document.querySelector<HTMLElement>('.grid-page-slot--active .grid');
+      if (!widget || !rawItem || !gridEl) return;
+
+      const cols = GRID_COLS[effectiveBreakpoint];
+      const rect = gridEl.getBoundingClientRect();
+      const positionParams = buildPositionParams(rect.width, cols);
+      const box = calcGridItemPosition(positionParams, rawItem.x, rawItem.y, rawItem.w, rawItem.h);
+      const minSize = findWidgetDefinition(widget.type)?.minSize ?? DEFAULT_WIDGET_MIN_SIZE;
+
+      resizeRef.current = {
+        widgetId,
+        pageId: current.page.id,
+        corner,
+        startPoint: point,
+        startWidthPx: box.width,
+        startHeightPx: box.height,
+        startX: rawItem.x,
+        startY: rawItem.y,
+        startW: rawItem.w,
+        minW: Math.min(minSize.w, cols),
+        minH: minSize.h,
+      };
+      setIsDragActive(true);
+      lockGestures();
+
+      if (!attachedResizeListenersRef.current) {
+        const move = handleResizeMove;
+        const up = endResize;
+        attachedResizeListenersRef.current = { move, up };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('mouseup', up);
+        window.addEventListener('touchend', up);
+      }
+    },
+    [handleResizeMove, endResize]
+  );
+
+  // Same fix as endDrag's own safety-net effect above, and for the exact
+  // same reason (endResize -> ... -> pages changing on any unrelated Redux
+  // update, tearing down an in-progress resize mid-gesture).
+  const endResizeRef = useRef(endResize);
+  useLayoutEffect(() => {
+    endResizeRef.current = endResize;
+  });
+  useEffect(() => () => endResizeRef.current(), []);
 
   const handleWidgetHeightsChange = useCallback(
     (pageId: string, patches: Array<{ id: string; h: number }>) =>
@@ -1158,21 +1372,7 @@ function Grid(
     [onWidgetHeightsChange, effectiveBreakpoint]
   );
 
-  const handleActiveLayoutChange = useCallback(
-    (pageId: string, layout: Layout) => {
-      // RGL fires the source page's own onLayoutChange around the same drop
-      // as onDragStop. If the drop just got rerouted to a neighbor, that
-      // commit would otherwise persist the widget at its clamped edge
-      // position on a page it's about to be removed from — skip it once.
-      if (suppressNextLayoutChangeRef.current) {
-        suppressNextLayoutChangeRef.current = false;
-        return;
-      }
-      onLayoutChange(effectiveBreakpoint, pageId, layout);
-    },
-    [effectiveBreakpoint, onLayoutChange]
-  );
-  const handleViewLayoutChange = useCallback(
+  const handleLayoutChange = useCallback(
     (pageId: string, layout: Layout) => onLayoutChange(effectiveBreakpoint, pageId, layout),
     [effectiveBreakpoint, onLayoutChange]
   );
@@ -1202,12 +1402,12 @@ function Grid(
     // removes itself again one frame later (via rAF) and would start easing
     // every subsequent touchmove frame instead of snapping straight to the
     // finger.
-    const beginDrag = () => {
+    const beginSwipeDrag = () => {
       pageSlide.resetToCommitted();
       trackRef.current?.classList.add('grid-page-track--no-transition');
     };
 
-    const endDrag = () => {
+    const endSwipeDrag = () => {
       touchStart = null;
       touchLocked = null;
       rawDx = 0;
@@ -1240,18 +1440,19 @@ function Grid(
 
     const handleTouchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
-      // relocationRef: a cross-page WIDGET drag is already steering the
-      // view. areGesturesLocked: some widget's own internal gesture (today,
-      // dragging a task/subtask row — see gestureLock.ts) has claimed this
-      // touch instead; without this, the drag's own touchmove deltas were
-      // easily big enough to also trip this handler's lock-detection below,
-      // paging the whole track out from under the row being dragged.
-      if (!touchStart || !touch || relocationRef.current || areGesturesLocked()) return;
+      // dragRef: a widget drag (same-page or hopped) is already steering
+      // the view. areGesturesLocked: some other gesture (a widget's own
+      // long-press/menu — see useLongPress — or, today, dragging a task/
+      // subtask row — see gestureLock.ts) has claimed this touch instead;
+      // without this, the drag's own touchmove deltas were easily big
+      // enough to also trip this handler's lock-detection below, paging
+      // the whole track out from under the gesture actually using it.
+      if (!touchStart || !touch || dragRef.current || resizeRef.current || areGesturesLocked()) return;
       const dx = touch.clientX - touchStart.x;
       const dy = touch.clientY - touchStart.y;
       if (touchLocked === null && Math.abs(dx) + Math.abs(dy) > 10) {
         touchLocked = Math.abs(dx) > Math.abs(dy) * SWIPE_DIRECTION_LOCK_RATIO;
-        if (touchLocked) beginDrag();
+        if (touchLocked) beginSwipeDrag();
       }
       if (!touchLocked) return;
       event.preventDefault();
@@ -1268,7 +1469,7 @@ function Grid(
       const touch = event.changedTouches[0];
       const start = touchStart;
       if (!start || !touch || !touchLocked) {
-        endDrag();
+        endSwipeDrag();
         return;
       }
       const duration = Date.now() - start.t;
@@ -1285,12 +1486,12 @@ function Grid(
       } else {
         snapBack(rawDx);
       }
-      endDrag();
+      endSwipeDrag();
     };
 
     const handleTouchCancel = () => {
       if (touchLocked) snapBack(rawDx);
-      endDrag();
+      endSwipeDrag();
     };
 
     let wheelAccumulated = 0;
@@ -1355,6 +1556,41 @@ function Grid(
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [requestDelta]);
 
+  // --- Canvas context menu: right-click (desktop) or long-press (mobile)
+  // on the active page's own empty background — bails if the press landed
+  // on a widget (its own long-press/right-click takes precedence there).
+  // "Add widget" opens AddWidgetModal (reused unmodified from the old
+  // toolbar); "Preview as" is CanvasContextMenu's own submenu.
+  const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
+  const [canvasMenuPosition, setCanvasMenuPosition] = useState<Point | null>(null);
+  const closeCanvasMenu = useCallback(() => setCanvasMenuPosition(null), []);
+  useCloseMenuOnOutsideClick(!!canvasMenuPosition, closeCanvasMenu);
+
+  const handleAddWidgetSelect = useCallback(
+    (type: string) => {
+      const { current, effectiveBreakpoint: liveEffectiveBreakpoint, onCreatePage } = liveRef.current;
+      const pageId = current.kind === 'real' ? current.page.id : onCreatePage(liveEffectiveBreakpoint);
+      onAddWidget(type, liveEffectiveBreakpoint, pageId);
+      setIsAddWidgetModalOpen(false);
+    },
+    [onAddWidget]
+  );
+
+  const canvasLongPress = useLongPress({
+    // This listener sits on .grid-page-slot-content, an ANCESTOR of every
+    // widget on the active page — a long-press starting on a widget bubbles
+    // up and arms this timer too, alongside that widget's own. Without this
+    // check both fire at ~500ms and race ContextMenu's singleton slot; this
+    // one, wired up via the bubble phase (so scheduled a beat after the
+    // widget's own), reliably wins and immediately closes the widget's menu
+    // the instant it opens — the "long-press flashes then closes itself"
+    // bug. Mirrors the identical check on the onContextMenu handler below.
+    onLongPress: (point, event) => {
+      if ((event.target as HTMLElement).closest('.grid-widget')) return;
+      setCanvasMenuPosition(point);
+    },
+  });
+
   // Shared by both placements below (only one is ever non-null at a time,
   // per slideDirection). Forward appends it as a normal trailing flex child
   // — that doesn't disturb prev/current/next's own flow positions (nothing
@@ -1381,7 +1617,7 @@ function Grid(
       // ordinary page swipe — every widget re-measuring from scratch, any
       // CSS animation inside them (e.g. Orbit) restarting from 0%.
       key={`${effectiveBreakpoint}:${lookaheadSignature}`}
-      className={`grid-page-slot grid-page-slot--peek grid-page-slot--incoming${lookaheadVisible ? ' grid-page-slot--incoming-visible' : ''}${isEditMode ? ' grid-page-slot--editing' : ''}`}
+      className={`grid-page-slot grid-page-slot--peek grid-page-slot--incoming${lookaheadVisible ? ' grid-page-slot--incoming-visible' : ''}${isDragActive ? ' grid-page-slot--dragging' : ''}`}
       style={
         slideDirection < 0
           ? { width: pageWidth, position: 'absolute', top: 0, left: -(pageWidth + slotGapPx) }
@@ -1402,7 +1638,6 @@ function Grid(
             key={`${effectiveBreakpoint}:${lookaheadPage.page.id}`}
             page={lookaheadPage.page}
             effectiveBreakpoint={effectiveBreakpoint}
-            isEditMode={isEditMode}
             isSimulating={false}
             gridWidth={pageWidth}
             onWidgetHeightsChange={handleWidgetHeightsChange}
@@ -1417,7 +1652,7 @@ function Grid(
   return (
     <div className="grid-canvas" ref={containerRef}>
       {mounted && (
-        <div className="grid-page-viewport">
+        <div className={isMoveDragActive ? 'grid-page-viewport grid-page-viewport--drag-shrink' : 'grid-page-viewport'}>
           <div
             ref={trackRef}
             className="grid-page-track"
@@ -1439,7 +1674,7 @@ function Grid(
                 // separately guards against the stale-flex-layout Chromium
                 // bug this used to dodge by forcing a fresh node every time.
                 key={`${effectiveBreakpoint}:${prev.kind === 'real' ? prev.page.id : 'blank'}`}
-                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isPrevCommitted ? ' grid-page-slot--committed' : ''}`}
+                className={`grid-page-slot grid-page-slot--peek${isDragActive ? ' grid-page-slot--dragging' : ''}${isPrevCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armLeftRef}
                 onClick={() => handlePeekClick(activeIndex - 1)}
                 style={{ width: pageWidth }}
@@ -1453,7 +1688,6 @@ function Grid(
                       key={`${effectiveBreakpoint}:${prev.page.id}`}
                       page={prev.page}
                       effectiveBreakpoint={effectiveBreakpoint}
-                      isEditMode={isEditMode}
                       isSimulating={false}
                       gridWidth={pageWidth}
                       onWidgetHeightsChange={handleWidgetHeightsChange}
@@ -1468,15 +1702,27 @@ function Grid(
             <div
               ref={activeSlotRef}
               key={`${effectiveBreakpoint}:${current.kind === 'real' ? current.page.id : 'blank'}`}
-              className={`grid-page-slot grid-page-slot--active${isEditMode ? ' grid-page-slot--editing' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}${isSimulating ? ' grid-page-slot--simulating' : ''}`}
+              className={`grid-page-slot grid-page-slot--active${isDragActive ? ' grid-page-slot--dragging' : ''}${isCurrentCommitted ? ' grid-page-slot--committed' : ''}${isSimulating ? ' grid-page-slot--simulating' : ''}`}
               style={{ width: pageWidth }}
             >
               {/* Same .grid-page-slot-content depth as the peek/lookahead
                   slots (without --inert, so widgets stay clickable) — keeps
                   <GridPage> one level deep under every role so its key
                   actually gets matched across a peek<->active transition
-                  instead of the depth mismatch forcing a remount. */}
-              <div className="grid-page-slot-content">
+                  instead of the depth mismatch forcing a remount. Also the
+                  trigger surface for the canvas context menu (Add widget /
+                  Preview as) — bails if the press/click landed on a widget,
+                  whose own long-press/right-click takes precedence. */}
+              <div
+                className="grid-page-slot-content"
+                onMouseDown={canvasLongPress.onMouseDown}
+                onTouchStart={canvasLongPress.onTouchStart}
+                onContextMenu={(event) => {
+                  if ((event.target as HTMLElement).closest(`.grid-widget, ${WIDGET_GESTURE_SKIP_SELECTOR}`)) return;
+                  event.preventDefault();
+                  setCanvasMenuPosition({ x: event.clientX, y: event.clientY });
+                }}
+              >
                 {current.kind === 'real' ? (
                   <GridPage
                     // Page identity alone (see lookahead's GridPage above) —
@@ -1485,16 +1731,15 @@ function Grid(
                     key={`${effectiveBreakpoint}:${current.page.id}`}
                     page={current.page}
                     effectiveBreakpoint={effectiveBreakpoint}
-                    isEditMode={isEditMode}
                     isSimulating={isSimulating}
                     gridWidth={pageWidth}
                     softLimitRows={softLimitRows}
-                    onLayoutChange={isEditMode ? handleActiveLayoutChange : handleViewLayoutChange}
+                    onLayoutChange={handleLayoutChange}
                     onUpdateWidget={handleUpdateWidget}
                     onRemoveWidget={handleRemove}
                     onWidgetHeightsChange={handleWidgetHeightsChange}
-                    onDrag={isEditMode ? handleActiveDrag : undefined}
-                    onDragStop={isEditMode ? handleActiveDragStop : undefined}
+                    onWidgetDragStart={beginDrag}
+                    onWidgetResizeStart={beginResize}
                   />
                 ) : isSimulating ? (
                   // Mirrors GridPage's own .grid-preview-frame wrapping for a
@@ -1508,9 +1753,8 @@ function Grid(
                   </div>
                 ) : (
                   // Purely a placeholder — the blank page only ever becomes
-                  // real via dragging a widget onto it (above) or clicking
-                  // "Add Widget" while sitting on it (see page.tsx), never by
-                  // clicking this pane itself.
+                  // real via dragging a widget onto it (drag-to-edge hop,
+                  // above), never by clicking this pane itself.
                   <BlankPagePane variant="current" />
                 )}
               </div>
@@ -1521,7 +1765,7 @@ function Grid(
                 // See the prev slot's comment above for why this is keyed
                 // by page identity alone.
                 key={`${effectiveBreakpoint}:${next.kind === 'real' ? next.page.id : 'blank'}`}
-                className={`grid-page-slot grid-page-slot--peek${isEditMode ? ' grid-page-slot--editing' : ''}${isNextCommitted ? ' grid-page-slot--committed' : ''}`}
+                className={`grid-page-slot grid-page-slot--peek${isDragActive ? ' grid-page-slot--dragging' : ''}${isNextCommitted ? ' grid-page-slot--committed' : ''}`}
                 ref={armRightRef}
                 onClick={() => handlePeekClick(activeIndex + 1)}
                 style={{ width: pageWidth }}
@@ -1535,7 +1779,6 @@ function Grid(
                       key={`${effectiveBreakpoint}:${next.page.id}`}
                       page={next.page}
                       effectiveBreakpoint={effectiveBreakpoint}
-                      isEditMode={isEditMode}
                       isSimulating={false}
                       gridWidth={pageWidth}
                       onWidgetHeightsChange={handleWidgetHeightsChange}
@@ -1551,6 +1794,23 @@ function Grid(
           </div>
         </div>
       )}
+
+      {isMoveDragActive && <RemoveDropZone ref={removeZoneRef} />}
+
+      <CanvasContextMenu
+        position={canvasMenuPosition}
+        onClose={closeCanvasMenu}
+        onAddWidget={() => setIsAddWidgetModalOpen(true)}
+        previewBreakpoint={previewBreakpoint}
+        allowedBreakpoints={allowedBreakpoints}
+        onPreviewBreakpointChange={onPreviewBreakpointChange}
+      />
+
+      <AddWidgetModal
+        isOpen={isAddWidgetModalOpen}
+        onClose={() => setIsAddWidgetModalOpen(false)}
+        onSelect={handleAddWidgetSelect}
+      />
     </div>
   );
 }

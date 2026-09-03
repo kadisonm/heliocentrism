@@ -1,7 +1,7 @@
 'use client';
 
 import { GridLayout, verticalCompactor } from 'react-grid-layout';
-import type { EventCallback, Layout } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   GRID_COLS,
@@ -12,13 +12,18 @@ import {
 } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardPage, DashboardWidget } from '../../lib/types';
 import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
+import type { Point } from '../../lib/grid/pointerEvents';
+import type { ResizeCorner } from './ResizeHandle';
 import WidgetShell from './WidgetShell';
 
-const RESIZE_HANDLES: Array<'se' | 'sw'> = ['se', 'sw'];
-// A widget with auto-expand on manages its own height (see WidgetShell's
-// ResizeObserver) — offering only east/west handles keeps width resizing
-// available without letting a manual drag fight that measurement.
-const AUTO_EXPAND_RESIZE_HANDLES: Array<'e' | 'w'> = ['e', 'w'];
+// Both drag and resize are now driven entirely by Grid.tsx's own manual
+// pointer-tracking engine (see its beginDrag/beginResize) rather than
+// react-grid-layout's native DraggableCore — RGL's own dragConfig/
+// resizeConfig below are fixed off, and it's kept around purely for its
+// layout/compaction math and for rendering widgets that aren't currently
+// being interacted with.
+const DRAG_DISABLED = { enabled: false };
+const RESIZE_DISABLED = { enabled: false };
 
 // Each auto-expand widget debounces its own ResizeObserver independently
 // (WidgetShell), so two widgets remeasuring from the same trigger (e.g. the
@@ -46,7 +51,6 @@ function snapGridTransition(el: HTMLDivElement | null) {
 type GridPageProps = {
   page: DashboardPage;
   effectiveBreakpoint: DashboardBreakpoint;
-  isEditMode: boolean;
   isSimulating: boolean;
   gridWidth: number;
   // Omitted => the length warning never renders (used for peek panes).
@@ -62,8 +66,11 @@ type GridPageProps = {
   onUpdateWidget?: (id: string, pageId: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => void;
   onRemoveWidget?: (id: string, pageId: string) => void;
   onWidgetHeightsChange?: (pageId: string, patches: Array<{ id: string; h: number }>) => void;
-  onDrag?: EventCallback;
-  onDragStop?: EventCallback;
+  // Straight pass-through to each WidgetShell (no page-scoping needed — see
+  // Grid.tsx's beginDrag/beginResize, which resolve the source page off
+  // their own `current` rather than needing it handed in).
+  onWidgetDragStart?: (widgetId: string, point: Point, element: HTMLElement) => void;
+  onWidgetResizeStart?: (widgetId: string, corner: ResizeCorner, point: Point) => void;
 };
 
 // One page's grid — extracted from what used to be the whole of Grid.tsx
@@ -79,10 +86,23 @@ type GridPageProps = {
 // tends to carry the most widgets. Relies on the same stable-reference
 // contract WidgetShell already does (page/callback props keep their
 // identity when nothing relevant to that slot changed).
+//
+// Deliberately does NOT take Grid.tsx's isDragActive as a prop (contrast
+// with the earlier persistent isEditMode, which did): GridLayout's own
+// internal reconciliation effect never stands down the way it does for a
+// REAL react-grid-layout native drag (activeDrag stays permanently unset,
+// since dragConfig/resizeConfig are always disabled below) — so ANY prop
+// change here re-renders every GridItem with React's own computed style,
+// stomping the raw DOM writes Grid.tsx's beginDrag/beginResize make each
+// frame (hiding the dragged widget, pushing siblings aside) and reading as
+// a flicker fighting the gesture itself. The "dim other widgets while
+// dragging" effect (see widget-shell.scss's `.grid-page-slot--dragging
+// .grid-widget-body` rule) is done in pure CSS off the outer slot's own
+// className instead, specifically so this component's props — and
+// therefore GridLayout's — stay completely inert for the whole gesture.
 function GridPage({
   page,
   effectiveBreakpoint,
-  isEditMode,
   isSimulating,
   gridWidth,
   softLimitRows,
@@ -90,8 +110,8 @@ function GridPage({
   onUpdateWidget,
   onRemoveWidget,
   onWidgetHeightsChange,
-  onDrag,
-  onDragStop,
+  onWidgetDragStart,
+  onWidgetResizeStart,
 }: GridPageProps) {
   const gridElRef = useRef<HTMLDivElement>(null);
 
@@ -136,19 +156,6 @@ function GridPage({
     []
   );
 
-  // Stabilized so <GridLayout>'s own internal useMemos (keyed off these
-  // props) actually hit instead of recomputing every render — otherwise a
-  // fresh object/array here every render, even with identical values,
-  // cascades into rebuilding derived grid state on every drag/resize frame.
-  const dragConfig = useMemo(
-    () => ({ enabled: isEditMode, handle: '.widget-drag-handle' }),
-    [isEditMode]
-  );
-  const resizeConfig = useMemo(
-    () => ({ enabled: isEditMode, handles: RESIZE_HANDLES }),
-    [isEditMode]
-  );
-
   const gridConfig = useMemo(
     () => ({
       cols: GRID_COLS[effectiveBreakpoint],
@@ -182,17 +189,17 @@ function GridPage({
           minW,
           minH,
           h: Math.max(item.h, minH),
-          resizeHandles: widget?.autoExpand ? AUTO_EXPAND_RESIZE_HANDLES : undefined,
         };
       });
 
     return verticalCompactor.compact(withSizing, cols);
   }, [page, effectiveBreakpoint]);
 
-  // Edit/view mode toggling on the SAME page shouldn't animate every widget
-  // jumping to its new layout; a drag/resize settling into place should.
-  // Also keyed on gridWidth, not just isEditMode, since a width change can
-  // happen without isEditMode itself changing (e.g. a window resize).
+  // A width change (e.g. isDragActive reserving peek-sliver room, or a
+  // window resize) shouldn't animate every widget jumping to its own
+  // settled layout; a drag/resize settling into place itself should
+  // (handled by the manual engine's own DOM writes in Grid.tsx, not this
+  // effect).
   //
   // A peek<->active role flip needs the same treatment, but is handled by
   // Grid.tsx instead (see its own snap effect) — that one has to coordinate
@@ -209,7 +216,7 @@ function GridPage({
       return;
     }
     return snapGridTransition(gridElRef.current);
-  }, [isEditMode, gridWidth]);
+  }, [gridWidth]);
 
   // An auto-expand height patch (see handleWidgetHeightChange above) lands
   // as an ordinary layout update as far as react-grid-layout is concerned,
@@ -234,11 +241,9 @@ function GridPage({
         layout={layout}
         gridConfig={gridConfig}
         width={gridWidth}
-        dragConfig={dragConfig}
-        resizeConfig={resizeConfig}
+        dragConfig={DRAG_DISABLED}
+        resizeConfig={RESIZE_DISABLED}
         onLayoutChange={handleLayoutChange}
-        onDrag={onDrag}
-        onDragStop={onDragStop}
       >
         {page.widgets.map((widget) => (
           // data-widget-id: react-grid-layout clones this div into the
@@ -249,10 +254,11 @@ function GridPage({
           <div key={widget.id} data-widget-id={widget.id}>
             <WidgetShell
               widget={widget}
-              isEditMode={isEditMode}
               onUpdateWidget={handleUpdateWidget}
               onRemove={handleRemove}
               onHeightChange={handleWidgetHeightChange}
+              onDragStart={onWidgetDragStart}
+              onResizeStart={onWidgetResizeStart}
             />
           </div>
         ))}

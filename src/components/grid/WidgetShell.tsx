@@ -1,35 +1,64 @@
 'use client';
 
-import { GripVertical, Settings, UnfoldVertical, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pxToGridRows } from '../../lib/grid/gridConfig';
-import { WIDGET_REGISTRY, findWidgetDefinition } from '../../lib/grid/widgetRegistry';
+import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
 import type { DashboardWidget } from '../../lib/types';
+import type { Point } from '../../lib/grid/pointerEvents';
+import type { ContextMenuPosition } from '../common/context-menu/ContextMenu';
 import { WidgetContext } from './widgetContext';
+import { useCloseMenuOnOutsideClick } from './useCloseMenuOnOutsideClick';
+import { useLongPress, WIDGET_GESTURE_SKIP_SELECTOR } from './useLongPress';
+import WidgetContextMenu from './WidgetContextMenu';
+import ResizeHandle, { type ResizeCorner } from './ResizeHandle';
+
+const MOVE_RESIZE_HANDLES: ResizeCorner[] = ['se', 'sw'];
+// A widget with auto-expand on manages its own height (see the
+// ResizeObserver effect below) — offering only east/west handles keeps
+// width resizing available without letting a manual resize fight that
+// measurement.
+const AUTO_EXPAND_RESIZE_HANDLES: ResizeCorner[] = ['e', 'w'];
 
 type WidgetShellProps = {
   widget: DashboardWidget;
-  isEditMode: boolean;
   onUpdateWidget: (id: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => void;
   onRemove: (id: string) => void;
   onHeightChange: (id: string, h: number) => void;
+  // Long-press (or a resize handle's own immediate press) hands off into
+  // these — see Grid.tsx's beginDrag/beginResize, the manual pointer-
+  // tracking engine that actually drives the gesture from here on.
+  onDragStart?: (widgetId: string, point: Point, element: HTMLElement) => void;
+  onResizeStart?: (widgetId: string, corner: ResizeCorner, point: Point) => void;
 };
 
 // Memoized because Grid re-renders every drag/resize frame; without it every
 // widget's subtree would re-render even though only the dragged one changed.
 // Relies on the parent's widgets array preserving identity for untouched
-// items (map/filter in useGridState) and on onUpdateWidget/onRemove being stable.
+// items (map/filter in useGridState) and on onUpdateWidget/onRemove being
+// stable. Deliberately has no isDragActive prop at all — see GridPage.tsx's
+// own comment on why threading that through here would defeat the whole
+// point of this memoization mid-gesture.
 function WidgetShell({
   widget,
-  isEditMode,
   onUpdateWidget,
   onRemove,
   onHeightChange,
+  onDragStart,
+  onResizeStart,
 }: WidgetShellProps) {
   const definition = findWidgetDefinition(widget.type);
   const WidgetComponent = definition?.component;
   const SettingsComponent = definition?.settingsComponent;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Long-press (or right-click) reveals the Settings/Resize/Delete menu;
+  // choosing "Resize" swaps it for the corner/edge resize handles instead —
+  // only one of the two is ever showing at once, hence one state instead of
+  // a pair that could disagree. null when neither is showing.
+  const [overlay, setOverlay] = useState<{ mode: 'menu'; position: ContextMenuPosition } | { mode: 'resize' } | null>(
+    null
+  );
+  const closeOverlay = useCallback(() => setOverlay(null), []);
+  useCloseMenuOnOutsideClick(!!overlay, closeOverlay);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const handleUpdate = useCallback(
@@ -43,7 +72,6 @@ function WidgetShell({
     [widget, handleUpdate]
   );
 
-  const isTransparent = definition?.transparentInViewMode && !isEditMode;
   const isAutoExpand = !!(widget.autoExpand && definition?.supportsAutoExpand);
 
   // Measures the content root (grid-widget-body's real child; portaled modals
@@ -70,7 +98,7 @@ function WidgetShell({
     const observer = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height;
       if (height === undefined) return;
-      // A cross-page drag (Grid.tsx's beginRelocation) hides this widget's
+      // A drag (Grid.tsx's beginDrag) hides this widget's
       // real DOM node with display:none while a ghost stands in for it on
       // the target page, which collapses this ResizeObserver's target to
       // 0x0 — reporting that as the widget's real height would shrink its
@@ -107,60 +135,49 @@ function WidgetShell({
     };
   }, [isAutoExpand, widget.id, onHeightChange, definition]);
 
-  const bodyClassName = [
-    'grid-widget-body',
-    isEditMode && 'is-locked',
-    isAutoExpand && 'grid-widget-body--auto-expand',
-  ]
+  const bodyClassName = ['grid-widget-body', isAutoExpand && 'grid-widget-body--auto-expand']
     .filter(Boolean)
     .join(' ');
 
+  // Fires on a hold anywhere on the widget's own body (no dedicated drag
+  // handle needed anymore) — opens the menu, and if the SAME contact then
+  // keeps moving, hands off into a move drag instead of a second long-press.
+  const longPress = useLongPress({
+    onLongPress: (point) => setOverlay({ mode: 'menu', position: point }),
+    onDragStart: (point, _event, element) => {
+      setOverlay(null);
+      onDragStart?.(widget.id, point, element);
+    },
+  });
+
+  // A resize handle only ever exists once "Resize" has been chosen from the
+  // menu, so its own press is inherently a fresh, unambiguous gesture — no
+  // long-press needed, straight into a resize.
+  const handleResizeStart = useCallback(
+    (point: Point, _event: Event, corner: ResizeCorner) => {
+      setOverlay(null);
+      onResizeStart?.(widget.id, corner, point);
+    },
+    [onResizeStart, widget.id]
+  );
+
+  const resizeCorners = isAutoExpand ? AUTO_EXPAND_RESIZE_HANDLES : MOVE_RESIZE_HANDLES;
+
   return (
-    <div className={isTransparent ? 'grid-widget grid-widget--transparent' : 'grid-widget'}>
-      {isEditMode && (
-        <div className="grid-widget-chrome">
-          <span className="widget-drag-handle" title="Drag to move" aria-label="Drag to move">
-            <GripVertical size={16} />
-          </span>
-
-          {SettingsComponent && (
-            <button
-              type="button"
-              className="grid-widget-settings"
-              onClick={() => setIsSettingsOpen(true)}
-              title="Widget settings"
-              aria-label="Widget settings"
-            >
-              <Settings size={14} />
-            </button>
-          )}
-
-          <select
-            className="grid-widget-type-select"
-            value={widget.type}
-            onChange={(event) => onUpdateWidget(widget.id, { type: event.target.value })}
-            title="Change widget"
-            aria-label="Change widget"
-          >
-            {WIDGET_REGISTRY.map((option) => (
-              <option key={option.type} value={option.type}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            className="grid-widget-remove"
-            onClick={() => onRemove(widget.id)}
-            title="Remove widget"
-            aria-label="Remove widget"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
+    <div
+      className={overlay ? 'grid-widget grid-widget--menu-open' : 'grid-widget'}
+      onMouseDown={longPress.onMouseDown}
+      onTouchStart={longPress.onTouchStart}
+      onContextMenu={(event) => {
+        // Desktop right-click is an unambiguous "show me the menu" signal —
+        // skips the hold delay entirely. Matches useLongPress's own
+        // exclusion so it doesn't steal a right-click meant for genuinely
+        // interactive content (e.g. an input's native context menu).
+        if ((event.target as HTMLElement).closest(WIDGET_GESTURE_SKIP_SELECTOR)) return;
+        event.preventDefault();
+        setOverlay({ mode: 'menu', position: { x: event.clientX, y: event.clientY } });
+      }}
+    >
       <WidgetContext.Provider value={widgetContextValue}>
         <div className={bodyClassName} ref={bodyRef}>
           {WidgetComponent ? (
@@ -175,22 +192,21 @@ function WidgetShell({
         )}
       </WidgetContext.Provider>
 
-      {isEditMode && definition?.supportsAutoExpand && (
-        <button
-          type="button"
-          className={
-            isAutoExpand
-              ? 'grid-widget-auto-expand grid-widget-auto-expand--active'
-              : 'grid-widget-auto-expand'
-          }
-          onClick={() => onUpdateWidget(widget.id, { autoExpand: !widget.autoExpand })}
-          title={isAutoExpand ? 'Disable auto-expand' : 'Enable auto-expand'}
-          aria-label={isAutoExpand ? 'Disable auto-expand' : 'Enable auto-expand'}
-          aria-pressed={isAutoExpand}
-        >
-          <UnfoldVertical size={13} />
-        </button>
+      {overlay?.mode === 'menu' && (
+        <WidgetContextMenu
+          position={overlay.position}
+          widget={widget}
+          definition={definition}
+          onClose={closeOverlay}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onToggleAutoExpand={() => onUpdateWidget(widget.id, { autoExpand: !widget.autoExpand })}
+          onResize={() => setOverlay({ mode: 'resize' })}
+          onDelete={() => onRemove(widget.id)}
+        />
       )}
+
+      {overlay?.mode === 'resize' &&
+        resizeCorners.map((corner) => <ResizeHandle key={corner} corner={corner} onResizeStart={handleResizeStart} />)}
     </div>
   );
 }

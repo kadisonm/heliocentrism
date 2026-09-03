@@ -1,0 +1,40 @@
+// Rendered by WidgetShell (see ResizeHandle.tsx) alongside the widget
+// context menu, once a widget's long-press/right-click reveals it — replaces
+// react-grid-layout's own native resize handles (disabled entirely now that
+// resizing is driven by Grid.tsx's manual beginResize engine).
+.grid-widget-resize-handle {
+  position: absolute;
+  z-index: 20;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  border: solid 2px var(--background-primary-alt);
+  box-shadow: 0 2px 6px var(--shadow-modifier);
+}
+
+.grid-widget-resize-handle--se {
+  right: -0.5rem;
+  bottom: -0.5rem;
+  cursor: nwse-resize;
+}
+
+.grid-widget-resize-handle--sw {
+  left: -0.5rem;
+  bottom: -0.5rem;
+  cursor: nesw-resize;
+}
+
+.grid-widget-resize-handle--e {
+  right: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.grid-widget-resize-handle--w {
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}

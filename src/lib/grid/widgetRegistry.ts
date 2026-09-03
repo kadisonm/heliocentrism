@@ -5,7 +5,6 @@ import PhotoWidget from '../../components/widgets/photo';
 import PhotoSettingsModal from '../../components/widgets/photo/PhotoSettingsModal';
 import PomodoroTimerWidget from '../../components/widgets/pomodoro-timer';
 import PomodoroSettingsModal from '../../components/widgets/pomodoro-timer/PomodoroSettingsModal';
-import SpacerWidget from '../../components/widgets/spacer';
 import TaskListWidget from '../../components/widgets/task-list';
 
 export type WidgetType =
@@ -13,7 +12,6 @@ export type WidgetType =
   | 'orbit'
   | 'pomodoro-timer'
   | 'photo'
-  | 'spacer'
   | 'clock';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
@@ -28,16 +26,12 @@ export type WidgetDefinition = {
   // below this.
   minSize: { w: number; h: number };
   component: ComponentType;
-  // Rendered by WidgetShell's gear icon (edit mode only) when present.
+  // Rendered by WidgetShell's context menu (see WidgetContextMenu) when present.
   settingsComponent?: WidgetSettingsComponent;
-  // When true, WidgetShell's own chrome (background/border, not just this
-  // widget's content) is only shown while editing — for widgets like Spacer
-  // that should be fully invisible once you're done editing, not just empty.
-  transparentInViewMode?: boolean;
-  // When true, WidgetShell offers an auto-expand toggle (edit mode only)
+  // When true, WidgetShell offers an auto-expand toggle in its context menu
   // that sizes this widget's height to its content instead of scrolling.
   // Only meaningful for widgets whose content can genuinely overflow —
-  // decorative/fixed-size widgets (Orbit, Spacer) leave this unset.
+  // decorative/fixed-size widgets (Orbit) leave this unset.
   supportsAutoExpand?: boolean;
 };
 
@@ -77,15 +71,6 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 1, h: 1 },
     component: PhotoWidget,
     settingsComponent: PhotoSettingsModal,
-  },
-  {
-    type: 'spacer',
-    name: 'Spacer',
-    description: 'Empty space for shaping the layout — visible only while editing.',
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
-    component: SpacerWidget,
-    transparentInViewMode: true,
   },
   {
     type: 'clock',

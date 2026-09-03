@@ -7,67 +7,38 @@
   background: var(--background-primary-alt);
   border-radius: 1rem;
   overflow: hidden;
-}
+  // Long-press/drag sweeps the pointer across a widget's own text, which the
+  // browser reads as a text-selection drag, highlighting content underneath
+  // instead of just moving the widget. react-grid-layout used to guard this
+  // itself (see grid-page.scss's history) but only while ITS OWN native
+  // drag/resize was active — since Grid.tsx's manual drag/resize engine
+  // replaced that entirely, nothing was preventing it, so this is now
+  // unconditional rather than drag-scoped.
+  user-select: none;
 
-// For widgets flagged transparentInViewMode (e.g. Spacer) — WidgetShell
-// only applies this outside edit mode, so the widget looks completely like
-// empty space in view mode but still shows its normal chrome/background
-// while editing (positioning/resizing an invisible box would be unusable).
-.grid-widget--transparent {
-  background: none;
-}
-
-.grid-widget-chrome {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0.6rem;
-  flex-shrink: 0;
-}
-
-.widget-drag-handle {
-  cursor: grab;
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
-  padding: 0.15rem 0.4rem;
-
-  &:active {
-    cursor: grabbing;
+  // ...except genuinely editable fields a widget provides (e.g. the task
+  // list's title/description — see InlineEditableField) — those need normal
+  // text selection to actually be editable/selectable while focused. Same
+  // element list as useLongPress's own WIDGET_GESTURE_SKIP_SELECTOR.
+  input,
+  textarea,
+  select {
+    user-select: text;
   }
 }
 
-.grid-widget-settings {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.4rem;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-accent-soft-hover);
-  }
-}
-
-.grid-widget-remove {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.4rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-error);
-  }
+// Long-press (or right-click) reveals this widget's own overlay — either the
+// context menu (Settings/Resize/Delete) or, once "Resize" is chosen from it,
+// the corner/edge resize handles instead (see WidgetShell's `overlay` state,
+// WidgetContextMenu, ResizeHandle) — a subtle highlight is the only
+// discoverability affordance now that there's no dedicated drag handle.
+// overflow: visible is required here — .grid-widget clips to its own rounded
+// corners at rest (below), which without this would clip the resize
+// handles entirely (they sit half outside the box, at each corner/edge) —
+// invisible, unclickable, silently making resize a dead gesture.
+.grid-widget--menu-open {
+  outline: solid 2px var(--color-accent);
+  overflow: visible;
 }
 
 .grid-widget-body {
@@ -78,12 +49,6 @@
   align-items: stretch;
   justify-content: stretch;
   transition: opacity 0.2s ease, filter 0.2s ease;
-
-  &.is-locked {
-    pointer-events: none;
-    opacity: 0.55;
-    filter: grayscale(0.4);
-  }
 
   // Auto-expand: align-self: flex-start opts the shell out of this flex
   // container's align-items: stretch so height: auto can shrink to content
@@ -104,57 +69,16 @@
   }
 }
 
-// Bottom-center toggle for a widget's auto-expand mode (edit mode only,
-// only for widgets declaring supportsAutoExpand — see WidgetShell). Sits on
-// top of the body rather than in the chrome bar above, so it stays anchored
-// to the edge whose behavior it's actually changing.
-.grid-widget-auto-expand {
-  position: absolute;
-  left: 50%;
-  bottom: 0.5rem;
-  transform: translateX(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--background-secondary) 70%, transparent);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-  }
-
-  &:active {
-    transform: translateX(-50%) scale(0.95);
-  }
-}
-
-.grid-widget-auto-expand--active {
-  background: var(--background-modifier-accent-soft);
-  color: var(--color-accent);
-}
-
-.grid-widget-type-select {
-  flex: 1;
-  min-width: 0;
-  margin: 0 0.5rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--background-secondary) 35%, transparent);
-  color: var(--text-normal);
-  font-size: 0.75rem;
-  text-overflow: ellipsis;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--background-modifier-hover);
-  }
+// Dims every widget on the active page while a drag/resize is in flight —
+// off the outer slot's own className (see grid.scss's --dragging), not a
+// per-widget React prop, so React never has to re-render GridPage/WidgetShell
+// (and therefore react-grid-layout's GridLayout) just to apply this. See
+// GridPage.tsx's own comment on why that matters: any such re-render would
+// stomp the raw DOM writes Grid.tsx's beginDrag/beginResize make every frame.
+.grid-page-slot--dragging .grid-widget-body {
+  pointer-events: none;
+  opacity: 0.55;
+  filter: grayscale(0.4);
 }
 
 .grid-widget-unknown {

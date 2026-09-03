@@ -1,0 +1,46 @@
+@use 'tokens' as *;
+
+// Centered above the canvas while a whole-widget move is in flight (see
+// Grid.tsx's isMoveDragActive) — dragging the ghost here and releasing
+// deletes the widget (see handleDragPointerMove/endDrag).
+//
+// position: absolute against .dashboard-container (not fixed against the
+// viewport) deliberately — that container already sits directly below
+// .app-nav in normal document flow, so this clears the nav automatically
+// regardless of its actual rendered height, no guessed pixel value needed.
+// The room below it is a real, guaranteed reservation (.grid-page-viewport's
+// own margin-top — see grid.scss's .grid-page-viewport--drag-shrink and
+// tokens.scss's $remove-drop-zone-space), sized specifically so the gap
+// below this button matches $remove-drop-zone-gap above it — not something
+// this button's own position has to gamble on.
+//
+// height is fixed (not padding/content-driven) so $remove-drop-zone-space
+// can be computed exactly from it — see tokens.scss.
+.remove-drop-zone {
+  position: absolute;
+  top: $remove-drop-zone-gap;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  height: $remove-drop-zone-height;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--background-primary-alt);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  box-shadow: 0 12px 30px var(--shadow-modifier);
+  pointer-events: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+// Toggled imperatively (see Grid.tsx's handleDragPointerMove) once the ghost
+// is hovering this zone — not React state, so it doesn't cost a re-render on
+// every drag frame.
+.remove-drop-zone--armed {
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+  transform: translateX(-50%) scale(1.08);
+}

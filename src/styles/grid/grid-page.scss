@@ -15,9 +15,11 @@
   // fix) — without this, each of those reads has to re-verify layout for
   // every widget on every rendered page just to answer a query about an
   // unrelated ancestor, which is what read as the whole page freezing for a
-  // beat on every navigation. `layout` only (not `paint`) so a dragged
-  // widget's own drop-shadow (see .react-draggable-dragging) can still
-  // bleed past this box instead of being clipped at the grid's edge.
+  // beat on every navigation. `layout` only (not `paint`), so an ordinary
+  // widget's own box-shadow (e.g. on hover) can still bleed past this box
+  // instead of being clipped at the grid's edge — moot for the dragged
+  // widget itself, which is a ghost living outside .grid entirely (see
+  // Grid.tsx's createGhost), but still applies to everything else here.
   contain: layout;
 }
 
@@ -29,30 +31,19 @@
   transition: none !important;
 }
 
-// Library classes react-grid-layout renders for each item (via <GridLayout>
-// in GridPage.tsx) and its own drag placeholder/resize handle.
-.react-grid-item {
-  &.react-draggable-dragging {
-    box-shadow: 0 12px 30px var(--shadow-modifier);
-  }
-
-  // Dragging the resize handle sweeps the cursor across the widget's own
-  // text, which the browser reads as a text-selection drag — highlighting
-  // everything underneath instead of resizing it.
-  &.resizing,
-  &.react-draggable-dragging {
-    user-select: none;
-  }
-}
-
+// react-grid-layout's own drag placeholder — still used (as a template
+// react-grid-layout renders once for the item that's currently interactive
+// in its layout data), even though the actual interactive drag/resize is
+// entirely driven by Grid.tsx's manual engine now (dragConfig/resizeConfig
+// are both disabled — see GridPage.tsx). Note: .react-grid-item's own
+// `.resizing`/`.react-draggable-dragging` modifier classes are react-grid-
+// layout's native-drag-only state and are dead now that that's disabled —
+// no rules target them here any more; widget-shell.scss's own
+// `user-select: none` on .grid-widget replaced what `.resizing`/
+// `.react-draggable-dragging` used to guard.
 .react-grid-placeholder {
   background: var(--color-accent) !important;
   border-radius: 1rem;
-}
-
-.react-resizable-handle::after {
-  border-right-color: var(--color-accent) !important;
-  border-bottom-color: var(--color-accent) !important;
 }
 
 .grid-length-warning {

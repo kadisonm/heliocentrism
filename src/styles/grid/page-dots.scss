@@ -1,20 +1,20 @@
 @use 'tokens' as *;
 
-// Bottom-center page navigation — sibling of .grid-status-bar (see
-// pages/dashboard.scss's padding-bottom, sized to clear both their
-// footprints). No background of its own — the dots float directly over the
-// page. Its own fixed positioning doubles as the containing block for
-// .page-dot-worm below, the same way position: relative normally would.
+// Bottom-center page navigation (see pages/dashboard.scss's padding-bottom,
+// sized to clear its footprint). No background of its own — the dots float
+// directly over the page. Its own fixed positioning doubles as the
+// containing block for .page-dot-worm below, the same way position:
+// relative normally would.
 .page-dots {
   position: fixed;
   left: 50%;
-  bottom: $toolbar-bottom-offset;
+  bottom: $page-dots-bottom-offset;
   transform: translateX(-50%);
   z-index: 500;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  height: $toolbar-height;
+  height: $page-dots-height;
 }
 
 .page-dot {

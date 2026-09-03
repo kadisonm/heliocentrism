@@ -1,3 +1,5 @@
+@use '../grid/tokens' as *;
+
 .dashboard-wrapper {
   min-height: 100vh;
   background: var(--background-primary);
@@ -27,9 +29,14 @@ html:not([data-background='none']) {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem 1.5rem;
-  // Clears .grid-status-bar's full fixed footprint (1.5rem offset + 2.75rem
-  // height) plus a gap, so scrolling to the bottom moves the grid's corner
-  // (and resize handle) out from under the bar instead of behind it.
-  padding-bottom: 6rem;
+  padding: $page-top-offset 1.5rem;
+  // Clears PageDots' full fixed footprint (offset + height, see
+  // grid/tokens.scss) plus a gap, so scrolling to the bottom moves the
+  // page's own content out from under the dots instead of behind them.
+  padding-bottom: calc(#{$page-dots-bottom-offset} + #{$page-dots-height} + 1rem);
+  // Containing block for RemoveDropZone's position: absolute (see
+  // grid/remove-drop-zone.scss) — this element already sits directly below
+  // .app-nav in normal document flow, so anchoring to it clears the nav
+  // without needing to know its actual rendered height.
+  position: relative;
 }

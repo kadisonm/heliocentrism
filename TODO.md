@@ -14,6 +14,7 @@
 - Make it so the user must sign in otherwise they cant access the site
 
 ### Tasks
+- Make it so you can set the date that the task repeats at (or by date of completion)
 - Fix tasks minimum stage not being updated
 - Fix unfinishing a task using the parent not updating all sub tasks to be unfinished too
 - Hide task stages badge for normal tasks (setting)
@@ -46,6 +47,7 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Date and time
 - Simple Time
 - Simple Clock
+- Daily counter
 
 - Date time and weather (includes weather warnings)
 - Simple weather (temp, conditions, and uv)

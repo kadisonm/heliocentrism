@@ -9,13 +9,19 @@
   // so they can't fire on the very first move) are ignored, leaving the
   // page-swipe drag dead mid-gesture. Vertical panning stays native.
   touch-action: pan-y;
+  // Deliberately never transformed/positioned itself — RemoveDropZone/
+  // CanvasContextMenu/AddWidgetModal are its own direct children (siblings
+  // of .grid-page-viewport below, not descendants of it), and a transform on
+  // an ancestor becomes the containing block for any position:fixed/absolute
+  // descendant, which would drag them along with the shrink below and
+  // scale them down too. The shrink instead lives on .grid-page-viewport,
+  // one level in — see .grid-page-viewport--drag-shrink.
 }
 
-// A cloned stand-in for a widget mid cross-page drag (see Grid.tsx's
-// relocation ghost) — position/size are set imperatively per frame to
-// track the cursor, so only cosmetics belong here. Matches
-// .react-grid-item.react-draggable-dragging's own shadow (see
-// grid-page.scss) so the handoff from the native drag is invisible.
+// A cloned stand-in for a widget mid-drag (see Grid.tsx's beginDrag) —
+// position/size are set imperatively per frame to track the cursor, so only
+// cosmetics belong here. Matches .react-grid-item.react-draggable-dragging's
+// own shadow (see grid-page.scss).
 .grid-drag-ghost {
   position: fixed;
   z-index: 2000;
@@ -23,6 +29,14 @@
   overflow: hidden;
   border-radius: 1rem;
   box-shadow: 0 12px 30px var(--shadow-modifier);
+  transition: opacity 0.15s ease;
+}
+
+// Hovering RemoveDropZone (see Grid.tsx's handleDragPointerMove) — fades
+// the ghost to signal that releasing here deletes the widget instead of
+// committing a position.
+.grid-drag-ghost--remove-armed {
+  opacity: 0.4;
 }
 
 // The active page plus its immediate real/blank neighbors, all rendered at
@@ -34,15 +48,54 @@
 .grid-page-viewport {
   overflow: visible;
   width: 100%;
+  // top center, deliberately NOT bottom: the scale below is a proportional
+  // shrink — with a bottom origin, it would ALSO shift this element's own
+  // top edge down by (1 - $canvas-drag-scale) * its own rendered height, on
+  // top of the margin-top push below. Since that height can be 700-900px+
+  // (min-height reaches nearly to PageDots), even this scale's subtle 4%
+  // added an extra ~1.5-2rem of viewport-height-dependent drift ABOVE the
+  // deliberately exact margin-top reservation — RemoveDropZone's own gap
+  // math (see tokens.scss's $remove-drop-zone-space) accounts for the
+  // margin alone, so the top edge has to be scale-invariant for that math to
+  // land where it's supposed to. The bottom edge moving up slightly instead
+  // (a bit more clearance above PageDots while dragging) is the harmless
+  // side of this trade.
+  transform-origin: top center;
+  transition: transform 0.3s ease, margin-top 0.3s ease;
 
   // The active page's outline bleeds a couple px outside its own box, so it
   // never touches the grid's actual size. With align-items: flex-start on
   // the track, every slot's top edge sits flush against this viewport's own
   // top edge, leaving no room for that bleed — reserve it only while a
   // border can actually be showing, so view mode is never affected.
-  &:has(.grid-page-slot--editing) {
+  &:has(.grid-page-slot--dragging) {
     padding-block: 8px;
   }
+}
+
+// Toggled while a whole-widget move is in flight (see Grid.tsx's
+// isMoveDragActive) — applied here, one level inside .grid-canvas, rather
+// than on .grid-canvas itself, specifically so RemoveDropZone/
+// CanvasContextMenu/AddWidgetModal (siblings of this element, not
+// descendants of it) never become subject to this transform themselves —
+// see .grid-canvas's own comment on why that distinction matters.
+//
+// The dragged widget itself is a ghost living OUTSIDE .grid-canvas entirely
+// (position: fixed, appended to document.body — see createGhost), so it's
+// unaffected by this and stays at its real, pre-drag size/position;
+// everything still inside this viewport (every other widget, the page
+// itself) visibly shrinks together. The drag engine's own position math
+// (Grid.tsx's applyRelocatedPosition) separately accounts for this
+// transform so the "push other widgets aside" preview still lines up
+// correctly — see its own layoutPositionParams comment.
+//
+// margin-top is the REAL room-maker for RemoveDropZone (see tokens.scss's
+// $remove-drop-zone-space) — actual reserved layout space, not a hope that
+// the scale below happens to open enough of its own accord. The scale is
+// purely the "something's different" visual cue on top of that.
+.grid-page-viewport--drag-shrink {
+  transform: scale($canvas-drag-scale);
+  margin-top: $remove-drop-zone-space;
 }
 
 .grid-page-track {
@@ -67,16 +120,18 @@
   flex-shrink: 0;
 }
 
-.grid-page-slot--editing {
+.grid-page-slot--dragging {
   background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
 }
 
 // While simulating a narrower device (see Grid.tsx's isSimulating), the slot
 // itself stays real-screen-width purely for the track/peek-centering math —
-// the visible "being edited" panel (background, outline, min-height) moves
-// onto the inner .grid-preview-frame instead (see grid-page.scss), so it
-// hugs the simulated device size rather than the full-width slot around it.
-.grid-page-slot--simulating.grid-page-slot--editing {
+// the visible "previewing a device" panel (background, outline, min-height)
+// moves onto the inner .grid-preview-frame instead (see below), so it hugs
+// the simulated device size rather than the full-width slot around it.
+// Unconditional on --simulating alone (not also --dragging): previewing a
+// device is its own persistent concern now, not scoped to a drag.
+.grid-page-slot--simulating {
   background: none;
 }
 
@@ -95,7 +150,7 @@
 }
 
 // Fades the background/border panel in rather than having it snap on the
-// instant .grid-page-slot--editing is added (entering edit mode, or this
+// instant .grid-page-slot--dragging is added (entering edit mode, or this
 // page becoming active mid-slide) — min-height itself is deliberately NOT
 // animated (0s): a live width tween tried alongside it previously triggered
 // a documented Chromium flex-layout bug elsewhere in this app, so both
@@ -123,7 +178,7 @@
 }
 
 // The panel-filled, bordered canvas actually being edited — in view mode
-// (no .grid-page-slot--editing) this renders bare, exactly like a normal
+// (no .grid-page-slot--dragging) this renders bare, exactly like a normal
 // single page. The border is a box-shadow rather than a real border: a real
 // border+padding would eat into the box's content area, forcing GridPage's
 // gridWidth (see Grid.tsx) to shrink to compensate — visibly resizing every
@@ -136,11 +191,22 @@
 // border kept in the whole app — a deliberate, always-visible indicator of
 // which page is being edited — so it stays a literal "white" rather than a
 // themed token that could wash out against a light theme's own background.
-.grid-page-slot--active.grid-page-slot--editing:not(.grid-page-slot--simulating) {
+.grid-page-slot--active.grid-page-slot--dragging:not(.grid-page-slot--simulating) {
   min-height: $page-min-height;
 }
 
-// Split out from .grid-page-slot--active.grid-page-slot--editing above:
+// While a whole-widget move specifically (not a resize) is in flight, the
+// viewport itself is pushed down by $remove-drop-zone-space to make room for
+// RemoveDropZone (see .grid-page-viewport--drag-shrink's own margin-top
+// above) — reduce this slot's own min-height by the same amount so its
+// BOTTOM edge doesn't creep further toward PageDots than it already sits at
+// rest. More specific than the rule above (extra ancestor class), so it
+// wins whenever both apply.
+.grid-page-viewport--drag-shrink .grid-page-slot--active.grid-page-slot--dragging:not(.grid-page-slot--simulating) {
+  min-height: calc(#{$page-min-height} - #{$remove-drop-zone-space});
+}
+
+// Split out from .grid-page-slot--active.grid-page-slot--dragging above:
 // --committed (see Grid.tsx) tracks which page just got navigated to —
 // independent of --active, which only follows once the peek<->active role
 // swap actually lands, roughly a slide's worth of time later. Keying the
@@ -152,15 +218,16 @@
 // once it settles into its new peek role. --active keeps the min-height
 // rule above to itself: only the border's color should react this early,
 // not a peek slot's actual size.
-.grid-page-slot--committed.grid-page-slot--editing:not(.grid-page-slot--simulating) {
+.grid-page-slot--committed.grid-page-slot--dragging:not(.grid-page-slot--simulating) {
   outline-color: var(--color-accent);
 }
 
-// Simulating a narrower device: give the inner device frame the same
-// "being edited" treatment the slot itself gets above (background, outline,
-// minimum height) instead, so the editing panel visually hugs the simulated
-// device size rather than the real (wide) slot around it.
-.grid-page-slot--simulating.grid-page-slot--editing .grid-preview-frame {
+// Simulating a narrower device: the inner device frame gets its own
+// "previewing" panel (background, outline, minimum height), persistently
+// for as long as previewBreakpoint is set — not scoped to a drag — so it
+// visually hugs the simulated device size rather than the real (wide) slot
+// around it.
+.grid-page-slot--simulating .grid-preview-frame {
   background: color-mix(in srgb, var(--background-primary) 85%, var(--color-accent) 10%, transparent);
   outline: solid 1px var(--color-accent);
   min-height: $page-min-height;
@@ -192,7 +259,7 @@
 // hover only apply once it actually has a neighbor to show — an empty
 // reserved slot (no neighbor there) stays invisible. Unstyled in view mode:
 // during a slide it should look like a real page, not a dimmed preview.
-.grid-page-slot--peek.grid-page-slot--editing:has(.grid-page-slot-content) {
+.grid-page-slot--peek.grid-page-slot--dragging:has(.grid-page-slot-content) {
   // Not var(--background-primary-alt): color-mix(in oklch, ..., white ...)
   // mis-handles white's undefined hue and skews visibly pink here — in srgb
   // mixes predictably.
@@ -206,9 +273,16 @@
   }
 }
 
+// Same compensation as .grid-page-slot--active's own override above, for
+// the same reason — this slot is a sibling inside the same pushed-down
+// viewport.
+.grid-page-viewport--drag-shrink .grid-page-slot--peek.grid-page-slot--dragging:has(.grid-page-slot-content) {
+  min-height: calc(#{$page-min-height} - #{$remove-drop-zone-space});
+}
+
 // Hinted while a drag is being held over this slot's edge (see Grid.tsx's
-// onDrag) — toggled imperatively via classList, not React state, so it
-// doesn't cost a re-render on every drag frame. Only cancels the peek
+// handleDragPointerMove) — toggled imperatively via classList, not React
+// state, so it doesn't cost a re-render on every drag frame. Only cancels the peek
 // hover-dim below; no color/border treatment of its own — the outline
 // fading in (see --committed above) is the only hand-off cue, and it
 // starts on its own as soon as the hop commits, armed or not.

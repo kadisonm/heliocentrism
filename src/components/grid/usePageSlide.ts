@@ -24,17 +24,17 @@ const PAGE_SLIDE_SAFETY_TIMEOUT_MS = 600;
 
 export type UsePageSlideParams = {
   committedIndex: number;
-  // `pages`/`isEditMode` are only ever read fresh via liveRef, at the
+  // `pages`/`allowBlankSlot` are only ever read fresh via liveRef, at the
   // moment the effect below actually runs (to compute showBlankSlot and
   // decide whether the incoming page needs a fresh-mount hold) — never
   // taken as a dependency-array trigger. Grid.tsx's own showBlankSlot/
   // isLookaheadFreshMount depend on THIS hook's own returned displayedIndex,
   // so passing either of those in directly would be circular; recomputing
-  // them here from `pages`/`isEditMode` (which aren't derived from this
+  // them here from `pages`/`allowBlankSlot` (which aren't derived from this
   // hook's output) avoids that without needing a render-time ref write,
   // which the react-hooks/refs lint rule forbids outright.
   pages: DashboardPage[];
-  isEditMode: boolean;
+  allowBlankSlot: boolean;
   trackRef: React.RefObject<HTMLDivElement | null>;
   onCommit: (index: number) => void;
 };
@@ -74,7 +74,7 @@ export type UsePageSlideResult = {
 export function usePageSlide({
   committedIndex,
   pages,
-  isEditMode,
+  allowBlankSlot,
   trackRef,
   onCommit,
 }: UsePageSlideParams): UsePageSlideResult {
@@ -86,13 +86,13 @@ export function usePageSlide({
   // committedIndex/state/onCommit off a ref rather than closing over
   // render-scoped values — avoids a second, differently-shaped staleness
   // guard alongside Grid's existing one. The "drives the slide" effect below
-  // also reads pages/isEditMode off this same ref rather than depending on
-  // them directly, so a `pages` array that's merely a new-but-equivalent
+  // also reads pages/allowBlankSlot off this same ref rather than depending
+  // on them directly, so a `pages` array that's merely a new-but-equivalent
   // reference (e.g. from an unrelated Redux update) doesn't spuriously
   // cancel/restart an in-flight slide.
-  const liveRef = useRef({ committedIndex, state, onCommit, pages, isEditMode });
+  const liveRef = useRef({ committedIndex, state, onCommit, pages, allowBlankSlot });
   useLayoutEffect(() => {
-    liveRef.current = { committedIndex, state, onCommit, pages, isEditMode };
+    liveRef.current = { committedIndex, state, onCommit, pages, allowBlankSlot };
   });
 
   const requestPage = useCallback((target: number) => {
@@ -146,8 +146,8 @@ export function usePageSlide({
     cancelSettleRef.current?.();
     cancelSettleRef.current = null;
 
-    const { pages: livePages, isEditMode: liveIsEditMode } = liveRef.current;
-    const showBlankSlot = liveIsEditMode || state.displayedIndex === livePages.length;
+    const { pages: livePages, allowBlankSlot: liveAllowBlankSlot } = liveRef.current;
+    const showBlankSlot = liveAllowBlankSlot || state.displayedIndex === livePages.length;
     const needsHold = isLookaheadFreshMount(livePages, showBlankSlot, committedIndex, state.displayedIndex);
     const plan = planSlide(committedIndex, state, needsHold);
 

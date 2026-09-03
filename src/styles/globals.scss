@@ -4,7 +4,8 @@
 @use 'grid/grid';
 @use 'grid/grid-page';
 @use 'grid/widget-shell';
-@use 'grid/grid-status-bar';
+@use 'grid/resize-handle';
+@use 'grid/remove-drop-zone';
 @use 'grid/page-dots';
 @use 'grid/blank-page-pane';
 @use 'grid/add-widget-modal';
@@ -48,4 +49,3 @@
 @use 'widgets/photo/photo-settings-modal';
 @use 'widgets/clock/index' as clock;
 @use 'widgets/orbit/index' as orbit;
-@use 'widgets/spacer/index' as spacer;
