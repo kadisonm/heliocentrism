@@ -2,6 +2,13 @@
 
 .grid-canvas {
   width: 100%;
+  // Narrows base.scss's touch-action: manipulation (which permits native
+  // panning in both axes) so the browser never starts its own horizontal
+  // scroll/pan on a swipe here — once it does, later preventDefault() calls
+  // in Grid.tsx's touchmove handler (gated behind the direction-lock check,
+  // so they can't fire on the very first move) are ignored, leaving the
+  // page-swipe drag dead mid-gesture. Vertical panning stays native.
+  touch-action: pan-y;
 }
 
 // A cloned stand-in for a widget mid cross-page drag (see Grid.tsx's
