@@ -98,6 +98,8 @@ export function usePageSlide({
   const requestPage = useCallback((target: number) => {
     const { committedIndex: liveCommitted, state: liveState, onCommit: liveOnCommit } = liveRef.current;
     const outcome = planPageRequest(target, liveCommitted, liveState);
+    // eslint-disable-next-line no-console
+    console.log('[swipe] requestPage', { target, liveCommitted, liveState, outcome: outcome.kind });
     if (outcome.kind === 'ignored') return;
     dispatch({ type: 'SYNC', state: outcome.state });
     if (outcome.kind === 'commit') liveOnCommit(outcome.target);
@@ -150,6 +152,8 @@ export function usePageSlide({
     const showBlankSlot = liveAllowBlankSlot || state.displayedIndex === livePages.length;
     const needsHold = isLookaheadFreshMount(livePages, showBlankSlot, committedIndex, state.displayedIndex);
     const plan = planSlide(committedIndex, state, needsHold);
+    // eslint-disable-next-line no-console
+    console.log('[swipe] slide effect', { committedIndex, displayedIndex: state.displayedIndex, plan, needsHold });
 
     if (plan.kind === 'atRest') return;
 
@@ -164,6 +168,8 @@ export function usePageSlide({
     const arm = () => {
       dispatch({ type: 'START_OVERSHOOT' });
       const track = trackRef.current;
+      // eslint-disable-next-line no-console
+      console.log('[swipe] arm', { hasTrack: !!track, transform: track?.style.transform });
       if (!track) return;
       // Deferred one more frame so the dispatch above has actually landed
       // and the track's transform reflects the overshoot before we start
@@ -173,6 +179,8 @@ export function usePageSlide({
       requestAnimationFrame(() => {
         cancelSettleRef.current = waitForTransitionEnd(track, 'transform', PAGE_SLIDE_SAFETY_TIMEOUT_MS, () => {
           cancelSettleRef.current = null;
+          // eslint-disable-next-line no-console
+          console.log('[swipe] settled', { committedIndex });
           const preSettleState = liveRef.current.state;
           const settledState = pageSlideReducer(preSettleState, { type: 'SETTLED', landedOn: committedIndex });
           // Read off the queue as it stood BEFORE this settle consumed it —

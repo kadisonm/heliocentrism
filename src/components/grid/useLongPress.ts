@@ -3,7 +3,6 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { getEventPoint, type Point } from '../../lib/grid/pointerEvents';
-import { lockGestures, unlockGestures } from '../../lib/gestureLock';
 
 // How long a press must hold before it counts as a long-press — mirrors
 // Grid.tsx's own PAGE_HOP_HOLD_MS dwell-timer pattern and TaskDragProvider's
@@ -58,15 +57,6 @@ export function useLongPress({ onLongPress, onDragStart, disabled }: UseLongPres
   const firedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listenersRef = useRef<{ move: (e: Event) => void; up: (e: Event) => void } | null>(null);
-  // True from the moment onLongPress actually fires until this same contact
-  // is released or handed off to onDragStart — claims the shared gesture
-  // lock (see gestureLock.ts) for exactly that window so Grid.tsx's own
-  // page-swipe recognizer backs off instead of racing the same touchmove
-  // stream once the hold has committed to being a long-press. Grid's own
-  // beginDrag/beginResize independently claim the lock again for the actual
-  // drag/resize that may follow — this only covers the brief "menu open,
-  // contact still down, not yet dragging" phase in between.
-  const lockedRef = useRef(false);
 
   const detachWindowListeners = useCallback(() => {
     const listeners = listenersRef.current;
@@ -88,10 +78,6 @@ export function useLongPress({ onLongPress, onDragStart, disabled }: UseLongPres
     startRef.current = null;
     firedRef.current = false;
     elementRef.current = null;
-    if (lockedRef.current) {
-      lockedRef.current = false;
-      unlockGestures();
-    }
   }, [detachWindowListeners]);
 
   const handleMove = useCallback(
@@ -146,8 +132,6 @@ export function useLongPress({ onLongPress, onDragStart, disabled }: UseLongPres
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
         firedRef.current = true;
-        lockedRef.current = true;
-        lockGestures();
         optionsRef.current.onLongPress(point, nativeEvent);
       }, LONG_PRESS_MS);
     },
