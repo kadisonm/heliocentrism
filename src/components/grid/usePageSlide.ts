@@ -126,7 +126,21 @@ export function usePageSlide({
   );
 
   const resetToCommitted = useCallback(() => {
-    dispatch({ type: 'FORCE_LAND', target: liveRef.current.committedIndex });
+    const { committedIndex: liveCommitted, state: liveState } = liveRef.current;
+    // Already at rest on this page (the common case: a fresh swipe starting
+    // with nothing in flight) — skip the dispatch entirely. FORCE_LAND always
+    // returns a brand-new state object, so dispatching here unconditionally
+    // triggers a re-render even when nothing actually changes, which
+    // reapplies trackOffsetPx onto the track's transform and stomps the
+    // caller's own imperative, 1:1 finger-tracking transform mid-gesture —
+    // a visible snap-back-then-resume stutter on every single swipe.
+    const atRest =
+      liveState.displayedIndex === liveCommitted &&
+      liveState.phase === 'idle' &&
+      liveState.trackOffsetReady &&
+      liveState.queue.length === 0;
+    if (atRest) return;
+    dispatch({ type: 'FORCE_LAND', target: liveCommitted });
   }, []);
 
   const resolveDeltaTarget = useCallback((delta: number) => {

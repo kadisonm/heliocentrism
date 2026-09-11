@@ -22,13 +22,24 @@ export default function OnboardingGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    const unsubscribe = subscribeToAuthState((user) => {
-      setStatus(user ? 'allowed' : 'blocked');
-    });
-
-    return () => {
-      unsubscribe?.();
-    };
+    // subscribeToAuthState (and the Firebase SDK init it triggers) isn't
+    // wrapped in a try/catch of its own — a platform restriction blocking
+    // Firebase Auth's persistence layer (e.g. IndexedDB disabled in a
+    // locked-down mobile browser/WebView) throws here instead of ever
+    // calling back, which without this would leave `status` stuck on
+    // 'checking' (renders null) forever. Falling back to 'blocked' at least
+    // gets the sign-in form on screen instead of a permanently blank page.
+    try {
+      const unsubscribe = subscribeToAuthState((user) => {
+        setStatus(user ? 'allowed' : 'blocked');
+      });
+      return () => {
+        unsubscribe?.();
+      };
+    } catch (error) {
+      console.error('[OnboardingGate] Failed to subscribe to auth state', error);
+      setStatus('blocked');
+    }
   }, []);
 
   if (status === 'checking') return null;

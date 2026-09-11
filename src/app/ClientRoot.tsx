@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
-// import OnboardingGate from '../components/pages/onboarding-gate';
+import OnboardingGate from '../components/pages/onboarding-gate';
 import { store } from '../lib/store/store';
 import { ensureGridLoaded } from '../lib/store/gridSlice';
 import { ensureTaskListsLoaded } from '../lib/store/taskListsSlice';
@@ -22,11 +22,10 @@ function StoreBootstrap() {
 
 export default function ClientRoot({ children }: { children: React.ReactNode }) {
   // Place any client-only providers/hooks here to avoid marking layout as a client component.
-  // TEMP QA BYPASS: return <OnboardingGate>{children}</OnboardingGate>;
   return (
     <Provider store={store}>
       <StoreBootstrap />
-      {children}
+      <OnboardingGate>{children}</OnboardingGate>
     </Provider>
   );
 }
