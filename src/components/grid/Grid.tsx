@@ -706,7 +706,7 @@ function Grid(
       const target = clampPageIndex(pageSlide.resolveDeltaTarget(delta), livePages.length, liveShowBlankSlot);
       pageSlide.requestPage(target);
     },
-    [pageSlide]
+    [pageSlide.resolveDeltaTarget, pageSlide.requestPage]
   );
 
   // Once a widget has been handed off to a neighboring page mid-drag (see
@@ -1436,8 +1436,6 @@ function Grid(
       touchStart = { x: touch.clientX, y: touch.clientY, t: Date.now() };
       touchLocked = null;
       rawDx = 0;
-      // eslint-disable-next-line no-console
-      console.log('[swipe] touchstart', { x: touch.clientX, y: touch.clientY });
     };
 
     const handleTouchMove = (event: TouchEvent) => {
@@ -1449,23 +1447,11 @@ function Grid(
       // without this, the drag's own touchmove deltas were easily big
       // enough to also trip this handler's lock-detection below, paging
       // the whole track out from under the gesture actually using it.
-      if (!touchStart || !touch || dragRef.current || resizeRef.current || areGesturesLocked()) {
-        // eslint-disable-next-line no-console
-        console.log('[swipe] touchmove bailed', {
-          hasTouchStart: !!touchStart,
-          hasTouch: !!touch,
-          dragActive: !!dragRef.current,
-          resizeActive: !!resizeRef.current,
-          gesturesLocked: areGesturesLocked(),
-        });
-        return;
-      }
+      if (!touchStart || !touch || dragRef.current || resizeRef.current || areGesturesLocked()) return;
       const dx = touch.clientX - touchStart.x;
       const dy = touch.clientY - touchStart.y;
       if (touchLocked === null && Math.abs(dx) + Math.abs(dy) > 10) {
         touchLocked = Math.abs(dx) > Math.abs(dy) * SWIPE_DIRECTION_LOCK_RATIO;
-        // eslint-disable-next-line no-console
-        console.log('[swipe] direction resolved', { dx, dy, touchLocked });
         if (touchLocked) beginSwipeDrag();
       }
       if (!touchLocked) return;
@@ -1477,16 +1463,12 @@ function Grid(
       const appliedDx = hasTarget ? dx : rubberBand(dx);
       const track = trackRef.current;
       if (track) track.style.transform = `translateX(${restingTrackOffsetPx + appliedDx}px)`;
-      // eslint-disable-next-line no-console
-      console.log('[swipe] touchmove applied', { dx, hasTarget, appliedDx, defaultPrevented: event.defaultPrevented });
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
       const touch = event.changedTouches[0];
       const start = touchStart;
       if (!start || !touch || !touchLocked) {
-        // eslint-disable-next-line no-console
-        console.log('[swipe] touchend bailed (never locked)', { hasStart: !!start, hasTouch: !!touch, touchLocked });
         endSwipeDrag();
         return;
       }
@@ -1498,8 +1480,6 @@ function Grid(
         ((Math.abs(rawDx) >= SWIPE_DISTANCE_PX && duration <= SWIPE_MAX_DURATION_MS) ||
           Math.abs(rawDx) >= pageWidth * SWIPE_COMMIT_FRACTION);
       const claimed = shouldCommit && tryClaimPageChange(PAGE_CHANGE_COOLDOWN_MS);
-      // eslint-disable-next-line no-console
-      console.log('[swipe] touchend', { rawDx, duration, hasTarget, hasNext: !!next, hasPrev: !!prev, pageWidth, shouldCommit, claimed });
 
       if (claimed) {
         trackRef.current?.classList.remove('grid-page-track--no-transition');
@@ -1511,8 +1491,6 @@ function Grid(
     };
 
     const handleTouchCancel = () => {
-      // eslint-disable-next-line no-console
-      console.log('[swipe] touchcancel', { touchLocked, rawDx });
       if (touchLocked) snapBack(rawDx);
       endSwipeDrag();
     };

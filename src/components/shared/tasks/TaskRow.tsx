@@ -82,6 +82,7 @@ export default function TaskRow({
   return (
     <div
       ref={dragRef}
+      data-no-widget-drag
       className={`${rootClass} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''} ${dragPhase ? `${rootClass}--${dragPhase}` : ''}`}
       // Clicking the row background enters edit mode; interactive children
       // already stopPropagation. Must stop it here too, since a subtask's

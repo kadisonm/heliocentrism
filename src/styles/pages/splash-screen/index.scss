@@ -1,11 +1,19 @@
 .splash-screen {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  // Below every real interactive overlay (nav's mobile menu/modals at 1000-
+  // 2000, context menus, drag ghost, etc.) — just above plain page content.
+  // Since this is pointer-events: none, it's purely a visual cover; if it
+  // sat above those layers, opening one (e.g. the mobile nav menu) in the
+  // ~3.6s window before this unmounts — see VISIBLE_DURATION_MS — would
+  // work but render invisibly behind this opaque overlay.
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--background-primary);
+  // Decorative only — never swallow taps/clicks on the real UI underneath.
+  pointer-events: none;
   animation: splash-fade-out 0.6s ease forwards;
   animation-delay: 3s;
 }
