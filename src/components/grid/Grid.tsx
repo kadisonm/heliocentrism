@@ -1472,6 +1472,17 @@ function Grid(
         endSwipeDrag();
         return;
       }
+      // A recognized horizontal drag releasing still fires the browser's own
+      // synthetic click afterward on whatever element the finger lifted over
+      // — often the neighboring page's own peek slot (see the prev/next
+      // onClick={handlePeekClick} below), which not every browser suppresses
+      // just because touchmove already called preventDefault (this listener
+      // has to be non-passive for this call to have any effect — see the
+      // addEventListener call below). Left unsuppressed, that ghost click
+      // requests a SECOND, adjacent page change on top of the one this swipe
+      // already just committed via requestDelta below — read as the slide
+      // animation restarting/playing twice for a single swipe.
+      event.preventDefault();
       const duration = Date.now() - start.t;
       const { next, prev, pageWidth } = liveRef.current;
       const hasTarget = rawDx < 0 ? !!next : !!prev;
@@ -1511,7 +1522,7 @@ function Grid(
 
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
-    el.addEventListener('touchend', handleTouchEnd, { passive: true });
+    el.addEventListener('touchend', handleTouchEnd, { passive: false });
     el.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     el.addEventListener('wheel', handleWheel, { passive: false });
 
