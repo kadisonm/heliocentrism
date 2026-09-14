@@ -39,4 +39,9 @@ html:not([data-background='none']) {
   // .app-nav in normal document flow, so anchoring to it clears the nav
   // without needing to know its actual rendered height.
   position: relative;
+
+  @media (max-width: 767px) {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
 }

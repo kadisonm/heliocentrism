@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
     output: "export",
     basePath,
     assetPrefix: basePath,
+    // Lets the dev server be reached from other devices on the LAN (e.g. testing on phone).
+    allowedDevOrigins: ["192.168.50.193"],
     // Root-relative asset paths hardcoded in JSX (e.g. <img src="/wordmark.svg">)
     // aren't rewritten by basePath automatically — components read this to
     // prefix them manually. See src/components/nav/index.tsx.
