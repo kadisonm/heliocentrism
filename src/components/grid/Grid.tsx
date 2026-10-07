@@ -30,6 +30,7 @@ import AddWidgetModal from './AddWidgetModal';
 import BlankPagePane from './BlankPagePane';
 import CanvasContextMenu from './CanvasContextMenu';
 import GridPage from './GridPage';
+import PageEdgeNav from './PageEdgeNav';
 import RemoveDropZone from './RemoveDropZone';
 import { useCloseMenuOnOutsideClick } from './useCloseMenuOnOutsideClick';
 import { useLongPress, WIDGET_GESTURE_SKIP_SELECTOR } from './useLongPress';
@@ -1805,6 +1806,14 @@ function Grid(
             {slideDirection > 0 && lookaheadSlot}
           </div>
         </div>
+      )}
+
+      {!isDragActive && (
+        <PageEdgeNav
+          canGoPrev={committedIndex > 0}
+          canGoNext={committedIndex < pages.length - 1}
+          onNavigate={requestDelta}
+        />
       )}
 
       {isMoveDragActive && <RemoveDropZone ref={removeZoneRef} />}

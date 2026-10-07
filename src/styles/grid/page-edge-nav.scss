@@ -1,0 +1,90 @@
+@use 'tokens' as *;
+
+// Spans .dashboard-container's side padding plus the grid's own inner gap, top to bottom.
+// Mouse-only: touch devices page by swiping and have no hover to reveal it.
+.page-edge-nav {
+  display: none;
+
+  @media (hover: hover) and (pointer: fine) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    width: calc(#{$page-side-padding} + #{$grid-container-padding-x});
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+
+    @media (min-width: $desktop-min-width) {
+      width: calc(#{$page-side-padding-desktop} + #{$grid-container-padding-x});
+    }
+
+    // The glow lives on a pseudo-element since gradients can't transition — its opacity can.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    // A soft wash of the primary colour rather than its full strength.
+    &:hover,
+    &:focus-visible {
+      &::before {
+        opacity: 0.1;
+      }
+
+      .page-edge-nav__arrow {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// Steps aside while a widget's menu/resize overlay is open — its resize handles poke into the grid gap.
+.dashboard-container:has(.grid-widget--menu-open) .page-edge-nav {
+  display: none;
+}
+
+// Each glow fades from the screen edge inward.
+.page-edge-nav--left {
+  left: 0;
+
+  .page-edge-nav__arrow {
+    left: 0;
+  }
+
+  &::before {
+    background: linear-gradient(to right, var(--color-primary), transparent);
+  }
+}
+
+.page-edge-nav--right {
+  right: 0;
+
+  .page-edge-nav__arrow {
+    right: 0;
+  }
+
+  &::before {
+    background: linear-gradient(to left, var(--color-primary), transparent);
+  }
+}
+
+// Fixed to the viewport's vertical centre (not the container's), at the strip's own width.
+.page-edge-nav__arrow {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: inherit;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}

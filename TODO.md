@@ -49,8 +49,6 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Quick Notes (A notepad that just keeps whatever you write in it)
 - Reminders
 - Goals
-- Habits + heatmap (Maybe can integrate into routines?)
-    Include a stats button for nice statistics
 
 - Google Calendar today's events
 - Upcoming google calendar event list

@@ -9,6 +9,15 @@ $page-dots-height: 2.75rem;
 // — a page's top always sits exactly this far below it at rest.
 $page-top-offset: 1rem;
 
+// .dashboard-container's side padding — also the width of PageEdgeNav's hover strips.
+// Wider on desktop (>= GRID_BREAKPOINTS.desktop) to give the mouse-only edge strips a comfier target.
+$page-side-padding: 1.5rem;
+$page-side-padding-desktop: 2.25rem;
+$desktop-min-width: 1200px;
+
+// Mirrors GRID_CONTAINER_PADDING's x value (lib/grid/gridConfig.ts) — the gap between a page's edge and its widgets.
+$grid-container-padding-x: 10px;
+
 // Every page panel (active or peeking, real or the blank "new page"
 // placeholder) should be tall enough to reach PageDots floating near the
 // bottom of the viewport, so it never ends with the dots floating over

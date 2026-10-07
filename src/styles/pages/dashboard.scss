@@ -30,7 +30,12 @@ html:not([data-background='none']) {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: $page-top-offset 1.5rem;
+  padding: $page-top-offset $page-side-padding;
+
+  @media (min-width: $desktop-min-width) {
+    padding-left: $page-side-padding-desktop;
+    padding-right: $page-side-padding-desktop;
+  }
   // Clears PageDots' full fixed footprint (offset + height, see
   // grid/tokens.scss) plus a gap, so scrolling to the bottom moves the
   // page's own content out from under the dots instead of behind them.
