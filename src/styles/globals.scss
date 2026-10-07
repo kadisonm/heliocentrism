@@ -49,6 +49,7 @@
 @use 'shared/habits/habit-done-toggle';
 @use 'shared/habits/habit-stats-line';
 @use 'shared/habits/habit-color-dot';
+@use 'shared/notepad/notepad';
 
 @use 'pages/splash-screen/index' as splash-screen;
 @use 'pages/dashboard';

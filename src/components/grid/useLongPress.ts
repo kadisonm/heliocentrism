@@ -7,7 +7,7 @@ import { getEventPoint, type Point } from '../../lib/grid/pointerEvents';
 // How long a press must hold before it counts as a long-press — mirrors
 // Grid.tsx's own PAGE_HOP_HOLD_MS dwell-timer pattern and TaskDragProvider's
 // dnd-kit activation delay, both 500ms.
-const LONG_PRESS_MS = 500;
+export const LONG_PRESS_MS = 500;
 // Movement past this, before the timer fires, cancels it outright (a scroll
 // or flick, not a hold) — matches dnd-kit's own activation-constraint
 // tolerance for consistency across the app's various long-press gestures.

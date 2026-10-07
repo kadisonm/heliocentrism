@@ -4,6 +4,8 @@ import ClockSettingsModal from '../../components/widgets/clock/ClockSettingsModa
 import HabitCheckWidget from '../../components/widgets/habit-check';
 import HabitHeatmapWidget from '../../components/widgets/habit-heatmap';
 import HabitRingWidget from '../../components/widgets/habit-ring';
+import MarkdownNotepadWidget from '../../components/widgets/markdown-notepad';
+import NotepadWidget from '../../components/widgets/notepad';
 import OrbitWidget from '../../components/widgets/orbit';
 import PhotoWidget from '../../components/widgets/photo';
 import PhotoSettingsModal from '../../components/widgets/photo/PhotoSettingsModal';
@@ -19,7 +21,9 @@ export type WidgetType =
   | 'clock'
   | 'habit-check'
   | 'habit-ring'
-  | 'habit-heatmap';
+  | 'habit-heatmap'
+  | 'notepad'
+  | 'markdown-notepad';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
@@ -113,6 +117,22 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     defaultSize: { w: 6, h: 5 },
     minSize: { w: 2, h: 5 },
     component: HabitHeatmapWidget,
+  },
+  {
+    type: 'notepad',
+    name: 'Notepad',
+    description: 'A quick plain-text note.',
+    defaultSize: { w: 3, h: 4 },
+    minSize: { w: 2, h: 2 },
+    component: NotepadWidget,
+  },
+  {
+    type: 'markdown-notepad',
+    name: 'Markdown Notepad',
+    description: 'A note written in markdown, with an edit / preview toggle.',
+    defaultSize: { w: 4, h: 5 },
+    minSize: { w: 2, h: 2 },
+    component: MarkdownNotepadWidget,
   },
 ];
 

@@ -187,6 +187,8 @@ export type DashboardWidget = {
   selectedListId?: string;
   // Habit widgets only — which habit is shown, same fallback rules as selectedListId.
   selectedHabitId?: string;
+  // Notepad widgets only — the note's text, saved per widget instance.
+  noteContent?: string;
 };
 
 // One independent grid of widgets — a breakpoint can hold several, see
