@@ -3,7 +3,7 @@ type SettingsFieldProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  type?: 'text' | 'password' | 'select';
+  type?: 'text' | 'password' | 'number' | 'select';
   options?: { value: string; label: string }[];
 };
 

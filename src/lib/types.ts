@@ -77,6 +77,38 @@ export type TaskList = {
   name: string;
 };
 
+// Keys into the theme's extended colour palette (--color-<name>).
+export type HabitColor = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'pink';
+
+// The condition a day's logged value must meet to count as complete.
+export type HabitGoal =
+  | { type: 'check' } // value 1 = done
+  | { type: 'quantity'; target: number; unit: string; step: number } // value >= target = done
+  | { type: 'abstain' }; // done by default; any logged slip (value > 0) fails the day
+
+// Where a habit's daily value comes from — extend with e.g. a health-data source later.
+export type HabitSource = { kind: 'manual' };
+
+export type HabitDay = {
+  value: number; // check: 0/1, quantity: amount, abstain: slip count
+  completedAt: string | null; // ISO 8601, when the goal was met that day; null if not met
+};
+
+export type Habit = {
+  id: string;
+  name: string;
+  color: HabitColor;
+  goal: HabitGoal; // type is fixed after creation so past log values keep their meaning
+  source: HabitSource;
+  order: number;
+  createdAt: string; // ISO 8601
+  // Keyed by local 'YYYY-MM-DD'. Days without activity are omitted to keep the synced doc small.
+  log: Record<string, HabitDay>;
+};
+
+// The user-editable part of a habit — everything else is managed by the habits slice.
+export type HabitDraft = Pick<Habit, 'name' | 'color' | 'goal'>;
+
 export type FirebaseConfig = {
   apiKey: string;
   authDomain: string;
@@ -147,6 +179,8 @@ export type DashboardWidget = {
   // any settings modal; changed via the widget's own list switcher. Falls
   // back to the first list when unset (or when it points at a deleted one).
   selectedListId?: string;
+  // Habit widgets only — which habit is shown, same fallback rules as selectedListId.
+  selectedHabitId?: string;
 };
 
 // One independent grid of widgets — a breakpoint can hold several, see

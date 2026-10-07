@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import gridReducer from './gridSlice';
+import habitsReducer from './habitsSlice';
 import taskListsReducer from './taskListsSlice';
 import settingsReducer from './settingsSlice';
 import { persistenceMiddleware } from './persistenceMiddleware';
@@ -8,6 +9,7 @@ export const store = configureStore({
   reducer: {
     grid: gridReducer,
     taskLists: taskListsReducer,
+    habits: habitsReducer,
     settings: settingsReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(persistenceMiddleware.middleware),

@@ -3,6 +3,7 @@ import type {
   BackgroundSettings,
   DashboardPage,
   DashboardState,
+  Habit,
   NavBarSettings,
   PomodoroSettings,
   StagePreset,
@@ -16,6 +17,7 @@ import type {
 export const DEFAULT_TASK_LISTS: TaskList[] = [];
 export const DEFAULT_TASKS: Task[] = [];
 export const DEFAULT_SUBTASKS: Subtask[] = [];
+export const DEFAULT_HABITS: Habit[] = [];
 
 // A fixed sentinel id, not crypto.randomUUID() — this constant seeds a
 // brand-new user's state, so a stable id is more predictable than a random
@@ -77,6 +79,7 @@ export type AppData = {
   taskLists: TaskList[];
   tasks: Task[];
   subtasks: Subtask[];
+  habits: Habit[];
   dashboard: DashboardState;
   settings: AppSettings;
 };
@@ -85,6 +88,7 @@ export const DEFAULT_DATA: AppData = {
   taskLists: DEFAULT_TASK_LISTS,
   tasks: DEFAULT_TASKS,
   subtasks: DEFAULT_SUBTASKS,
+  habits: DEFAULT_HABITS,
   dashboard: DEFAULT_DASHBOARD,
   settings: DEFAULT_SETTINGS,
 };

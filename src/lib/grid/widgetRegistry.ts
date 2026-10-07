@@ -1,5 +1,8 @@
 import type { ComponentType } from 'react';
 import ClockWidget from '../../components/widgets/clock';
+import HabitCheckWidget from '../../components/widgets/habit-check';
+import HabitHeatmapWidget from '../../components/widgets/habit-heatmap';
+import HabitRingWidget from '../../components/widgets/habit-ring';
 import OrbitWidget from '../../components/widgets/orbit';
 import PhotoWidget from '../../components/widgets/photo';
 import PhotoSettingsModal from '../../components/widgets/photo/PhotoSettingsModal';
@@ -12,7 +15,10 @@ export type WidgetType =
   | 'orbit'
   | 'pomodoro-timer'
   | 'photo'
-  | 'clock';
+  | 'clock'
+  | 'habit-check'
+  | 'habit-ring'
+  | 'habit-heatmap';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
@@ -79,6 +85,31 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     defaultSize: { w: 2, h: 1 },
     minSize: { w: 1, h: 1 },
     component: ClockWidget,
+  },
+  {
+    type: 'habit-check',
+    name: 'Habit Check',
+    description: "Log today's progress on a habit.",
+    defaultSize: { w: 3, h: 3 },
+    minSize: { w: 2, h: 3 },
+    component: HabitCheckWidget,
+    supportsAutoExpand: true,
+  },
+  {
+    type: 'habit-ring',
+    name: 'Habit Ring',
+    description: "A completion wheel for today's progress on a habit.",
+    defaultSize: { w: 3, h: 6 },
+    minSize: { w: 2, h: 5 },
+    component: HabitRingWidget,
+  },
+  {
+    type: 'habit-heatmap',
+    name: 'Habit Heatmap',
+    description: "A year-long grid of a habit's daily history.",
+    defaultSize: { w: 6, h: 5 },
+    minSize: { w: 2, h: 5 },
+    component: HabitHeatmapWidget,
   },
 ];
 

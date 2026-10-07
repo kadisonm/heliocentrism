@@ -4,6 +4,7 @@ import type { DashboardState } from '../types';
 import {
   writeAppSettings,
   writeDashboardState,
+  writeHabits,
   writeSubtasks,
   writeTaskLists,
   writeTasks,
@@ -40,6 +41,7 @@ import {
   updateTaskStages,
 } from './taskListsSlice';
 import { setSettings } from './settingsSlice';
+import { createHabit, deleteHabit, setHabitValue, updateHabit } from './habitsSlice';
 
 export const persistenceMiddleware = createListenerMiddleware();
 
@@ -115,6 +117,15 @@ persistenceMiddleware.startListening({
     subtasksReordered
   ),
   effect: (_, listenerApi) => persistTaskLists(listenerApi.getState() as RootState),
+});
+
+// --- Habits: undebounced writes on every mutation, same as task lists. ---
+persistenceMiddleware.startListening({
+  matcher: isAnyOf(createHabit, updateHabit, deleteHabit, setHabitValue),
+  effect: (_, listenerApi) => {
+    const { isLoading, habits } = (listenerApi.getState() as RootState).habits;
+    if (!isLoading) writeHabits(habits);
+  },
 });
 
 // The repeat-reset check only actually changes (and persists) anything when

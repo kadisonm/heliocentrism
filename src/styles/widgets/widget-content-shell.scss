@@ -1,6 +1,5 @@
 // Shared "widget content" shell + header controls, reused by the widgets
-// that render a scrollable list inside their body (Task List, Pomodoro
-// Timer).
+// with a header above their body (Task List, Pomodoro Timer, habit widgets).
 .widget-content-shell {
   width: 100%;
   height: 100%;
@@ -84,6 +83,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.widget-empty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .widget-empty {

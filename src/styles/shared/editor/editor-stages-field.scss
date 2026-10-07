@@ -72,54 +72,6 @@
   }
 }
 
-.editor-stage__swatches {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.editor-swatch {
-  width: 1.4rem;
-  height: 1.4rem;
-  padding: 0;
-  border-radius: 0.35rem;
-  background: var(--background-primary-alt);
-  cursor: pointer;
-}
-
-.editor-swatch--none {
-  background: transparent;
-}
-
-.editor-swatch--accent {
-  background: var(--color-accent);
-}
-
-.editor-swatch--success {
-  background: var(--text-success);
-}
-
-.editor-swatch--warning {
-  background: var(--text-warning);
-}
-
-.editor-swatch--error {
-  background: var(--text-error);
-}
-
-.editor-swatch--secondary {
-  background: var(--color-secondary);
-}
-
-.editor-swatch--muted {
-  background: var(--text-muted);
-}
-
-.editor-swatch--selected {
-  box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 4px var(--color-accent);
-}
-
 .editor-stage__icon-trigger {
   display: inline-flex;
   align-items: center;

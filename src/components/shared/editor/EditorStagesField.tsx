@@ -4,6 +4,7 @@ import { createElement, useState } from 'react';
 import { BUILT_IN_STAGE_PRESETS } from '../../../lib/tasks/taskCascade';
 import { getTaskStageIcon } from '../../../lib/tasks/taskStageIcons';
 import type { StageColor, StagePreset, TaskStageDef } from '../../../lib/types';
+import SwatchPicker, { type SwatchOption } from '../../common/SwatchPicker';
 import { useSettings } from '../settings/useSettings';
 import EditorField from './EditorField';
 import EditorIconPicker from './EditorIconPicker';
@@ -13,14 +14,14 @@ type EditorStagesFieldProps = {
   onChange: (stages: TaskStageDef[]) => void;
 };
 
-const STAGE_COLOR_OPTIONS: { value: StageColor; label: string }[] = [
-  { value: 'none', label: 'None' },
-  { value: 'accent', label: 'Accent' },
-  { value: 'success', label: 'Success' },
-  { value: 'warning', label: 'Warning' },
-  { value: 'error', label: 'Error' },
-  { value: 'secondary', label: 'Secondary' },
-  { value: 'muted', label: 'Muted' },
+const STAGE_COLOR_OPTIONS: SwatchOption<StageColor>[] = [
+  { value: 'none', label: 'None', color: 'transparent' },
+  { value: 'accent', label: 'Accent', color: 'var(--color-accent)' },
+  { value: 'success', label: 'Success', color: 'var(--text-success)' },
+  { value: 'warning', label: 'Warning', color: 'var(--text-warning)' },
+  { value: 'error', label: 'Error', color: 'var(--text-error)' },
+  { value: 'secondary', label: 'Secondary', color: 'var(--color-secondary)' },
+  { value: 'muted', label: 'Muted', color: 'var(--text-muted)' },
 ];
 
 function stagesMatch(a: TaskStageDef[], b: TaskStageDef[]): boolean {
@@ -156,20 +157,12 @@ export default function EditorStagesField({ stages, onChange }: EditorStagesFiel
                     </button>
                   )}
                 </div>
-                <div className="editor-stage__swatches">
-                  {STAGE_COLOR_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`editor-swatch editor-swatch--${option.value}${
-                        stage.color === option.value ? ' editor-swatch--selected' : ''
-                      }`}
-                      aria-label={option.label}
-                      aria-pressed={stage.color === option.value}
-                      onClick={() => updateStage(stage.id, { color: option.value })}
-                    />
-                  ))}
-                </div>
+                <SwatchPicker
+                  options={STAGE_COLOR_OPTIONS}
+                  value={stage.color}
+                  onChange={(color) => updateStage(stage.id, { color })}
+                  ariaLabel="Stage colour"
+                />
               </div>
 
               {openPickerId === stage.id && (

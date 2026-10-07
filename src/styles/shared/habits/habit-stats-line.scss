@@ -1,0 +1,20 @@
+.habit-stats-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.habit-stats-line__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+
+  svg {
+    color: var(--habit-color);
+  }
+}

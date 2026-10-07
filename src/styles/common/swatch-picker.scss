@@ -1,0 +1,20 @@
+.swatch-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.swatch-picker__swatch {
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--background-modifier-hover);
+  border-radius: 0.35rem;
+  background: var(--swatch-color);
+  cursor: pointer;
+}
+
+.swatch-picker__swatch--selected {
+  box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 4px var(--color-accent);
+}

@@ -1,3 +1,4 @@
+import { toDateKey } from '../dateKey';
 import { formatRelativeDateTime } from '../relativeDate';
 import { deriveStageFromSubtasks, isTaskDone } from './taskCascade';
 import type { RepeatUnit, Subtask, Task, TaskRepeat, TaskStageDef } from '../types';
@@ -18,7 +19,7 @@ function parseTime(time: string): { hour: number; minute: number } {
 }
 
 function formatDatePart(year: number, month: number, day: number): string {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return toDateKey(new Date(year, month, day));
 }
 
 // Steps a (year, month, day) forward by `steps` repeat-interval-sized units,
@@ -261,7 +262,7 @@ export function createDefaultRepeat(now: Date = new Date()): TaskRepeat {
     interval: 1,
     unit: 'week',
     time: '09:00',
-    anchor: formatDatePart(now.getFullYear(), now.getMonth(), now.getDate()),
+    anchor: toDateKey(now),
     end: { type: 'never' },
   };
 }

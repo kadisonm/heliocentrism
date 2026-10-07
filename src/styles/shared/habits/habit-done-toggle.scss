@@ -1,0 +1,44 @@
+// Colours come from --habit-color, set by HabitWidgetFrame.
+.habit-done-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px dashed var(--habit-color);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--background-secondary-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.habit-done-toggle--complete {
+  border-style: solid;
+  background: var(--habit-color);
+  color: var(--background-primary);
+
+  &:hover {
+    background: var(--habit-color);
+    color: var(--background-primary);
+  }
+}
+
+.habit-done-toggle--icon-only {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+}

@@ -9,13 +9,13 @@ import type { Subtask, Task, TaskList } from '../../../lib/types';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import MenuItem from '../../common/context-menu/MenuItem';
+import SearchableSwitcher from '../../common/SearchableSwitcher';
 import { TASK_TYPE } from '../../shared/tasks/taskSortableTypes';
 import AddTaskListModal from './AddTaskListModal';
 import TaskDueModal from './TaskDueModal';
 import { editTargetId, type EditTarget } from './editTarget';
 import SubtaskModal from './SubtaskModal';
 import TaskListRow from './TaskListRow';
-import TaskListSwitcher from './TaskListSwitcher';
 import TaskModal from './TaskModal';
 import TaskRepeatModal from './TaskRepeatModal';
 import TaskStagesModal from './TaskStagesModal';
@@ -301,9 +301,10 @@ export default function TaskListWidget() {
         <div className="widget-content">
           <div className="widget-content-header">
             {taskLists.length > 0 ? (
-              <TaskListSwitcher
-                lists={taskLists}
-                activeList={activeList}
+              <SearchableSwitcher
+                items={taskLists}
+                activeItem={activeList}
+                noun="list"
                 onSelect={(id) => onUpdate({ selectedListId: id })}
                 onRequestDelete={setListPendingDelete}
                 onRequestCreate={(name) => setListModalState({ mode: 'add', seedName: name })}
@@ -344,7 +345,7 @@ export default function TaskListWidget() {
             {!isLoading && (
               <div className="widget-list" ref={setListDropRef}>
                 {!activeList ? (
-                  <div className="task-list-empty">
+                  <div className="widget-empty-row">
                     <p className="widget-empty">No lists yet</p>
                     <button
                       type="button"

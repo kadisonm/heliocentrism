@@ -1,0 +1,40 @@
+.progress-ring {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.progress-ring__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  // Starts the arc at 12 o'clock instead of 3.
+  transform: rotate(-90deg);
+}
+
+.progress-ring__track,
+.progress-ring__value {
+  fill: none;
+  stroke-width: 9;
+}
+
+.progress-ring__track {
+  stroke: var(--background-modifier-hover);
+}
+
+.progress-ring__value {
+  stroke: var(--progress-ring-color, var(--color-accent));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.progress-ring__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}

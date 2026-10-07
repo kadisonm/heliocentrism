@@ -1,0 +1,13 @@
+.habit-today-control__quantity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.habit-today-control__target {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}

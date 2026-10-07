@@ -20,7 +20,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from '../data';
-import type { DashboardState, Subtask, SyncStatus, Task, TaskList } from '../types';
+import type { DashboardState, Habit, Subtask, SyncStatus, Task, TaskList } from '../types';
 import { loadGlobalFirebaseConfig } from './globalFirebaseConfig';
 
 type FirebaseServices = {
@@ -231,193 +231,77 @@ export async function signOutFirebaseUser(): Promise<{
   }
 }
 
-export async function readTaskLists(): Promise<TaskList[] | null> {
+// Reads one top-level field of the synced `data` map; `isValid` rejects malformed shapes.
+async function readDataField<K extends keyof AppData>(
+  key: K,
+  isValid: (value: unknown) => boolean = (value) => value != null
+): Promise<AppData[K] | null> {
   try {
     const snapshot = await getAuthenticatedSnapshot();
     if (!snapshot || !snapshot.exists()) return null;
 
     const doc = snapshot.data() as { data?: Partial<AppData> };
-    return Array.isArray(doc.data?.taskLists) ? doc.data.taskLists : null;
+    const value = doc.data?.[key];
+    return isValid(value) ? (value as AppData[K]) : null;
   } catch (error) {
-    console.error('Error reading task lists from Firestore:', error);
+    console.error(`Error reading ${key} from Firestore:`, error);
     return null;
   }
 }
 
-export async function writeTaskLists(taskLists: TaskList[]): Promise<boolean> {
+// Merge-writes one top-level field of the synced `data` map, leaving the others untouched.
+async function writeDataField<K extends keyof AppData>(key: K, value: unknown): Promise<boolean> {
   const docRef = await getAuthenticatedDocRef();
   if (!docRef) return false;
 
   try {
-    const data: Pick<AppData, 'taskLists'> = { taskLists };
     await setDoc(
       docRef,
       {
-        data,
+        data: { [key]: value },
         updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
     return true;
   } catch (error) {
-    console.error('Error writing task lists to Firestore:', error);
+    console.error(`Error writing ${key} to Firestore:`, error);
     return false;
   }
 }
 
-export async function readTasks(): Promise<Task[] | null> {
-  try {
-    const snapshot = await getAuthenticatedSnapshot();
-    if (!snapshot || !snapshot.exists()) return null;
+export const readTaskLists = (): Promise<TaskList[] | null> => readDataField('taskLists', Array.isArray);
+export const writeTaskLists = (taskLists: TaskList[]) => writeDataField('taskLists', taskLists);
 
-    const doc = snapshot.data() as { data?: Partial<AppData> };
-    return Array.isArray(doc.data?.tasks) ? doc.data.tasks : null;
-  } catch (error) {
-    console.error('Error reading tasks from Firestore:', error);
-    return null;
-  }
-}
+export const readTasks = (): Promise<Task[] | null> => readDataField('tasks', Array.isArray);
+export const writeTasks = (tasks: Task[]) => writeDataField('tasks', tasks);
 
-export async function writeTasks(tasks: Task[]): Promise<boolean> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return false;
+export const readSubtasks = (): Promise<Subtask[] | null> => readDataField('subtasks', Array.isArray);
+export const writeSubtasks = (subtasks: Subtask[]) => writeDataField('subtasks', subtasks);
 
-  try {
-    const data: Pick<AppData, 'tasks'> = { tasks };
-    await setDoc(
-      docRef,
-      {
-        data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return true;
-  } catch (error) {
-    console.error('Error writing tasks to Firestore:', error);
-    return false;
-  }
-}
+export const readHabits = (): Promise<Habit[] | null> => readDataField('habits', Array.isArray);
+export const writeHabits = (habits: Habit[]) => writeDataField('habits', habits);
 
-export async function readSubtasks(): Promise<Subtask[] | null> {
-  try {
-    const snapshot = await getAuthenticatedSnapshot();
-    if (!snapshot || !snapshot.exists()) return null;
+export const readAppSettings = (): Promise<AppSettings | null> => readDataField('settings');
+export const writeAppSettings = (settings: AppSettings) => writeDataField('settings', settings);
 
-    const doc = snapshot.data() as { data?: Partial<AppData> };
-    return Array.isArray(doc.data?.subtasks) ? doc.data.subtasks : null;
-  } catch (error) {
-    console.error('Error reading subtasks from Firestore:', error);
-    return null;
-  }
-}
+export const readDashboardState = (): Promise<DashboardState | null> => readDataField('dashboard');
 
-export async function writeSubtasks(subtasks: Subtask[]): Promise<boolean> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return false;
-
-  try {
-    const data: Pick<AppData, 'subtasks'> = { subtasks };
-    await setDoc(
-      docRef,
-      {
-        data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return true;
-  } catch (error) {
-    console.error('Error writing subtasks to Firestore:', error);
-    return false;
-  }
-}
-
-export async function readDashboardState(): Promise<DashboardState | null> {
-  try {
-    const snapshot = await getAuthenticatedSnapshot();
-    if (!snapshot || !snapshot.exists()) return null;
-
-    const doc = snapshot.data() as { data?: Partial<AppData> };
-    return doc.data?.dashboard ?? null;
-  } catch (error) {
-    console.error('Error reading dashboard state from Firestore:', error);
-    return null;
-  }
-}
-
-export async function writeDashboardState(
-  dashboard: DashboardState
-): Promise<boolean> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return false;
-
-  try {
-    // setDoc with merge:true never removes fields a write omits, so older
-    // shapes this doc may still carry (a pre-pages breakpoint's widgets/layout,
-    // or the even older top-level widgets/layouts) would otherwise linger
-    // forever, silently shadowing the current data on the next migration.
-    const breakpointCleanup = {
-      widgets: deleteField(),
-      layout: deleteField(),
-    };
-    const data = {
-      dashboard: {
-        ...dashboard,
-        widgets: deleteField(),
-        layouts: deleteField(),
-        breakpoints: {
-          desktop: { ...dashboard.breakpoints.desktop, ...breakpointCleanup },
-          tablet: { ...dashboard.breakpoints.tablet, ...breakpointCleanup },
-          mobile: { ...dashboard.breakpoints.mobile, ...breakpointCleanup },
-        },
-      },
-    };
-    await setDoc(
-      docRef,
-      {
-        data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return true;
-  } catch (error) {
-    console.error('Error writing dashboard state to Firestore:', error);
-    return false;
-  }
-}
-
-export async function readAppSettings(): Promise<AppSettings | null> {
-  try {
-    const snapshot = await getAuthenticatedSnapshot();
-    if (!snapshot || !snapshot.exists()) return null;
-
-    const doc = snapshot.data() as { data?: Partial<AppData> };
-    return doc.data?.settings ?? null;
-  } catch (error) {
-    console.error('Error reading app settings from Firestore:', error);
-    return null;
-  }
-}
-
-export async function writeAppSettings(settings: AppSettings): Promise<boolean> {
-  const docRef = await getAuthenticatedDocRef();
-  if (!docRef) return false;
-
-  try {
-    const data: Pick<AppData, 'settings'> = { settings };
-    await setDoc(
-      docRef,
-      {
-        data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return true;
-  } catch (error) {
-    console.error('Error writing app settings to Firestore:', error);
-    return false;
-  }
+// setDoc with merge:true never removes omitted fields, so older shapes (a pre-pages
+// breakpoint's widgets/layout, or the top-level widgets/layouts) are deleted explicitly.
+export function writeDashboardState(dashboard: DashboardState): Promise<boolean> {
+  const breakpointCleanup = {
+    widgets: deleteField(),
+    layout: deleteField(),
+  };
+  return writeDataField('dashboard', {
+    ...dashboard,
+    widgets: deleteField(),
+    layouts: deleteField(),
+    breakpoints: {
+      desktop: { ...dashboard.breakpoints.desktop, ...breakpointCleanup },
+      tablet: { ...dashboard.breakpoints.tablet, ...breakpointCleanup },
+      mobile: { ...dashboard.breakpoints.mobile, ...breakpointCleanup },
+    },
+  });
 }

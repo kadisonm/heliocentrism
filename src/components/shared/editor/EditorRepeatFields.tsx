@@ -1,3 +1,4 @@
+import { toDateKey } from '../../../lib/dateKey';
 import { createDefaultRepeat } from '../../../lib/tasks/taskRepeat';
 import type { RepeatUnit, TaskRepeat } from '../../../lib/types';
 import EditorField from './EditorField';
@@ -13,11 +14,6 @@ const UNIT_OPTIONS: { value: RepeatUnit; label: string }[] = [
   { value: 'month', label: 'month' },
   { value: 'year', label: 'year' },
 ];
-
-function todayDateString(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
 
 export default function EditorRepeatFields({ repeat, onChange }: EditorRepeatFieldsProps) {
   return (
@@ -71,7 +67,7 @@ export default function EditorRepeatFields({ repeat, onChange }: EditorRepeatFie
                   if (type === 'never') {
                     onChange({ ...repeat, end: { type: 'never' } });
                   } else if (type === 'onDate') {
-                    onChange({ ...repeat, end: { type: 'onDate', date: todayDateString() } });
+                    onChange({ ...repeat, end: { type: 'onDate', date: toDateKey(new Date()) } });
                   } else {
                     onChange({ ...repeat, end: { type: 'afterOccurrences', count: 5 } });
                   }

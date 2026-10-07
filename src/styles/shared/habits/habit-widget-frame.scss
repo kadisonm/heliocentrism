@@ -1,0 +1,15 @@
+.habit-widget-frame {
+  display: flex;
+  flex-direction: column;
+}
+
+// Fills the space under the header so views can centre or stretch into it.
+.habit-widget-frame__body {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+}
