@@ -1,4 +1,5 @@
 @use 'tokens' as *;
+@use '../shared/nav/tokens' as *;
 
 // Bottom-center page navigation (see pages/dashboard.scss's padding-bottom,
 // sized to clear its footprint). No background of its own — the dots float
@@ -15,6 +16,13 @@
   align-items: center;
   gap: 0.5rem;
   height: $page-dots-height;
+
+  // Below this, MobileBottomNav floats over the same bottom-center spot —
+  // sit above its footprint instead of overlapping it (matches
+  // GRID_BREAKPOINTS.desktop in lib/grid/gridConfig.ts).
+  @media (max-width: 1199px) {
+    bottom: calc(#{$mobile-nav-bottom-offset} + #{$mobile-nav-height} + 0.75rem);
+  }
 }
 
 .page-dot {
@@ -26,6 +34,10 @@
   background: var(--text-faint);
   cursor: pointer;
   transition: all 0.2s ease;
+  // Dots have no background container of their own (see .page-dots above),
+  // so this keeps them visible against whatever's showing through behind
+  // them — same token MobileBottomNav's pill shadow already uses.
+  box-shadow: 0 1px 3px var(--shadow-modifier);
 
   &:hover {
     background: var(--text-muted);
@@ -68,6 +80,7 @@
   height: 0.5rem;
   border-radius: 999px;
   background: var(--color-accent);
+  box-shadow: 0 1px 3px var(--shadow-modifier);
   pointer-events: none;
   transform: translateY(-50%);
   transition: left 150ms ease, width 150ms ease;

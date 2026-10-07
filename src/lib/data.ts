@@ -1,7 +1,9 @@
+import { NAV_ITEMS } from './nav/navItems';
 import type {
   BackgroundSettings,
   DashboardPage,
   DashboardState,
+  NavBarSettings,
   PomodoroSettings,
   StagePreset,
   Subtask,
@@ -44,6 +46,11 @@ export const DEFAULT_BACKGROUND_SETTINGS: BackgroundSettings = {
   variant: 'space',
 };
 
+export const DEFAULT_NAV_BAR_SETTINGS: NavBarSettings = {
+  order: NAV_ITEMS.map((item) => item.id),
+  hidden: [],
+};
+
 // User-saved stage presets start empty — the built-in Normal/Kanban presets
 // are pure code constants (src/lib/taskCascade.ts) and never stored here.
 export const DEFAULT_CUSTOM_STAGE_PRESETS: StagePreset[] = [];
@@ -54,6 +61,7 @@ export type AppSettings = {
   theme: ThemeSettings;
   background: BackgroundSettings;
   customStagePresets: StagePreset[];
+  navBar: NavBarSettings;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -61,6 +69,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: DEFAULT_THEME_SETTINGS,
   background: DEFAULT_BACKGROUND_SETTINGS,
   customStagePresets: DEFAULT_CUSTOM_STAGE_PRESETS,
+  navBar: DEFAULT_NAV_BAR_SETTINGS,
 };
 
 // Shape of the synced Firebase document, nested under a `data` field.

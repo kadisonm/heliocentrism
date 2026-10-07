@@ -22,6 +22,9 @@
 @use 'common/confirm-dialog';
 
 @use 'shared/nav/index' as nav;
+@use 'shared/nav/desktop-nav';
+@use 'shared/nav/mobile-header';
+@use 'shared/nav/mobile-bottom-nav';
 @use 'shared/orbit-animation/index' as orbit-animation;
 @use 'shared/background/space-background';
 @use 'shared/editor/editor-modal';

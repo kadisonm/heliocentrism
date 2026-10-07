@@ -1,4 +1,5 @@
 @use '../grid/tokens' as *;
+@use '../shared/nav/tokens' as *;
 
 .dashboard-wrapper {
   min-height: 100vh;
@@ -34,6 +35,15 @@ html:not([data-background='none']) {
   // grid/tokens.scss) plus a gap, so scrolling to the bottom moves the
   // page's own content out from under the dots instead of behind them.
   padding-bottom: calc(#{$page-dots-bottom-offset} + #{$page-dots-height} + 1rem);
+
+  // Below this, PageDots itself moves up to clear MobileBottomNav (see
+  // grid/page-dots.scss) — reserve space for that whole stacked footprint
+  // instead of just PageDots' own desktop-sized one.
+  @media (max-width: 1199px) {
+    padding-bottom: calc(
+      #{$mobile-nav-bottom-offset} + #{$mobile-nav-height} + 0.75rem + #{$page-dots-height} + 1rem
+    );
+  }
   // Containing block for RemoveDropZone's position: absolute (see
   // grid/remove-drop-zone.scss) — this element already sits directly below
   // .app-nav in normal document flow, so anchoring to it clears the nav
@@ -43,5 +53,6 @@ html:not([data-background='none']) {
   @media (max-width: 767px) {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    padding-top: 0;
   }
 }

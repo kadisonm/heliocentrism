@@ -1,0 +1,5 @@
+// Single source of truth for MobileBottomNav's own fixed position/height —
+// shared with pages/dashboard.scss, which reserves space below it the same
+// way it already does for PageDots (see grid/tokens.scss).
+$mobile-nav-bottom-offset: 1rem;
+$mobile-nav-height: 3.5rem;
