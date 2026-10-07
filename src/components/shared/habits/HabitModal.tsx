@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { HABIT_TEMPLATES } from '../../../lib/habits/habitTemplates';
 import type { Habit, HabitColor, HabitDraft, HabitGoal } from '../../../lib/types';
+import ChipList from '../../common/ChipList';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
 import SwatchPicker from '../../common/SwatchPicker';
@@ -84,18 +85,10 @@ export default function HabitModal({ isOpen, habit = null, initialName = '', onC
         }}
       >
         {!isEditing && (
-          <div className="habit-modal__templates">
-            {HABIT_TEMPLATES.map((template) => (
-              <button
-                key={template.name}
-                type="button"
-                className="habit-modal__template"
-                onClick={() => setForm(toFormState(template))}
-              >
-                {template.name}
-              </button>
-            ))}
-          </div>
+          <ChipList
+            options={HABIT_TEMPLATES.map((template) => ({ value: template.name, label: template.name }))}
+            onSelect={(name) => setForm(toFormState(HABIT_TEMPLATES.find((template) => template.name === name)!))}
+          />
         )}
 
         <SettingsField label="Name" value={form.name} onChange={(name) => update({ name })} placeholder="Habit name" />

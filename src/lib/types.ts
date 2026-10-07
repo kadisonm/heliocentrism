@@ -162,6 +162,10 @@ export type PhotoWidgetConfig = {
   fit?: 'cover' | 'contain';
 };
 
+export type ClockWidgetConfig = {
+  format: string; // token string, see src/lib/clock/dateTimeFormat.ts; newlines become line breaks
+};
+
 export type DashboardWidget = {
   id: string;
   type: string;
@@ -171,6 +175,8 @@ export type DashboardWidget = {
   autoExpand?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
+  // Clock widget only, set via ClockSettingsModal.
+  clock?: ClockWidgetConfig;
   // Task List widget only — whether completed tasks are shown.
   // Not surfaced in any settings modal; toggled via the widget's own
   // show/hide button. Defaults to false (hidden) when unset.

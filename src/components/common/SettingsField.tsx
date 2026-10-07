@@ -3,7 +3,7 @@ type SettingsFieldProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  type?: 'text' | 'password' | 'number' | 'select';
+  type?: 'text' | 'password' | 'number' | 'select' | 'textarea';
   options?: { value: string; label: string }[];
 };
 
@@ -30,6 +30,14 @@ export default function SettingsField({
             </option>
           ))}
         </select>
+      ) : type === 'textarea' ? (
+        <textarea
+          className="settings-input settings-input--textarea"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          rows={3}
+        />
       ) : (
         <input
           type={type}

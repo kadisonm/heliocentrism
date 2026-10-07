@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import ClockWidget from '../../components/widgets/clock';
+import ClockSettingsModal from '../../components/widgets/clock/ClockSettingsModal';
 import HabitCheckWidget from '../../components/widgets/habit-check';
 import HabitHeatmapWidget from '../../components/widgets/habit-heatmap';
 import HabitRingWidget from '../../components/widgets/habit-ring';
@@ -81,10 +82,12 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
   {
     type: 'clock',
     name: 'Clock',
-    description: 'The current time, 12-hour format.',
+    description: 'The current time and date, in a format you choose.',
     defaultSize: { w: 2, h: 1 },
     minSize: { w: 1, h: 1 },
     component: ClockWidget,
+    settingsComponent: ClockSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'habit-check',

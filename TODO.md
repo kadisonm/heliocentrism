@@ -4,11 +4,7 @@
 - Change the pomodoro timer auto play to a better icon
 - Add a reset timer to the pomodoro timer widget
 
-- Make it so the pages navigation matches the figma mock
-- Make it so the edit button has a frosted glass effect
-
-- Create mobile header
-- Create mobile navigation + edit button
+- Create mobile edit button
 
 - Make it so edit mode is forced on if the user has no widgets
 - Make it so the user must sign in otherwise they cant access the site
@@ -44,9 +40,6 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Investigate tablet mode and turning the tablet to portrait
    
 ### Widget Ideas
-- Date and time
-- Simple Time
-- Simple Clock
 - Daily counter
 
 - Date time and weather (includes weather warnings)
