@@ -1,8 +1,4 @@
-function daysBetween(from: Date, to: Date): number {
-  const fromUTC = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
-  const toUTC = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
-  return Math.round((toUTC - fromUTC) / 86_400_000);
-}
+import { daysBetween } from './dateKey';
 
 function formatTimeOfDay(date: Date): string {
   const hours24 = date.getHours();

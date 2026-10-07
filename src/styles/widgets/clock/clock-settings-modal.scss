@@ -11,12 +11,6 @@
   overflow-x: auto;
 }
 
-.clock-settings-hint {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-faint);
-}
-
 .clock-settings-tokens {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

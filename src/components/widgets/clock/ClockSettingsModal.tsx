@@ -38,7 +38,7 @@ export default function ClockSettingsModal({ isOpen, onClose }: ClockSettingsMod
 
         <SettingsField label="Format" type="textarea" value={format} onChange={setFormat} placeholder={DEFAULT_CLOCK_FORMAT} />
 
-        <p className="clock-settings-hint">
+        <p className="settings-hint">
           Press Enter for a new line. Wrap plain words in [brackets] so their letters aren&apos;t read as tokens.
         </p>
 

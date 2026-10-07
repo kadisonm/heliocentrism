@@ -7,6 +7,7 @@ import { store } from '../lib/store/store';
 import { ensureGridLoaded } from '../lib/store/gridSlice';
 import { ensureTaskListsLoaded } from '../lib/store/taskListsSlice';
 import { ensureHabitsLoaded } from '../lib/store/habitsSlice';
+import { ensureGoalsLoaded } from '../lib/store/goalsSlice';
 import { ensureSettingsLoaded } from '../lib/store/settingsSlice';
 import { ensureRepeatWatcherStarted } from '../lib/store/persistenceMiddleware';
 
@@ -15,6 +16,7 @@ function StoreBootstrap() {
     ensureGridLoaded(store.dispatch);
     ensureTaskListsLoaded(store.dispatch);
     ensureHabitsLoaded(store.dispatch);
+    ensureGoalsLoaded(store.dispatch);
     ensureSettingsLoaded(store.dispatch);
     ensureRepeatWatcherStarted(store.dispatch);
   }, []);

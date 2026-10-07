@@ -1,10 +1,10 @@
-.habit-widget-frame {
+.collection-widget-frame {
   display: flex;
   flex-direction: column;
 }
 
 // Fills the space under the header so views can centre or stretch into it.
-.habit-widget-frame__body {
+.collection-widget-frame__body {
   flex: 1;
   min-height: 0;
   margin-top: 0.75rem;

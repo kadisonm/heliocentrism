@@ -1,0 +1,66 @@
+// The list scrolls on its own; the summary and bar stay put above it.
+.goal-milestones .collection-widget-frame__body {
+  justify-content: flex-start;
+}
+
+.goal-milestones__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.goal-milestones__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.goal-milestones__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.35rem;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.goal-milestones__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+  border: 2px solid var(--item-color);
+  border-radius: 0.3rem;
+  color: var(--background-primary);
+}
+
+.goal-milestones__step--done {
+  color: var(--text-faint);
+
+  .goal-milestones__box {
+    background: var(--item-color);
+  }
+
+  .goal-milestones__title {
+    text-decoration: line-through;
+  }
+}

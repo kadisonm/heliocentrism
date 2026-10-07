@@ -25,6 +25,11 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 
 - Dragging a thin task over a thicker task doesnt move the thicker task out the way and the tasks just overlap eachother. If there is a thinner task at all hovering over another task, that task must move. It must either move out the way up or down.
 
+### Goals
+- A confetti or trophy moment when a goal completes
+- Completed goals archive
+- Sub-goals, e.g. "Learn Japanese" made up of N5 → N4 goals.
+
 ---
 
 ## Data
@@ -48,7 +53,7 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Agenda view (horizontal or vertical)
 - Quick Notes (A notepad that just keeps whatever you write in it)
 - Reminders
-- Goals
+
 
 - Google Calendar today's events
 - Upcoming google calendar event list

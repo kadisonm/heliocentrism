@@ -1,0 +1,19 @@
+.goal-ring__ring {
+  flex: 1;
+  min-height: 4rem;
+  display: flex;
+  justify-content: center;
+}
+
+.goal-ring__percent {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-ring__caption {
+  max-width: 80%;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}

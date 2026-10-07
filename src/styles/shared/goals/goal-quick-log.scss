@@ -1,0 +1,60 @@
+// Colours come from --item-color, set by CollectionWidgetFrame.
+.goal-quick-log {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.goal-quick-log__unit {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.goal-quick-log__log {
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--item-color);
+  color: var(--background-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.goal-quick-log__undo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+.goal-quick-log__link {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.goal-quick-log__link--missing {
+  color: var(--text-warning);
+}

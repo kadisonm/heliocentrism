@@ -20,7 +20,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { AppData, AppSettings } from '../data';
-import type { DashboardState, Habit, Subtask, SyncStatus, Task, TaskList } from '../types';
+import type { DashboardState, Goal, Habit, Subtask, SyncStatus, Task, TaskList } from '../types';
 import { loadGlobalFirebaseConfig } from './globalFirebaseConfig';
 
 type FirebaseServices = {
@@ -281,6 +281,9 @@ export const writeSubtasks = (subtasks: Subtask[]) => writeDataField('subtasks',
 
 export const readHabits = (): Promise<Habit[] | null> => readDataField('habits', Array.isArray);
 export const writeHabits = (habits: Habit[]) => writeDataField('habits', habits);
+
+export const readGoals = (): Promise<Goal[] | null> => readDataField('goals', Array.isArray);
+export const writeGoals = (goals: Goal[]) => writeDataField('goals', goals);
 
 export const readAppSettings = (): Promise<AppSettings | null> => readDataField('settings');
 export const writeAppSettings = (settings: AppSettings) => writeDataField('settings', settings);

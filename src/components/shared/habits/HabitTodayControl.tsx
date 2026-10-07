@@ -1,10 +1,10 @@
 'use client';
 
 import { ShieldCheck, ShieldX } from 'lucide-react';
+import { formatAmount } from '../../../lib/formatAmount';
 import { dayValue, isDayComplete } from '../../../lib/habits/habitGoal';
 import type { Habit } from '../../../lib/types';
 import NumberStepper from '../../common/NumberStepper';
-import { formatHabitAmount } from './habitDisplay';
 import HabitDoneToggle from './HabitDoneToggle';
 
 type HabitTodayControlProps = {
@@ -43,7 +43,7 @@ export default function HabitTodayControl({ habit, today, onChange }: HabitToday
     <div className="habit-today-control__quantity">
       <NumberStepper value={dayValue(habit, today)} step={goal.step} onChange={onChange} ariaLabel={`${habit.name} today`} />
       <span className="habit-today-control__target">
-        / {formatHabitAmount(goal.target)} {goal.unit}
+        / {formatAmount(goal.target)} {goal.unit}
       </span>
       {/* Boolean shortcut: jump straight to the target, or clear back to zero. */}
       <HabitDoneToggle habit={habit} today={today} onChange={onChange} />

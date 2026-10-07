@@ -1,6 +1,10 @@
 import type { ComponentType } from 'react';
 import ClockWidget from '../../components/widgets/clock';
 import ClockSettingsModal from '../../components/widgets/clock/ClockSettingsModal';
+import GoalCardWidget from '../../components/widgets/goal-card';
+import GoalChartWidget from '../../components/widgets/goal-chart';
+import GoalMilestonesWidget from '../../components/widgets/goal-milestones';
+import GoalRingWidget from '../../components/widgets/goal-ring';
 import HabitCheckWidget from '../../components/widgets/habit-check';
 import HabitHeatmapWidget from '../../components/widgets/habit-heatmap';
 import HabitRingWidget from '../../components/widgets/habit-ring';
@@ -23,7 +27,11 @@ export type WidgetType =
   | 'habit-ring'
   | 'habit-heatmap'
   | 'notepad'
-  | 'markdown-notepad';
+  | 'markdown-notepad'
+  | 'goal-card'
+  | 'goal-ring'
+  | 'goal-milestones'
+  | 'goal-chart';
 
 export type WidgetSettingsComponent = ComponentType<{ isOpen: boolean; onClose: () => void }>;
 
@@ -133,6 +141,40 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     defaultSize: { w: 4, h: 5 },
     minSize: { w: 2, h: 2 },
     component: MarkdownNotepadWidget,
+  },
+  {
+    type: 'goal-card',
+    name: 'Goal Progress',
+    description: 'A goal’s progress bar, pace, and quick logging.',
+    defaultSize: { w: 4, h: 4 },
+    minSize: { w: 2, h: 3 },
+    component: GoalCardWidget,
+    supportsAutoExpand: true,
+  },
+  {
+    type: 'goal-ring',
+    name: 'Goal Ring',
+    description: 'A completion wheel for a goal’s overall progress.',
+    defaultSize: { w: 3, h: 5 },
+    minSize: { w: 2, h: 4 },
+    component: GoalRingWidget,
+  },
+  {
+    type: 'goal-milestones',
+    name: 'Goal Steps',
+    description: 'Tick off the steps of a step-based goal.',
+    defaultSize: { w: 3, h: 5 },
+    minSize: { w: 2, h: 3 },
+    component: GoalMilestonesWidget,
+    supportsAutoExpand: true,
+  },
+  {
+    type: 'goal-chart',
+    name: 'Goal Chart',
+    description: 'A goal’s progress over time against an even pace to its deadline.',
+    defaultSize: { w: 6, h: 5 },
+    minSize: { w: 3, h: 4 },
+    component: GoalChartWidget,
   },
 ];
 

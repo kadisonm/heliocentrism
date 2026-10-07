@@ -36,26 +36,26 @@
   margin-inline: auto;
 }
 
-// Shades of --habit-color (set by HabitWidgetFrame) blended toward the empty-cell fill.
+// Shades of --item-color (set by HabitWidgetFrame) blended toward the empty-cell fill.
 .habit-heatmap__cell {
   border-radius: 2px;
   background: var(--background-modifier-hover);
 }
 
 .habit-heatmap__cell--level-1 {
-  background: color-mix(in srgb, var(--habit-color) 30%, var(--background-modifier-hover));
+  background: color-mix(in srgb, var(--item-color) 30%, var(--background-modifier-hover));
 }
 
 .habit-heatmap__cell--level-2 {
-  background: color-mix(in srgb, var(--habit-color) 55%, var(--background-modifier-hover));
+  background: color-mix(in srgb, var(--item-color) 55%, var(--background-modifier-hover));
 }
 
 .habit-heatmap__cell--level-3 {
-  background: color-mix(in srgb, var(--habit-color) 78%, var(--background-modifier-hover));
+  background: color-mix(in srgb, var(--item-color) 78%, var(--background-modifier-hover));
 }
 
 .habit-heatmap__cell--level-4 {
-  background: var(--habit-color);
+  background: var(--item-color);
 }
 
 .habit-heatmap__cell--untracked {

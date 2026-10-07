@@ -1,0 +1,95 @@
+// Series uses --item-color (set by CollectionWidgetFrame); everything else stays recessive.
+.goal-chart {
+  position: relative;
+  flex: 1;
+  min-height: 5rem;
+}
+
+.goal-chart__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.goal-chart__grid {
+  stroke: var(--background-modifier-hover);
+  stroke-width: 1;
+}
+
+.goal-chart__target {
+  stroke: var(--text-faint);
+  stroke-width: 1;
+}
+
+.goal-chart__pace {
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.goal-chart__area {
+  fill: var(--item-color);
+  opacity: 0.1;
+}
+
+.goal-chart__line {
+  fill: none;
+  stroke: var(--item-color);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+// Surface-coloured ring keeps the end dot legible where it sits on the line.
+.goal-chart__dot {
+  fill: var(--item-color);
+  stroke: var(--background-primary-alt);
+  stroke-width: 2;
+}
+
+.goal-chart__crosshair {
+  stroke: var(--text-faint);
+  stroke-width: 1;
+}
+
+.goal-chart__label {
+  fill: var(--text-faint);
+  font-size: 0.65rem;
+}
+
+.goal-chart__tooltip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.5rem;
+  background: var(--background-secondary-alt);
+  box-shadow: 0 4px 12px var(--shadow-modifier);
+  color: var(--text-normal);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.goal-chart__tooltip-date {
+  margin-bottom: 0.2rem;
+  color: var(--text-muted);
+}
+
+.goal-chart__tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+// Short line keys, mirroring each line's stroke.
+.goal-chart__key {
+  width: 0.75rem;
+  height: 0;
+  border-top: 2px solid var(--item-color);
+}
+
+.goal-chart__key--pace {
+  border-top: 2px dashed var(--text-faint);
+}

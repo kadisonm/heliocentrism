@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { HABIT_TEMPLATES } from '../../../lib/habits/habitTemplates';
-import type { Habit, HabitColor, HabitDraft, HabitGoal } from '../../../lib/types';
+import type { Habit, PaletteColor, HabitDraft, HabitGoal } from '../../../lib/types';
 import ChipList from '../../common/ChipList';
 import Modal from '../../common/Modal';
 import SettingsField from '../../common/SettingsField';
 import SwatchPicker from '../../common/SwatchPicker';
 import Tabs from '../../common/Tabs';
-import { HABIT_COLOR_OPTIONS } from './habitDisplay';
+import { PALETTE_COLOR_OPTIONS } from '../palette/paletteColor';
 
 type GoalType = HabitGoal['type'];
 
@@ -27,7 +27,7 @@ const GOAL_TYPE_HELP: Record<GoalType, string> = {
 // Quantity numbers are held as strings so fields can be cleared while typing.
 type FormState = {
   name: string;
-  color: HabitColor;
+  color: PaletteColor;
   goalType: GoalType;
   target: string;
   unit: string;
@@ -103,7 +103,7 @@ export default function HabitModal({ isOpen, habit = null, initialName = '', onC
               onChange={(goalType) => update({ goalType })}
               ariaLabel="Habit type"
             />
-            <p className="habit-modal__help">{GOAL_TYPE_HELP[form.goalType]}</p>
+            <p className="settings-hint">{GOAL_TYPE_HELP[form.goalType]}</p>
           </div>
         )}
 
@@ -118,7 +118,7 @@ export default function HabitModal({ isOpen, habit = null, initialName = '', onC
         <div className="settings-field">
           <label>Colour</label>
           <SwatchPicker
-            options={HABIT_COLOR_OPTIONS}
+            options={PALETTE_COLOR_OPTIONS}
             value={form.color}
             onChange={(color) => update({ color })}
             ariaLabel="Habit colour"

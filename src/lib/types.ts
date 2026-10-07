@@ -78,7 +78,7 @@ export type TaskList = {
 };
 
 // Keys into the theme's extended colour palette (--color-<name>).
-export type HabitColor = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'pink';
+export type PaletteColor = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'pink';
 
 // The condition a day's logged value must meet to count as complete.
 export type HabitGoal =
@@ -97,7 +97,7 @@ export type HabitDay = {
 export type Habit = {
   id: string;
   name: string;
-  color: HabitColor;
+  color: PaletteColor;
   goal: HabitGoal; // type is fixed after creation so past log values keep their meaning
   source: HabitSource;
   order: number;
@@ -108,6 +108,41 @@ export type Habit = {
 
 // The user-editable part of a habit — everything else is managed by the habits slice.
 export type HabitDraft = Pick<Habit, 'name' | 'color' | 'goal'>;
+
+export type GoalMilestone = {
+  id: string;
+  title: string;
+  completedAt: string | null; // ISO 8601, null while not done
+};
+
+// A dated change to a numeric goal's value — may be negative (e.g. weight lost, money spent).
+export type GoalEntry = {
+  id: string;
+  date: string; // 'YYYY-MM-DD'
+  amount: number;
+};
+
+// How a goal's progress is measured. Linked types derive progress from habit/task data instead of storing it.
+export type GoalMeasure =
+  | { type: 'milestones'; milestones: GoalMilestone[] }
+  | { type: 'numeric'; start: number; target: number; unit: string; entries: GoalEntry[] } // target < start = decreasing goal
+  | { type: 'habit'; habitId: string; metric: 'days' | 'total'; target: number } // days = complete days, total = summed values
+  | { type: 'taskList'; listId: string }; // target = every task in the list
+
+export type Goal = {
+  id: string;
+  name: string;
+  color: PaletteColor;
+  measure: GoalMeasure; // type is fixed after creation
+  startDate: string; // 'YYYY-MM-DD' — progress counts from here
+  deadline: string | null; // 'YYYY-MM-DD', inclusive; null = open-ended
+  note?: string; // why this goal matters
+  order: number;
+  createdAt: string; // ISO 8601
+};
+
+// The user-editable part of a goal — everything else is managed by the goals slice.
+export type GoalDraft = Pick<Goal, 'name' | 'color' | 'measure' | 'startDate' | 'deadline' | 'note'>;
 
 export type FirebaseConfig = {
   apiKey: string;
@@ -187,6 +222,8 @@ export type DashboardWidget = {
   selectedListId?: string;
   // Habit widgets only — which habit is shown, same fallback rules as selectedListId.
   selectedHabitId?: string;
+  // Goal widgets only — which goal is shown, same fallback rules as selectedListId.
+  selectedGoalId?: string;
   // Notepad widgets only — the note's text, saved per widget instance.
   noteContent?: string;
 };

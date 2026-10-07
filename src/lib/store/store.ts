@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import gridReducer from './gridSlice';
+import goalsReducer from './goalsSlice';
 import habitsReducer from './habitsSlice';
 import taskListsReducer from './taskListsSlice';
 import settingsReducer from './settingsSlice';
@@ -10,6 +11,7 @@ export const store = configureStore({
     grid: gridReducer,
     taskLists: taskListsReducer,
     habits: habitsReducer,
+    goals: goalsReducer,
     settings: settingsReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(persistenceMiddleware.middleware),

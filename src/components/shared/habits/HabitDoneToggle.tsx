@@ -20,7 +20,7 @@ function defaultLabel(habit: Habit, complete: boolean): string {
   return complete ? 'Undo today' : 'Mark done';
 }
 
-// One-tap button that flips today between complete and not, tinted with --habit-color.
+// One-tap button that flips today between complete and not, tinted with --item-color.
 export default function HabitDoneToggle({ habit, today, onChange, icon = <Check size={16} />, children }: HabitDoneToggleProps) {
   const complete = isDayComplete(habit, today);
   const label = children ? undefined : defaultLabel(habit, complete);

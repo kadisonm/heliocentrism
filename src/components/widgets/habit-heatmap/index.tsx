@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { addDaysToKey, parseDateKey } from '../../../lib/dateKey';
 import { dayProgress, dayValue, habitStartKey } from '../../../lib/habits/habitGoal';
 import type { Habit } from '../../../lib/types';
-import { formatHabitAmount } from '../../shared/habits/habitDisplay';
+import { formatAmount } from '../../../lib/formatAmount';
 import HabitDoneToggle from '../../shared/habits/HabitDoneToggle';
 import HabitStatsLine from '../../shared/habits/HabitStatsLine';
 import HabitWidgetFrame, { type HabitViewProps } from '../../shared/habits/HabitWidgetFrame';
@@ -23,7 +23,7 @@ function progressLevel(progress: number): number {
 function cellTitle(habit: Habit, key: string, progress: number): string {
   const date = parseDateKey(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   if (habit.goal.type === 'quantity') {
-    return `${date}: ${formatHabitAmount(dayValue(habit, key))} / ${formatHabitAmount(habit.goal.target)} ${habit.goal.unit}`;
+    return `${date}: ${formatAmount(dayValue(habit, key))} / ${formatAmount(habit.goal.target)} ${habit.goal.unit}`;
   }
   return `${date}: ${progress >= 1 ? 'done' : 'missed'}`;
 }

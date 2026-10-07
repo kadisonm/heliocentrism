@@ -1,11 +1,11 @@
-// Colours come from --habit-color, set by HabitWidgetFrame.
+// Colours come from --item-color, set by CollectionWidgetFrame.
 .habit-done-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  border: 1px dashed var(--habit-color);
+  border: 1px dashed var(--item-color);
   border-radius: 0.75rem;
   padding: 0.6rem 0.8rem;
   background: var(--background-secondary);
@@ -27,11 +27,11 @@
 
 .habit-done-toggle--complete {
   border-style: solid;
-  background: var(--habit-color);
+  background: var(--item-color);
   color: var(--background-primary);
 
   &:hover {
-    background: var(--habit-color);
+    background: var(--item-color);
     color: var(--background-primary);
   }
 }

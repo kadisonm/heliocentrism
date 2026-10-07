@@ -4,6 +4,7 @@ import type { DashboardState } from '../types';
 import {
   writeAppSettings,
   writeDashboardState,
+  writeGoals,
   writeHabits,
   writeSubtasks,
   writeTaskLists,
@@ -42,6 +43,7 @@ import {
 } from './taskListsSlice';
 import { setSettings } from './settingsSlice';
 import { createHabit, deleteHabit, setHabitValue, updateHabit } from './habitsSlice';
+import { createGoal, deleteGoal, deleteGoalEntry, logGoalEntry, toggleMilestone, updateGoal } from './goalsSlice';
 
 export const persistenceMiddleware = createListenerMiddleware();
 
@@ -125,6 +127,15 @@ persistenceMiddleware.startListening({
   effect: (_, listenerApi) => {
     const { isLoading, habits } = (listenerApi.getState() as RootState).habits;
     if (!isLoading) writeHabits(habits);
+  },
+});
+
+// --- Goals: undebounced writes on every mutation, same as habits. ---
+persistenceMiddleware.startListening({
+  matcher: isAnyOf(createGoal, updateGoal, deleteGoal, toggleMilestone, logGoalEntry, deleteGoalEntry),
+  effect: (_, listenerApi) => {
+    const { isLoading, goals } = (listenerApi.getState() as RootState).goals;
+    if (!isLoading) writeGoals(goals);
   },
 });
 
