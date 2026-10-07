@@ -3,6 +3,22 @@
 // every rule genuinely shared across both variants live here, since this
 // one component renders both; subtask.scss holds only what's exclusive to
 // the subtask variant.
+// Set briefly by blinkTaskRow (lib/grid/taskFocus.ts) when another widget jumps to this row.
+[data-focus-blink] {
+  animation: task-focus-blink 0.8s ease-in-out 2;
+}
+
+@keyframes task-focus-blink {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+}
+
 .task-item {
   position: relative;
   display: flex;

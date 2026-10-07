@@ -28,6 +28,7 @@
 @use 'common/chip-list';
 @use 'common/color-dot';
 @use 'common/progress-bar';
+@use 'common/checkbox-list';
 
 @use 'shared/nav/index' as nav;
 @use 'shared/nav/desktop-nav';
@@ -69,6 +70,8 @@
 @use 'widgets/orbit/index' as orbit;
 @use 'widgets/habit-ring/index' as habit-ring;
 @use 'widgets/habit-heatmap/index' as habit-heatmap;
+@use 'widgets/due-tasks/index' as due-tasks;
+@use 'widgets/due-tasks/due-task-row';
 @use 'widgets/goal-card/index' as goal-card;
 @use 'widgets/goal-ring/index' as goal-ring;
 @use 'widgets/goal-milestones/index' as goal-milestones;

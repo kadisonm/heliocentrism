@@ -220,6 +220,10 @@ export type DashboardWidget = {
   // any settings modal; changed via the widget's own list switcher. Falls
   // back to the first list when unset (or when it points at a deleted one).
   selectedListId?: string;
+  // Due Tasks widget only — task lists left out of this widget. Empty/unset = every list, including new ones.
+  excludedListIds?: string[];
+  // Due Tasks widget only — only show items due within this many days (overdue always shows). Unset = no limit.
+  dueWithinDays?: number;
   // Habit widgets only — which habit is shown, same fallback rules as selectedListId.
   selectedHabitId?: string;
   // Goal widgets only — which goal is shown, same fallback rules as selectedListId.

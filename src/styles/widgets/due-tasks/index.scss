@@ -1,0 +1,14 @@
+.due-tasks__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.due-tasks__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

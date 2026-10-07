@@ -1,65 +1,37 @@
 import { Calendar, RefreshCw } from 'lucide-react';
 import { formatNextOccurrence, formatNextOccurrenceFull } from '../../../lib/tasks/taskRepeat';
-import type { Subtask, Task } from '../../../lib/types';
+import type { Subtask, Task, TaskRepeat } from '../../../lib/types';
 import Badge from '../../common/Badge';
 import { dueBadgeColor, formatDue, formatDueFull, getDueUrgency } from './dueDate';
 import type { EditTarget } from './editTarget';
 
-export function renderDueBadge(task: Task, onClick: () => void) {
-  if (!task.due) return undefined;
+// Works for tasks and subtasks alike. Omit onClick for a read-only badge (e.g. the Due Tasks preview).
+export function renderDueBadge(item: { due: string }, onClick?: () => void, now?: Date) {
+  if (!item.due) return undefined;
   return (
     <Badge
       icon={Calendar}
-      title={formatDue(task.due)}
-      ariaLabel={`Due ${formatDueFull(task.due)}`}
-      color={dueBadgeColor(getDueUrgency(task.due))}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
+      title={formatDue(item.due, now)}
+      ariaLabel={`Due ${formatDueFull(item.due)}`}
+      color={dueBadgeColor(getDueUrgency(item.due, now))}
+      onClick={
+        onClick &&
+        ((event) => {
+          event.stopPropagation();
+          onClick();
+        })
+      }
     />
   );
 }
 
-export function renderRepeatBadge(task: Task, onClick: () => void) {
-  if (!task.repeat) return undefined;
+export function renderRepeatBadge(item: { repeat?: TaskRepeat }, onClick: () => void) {
+  if (!item.repeat) return undefined;
   return (
     <Badge
       icon={RefreshCw}
-      title={formatNextOccurrence(task.repeat)}
-      ariaLabel={`Repeats ${formatNextOccurrenceFull(task.repeat)}`}
-      color="muted"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSubtaskDueBadge(subtask: Subtask, onClick: () => void) {
-  if (!subtask.due) return undefined;
-  return (
-    <Badge
-      icon={Calendar}
-      title={formatDue(subtask.due)}
-      ariaLabel={`Due ${formatDueFull(subtask.due)}`}
-      color={dueBadgeColor(getDueUrgency(subtask.due))}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    />
-  );
-}
-
-function renderSubtaskRepeatBadge(subtask: Subtask, onClick: () => void) {
-  if (!subtask.repeat) return undefined;
-  return (
-    <Badge
-      icon={RefreshCw}
-      title={formatNextOccurrence(subtask.repeat)}
-      ariaLabel={`Repeats ${formatNextOccurrenceFull(subtask.repeat)}`}
+      title={formatNextOccurrence(item.repeat)}
+      ariaLabel={`Repeats ${formatNextOccurrenceFull(item.repeat)}`}
       color="muted"
       onClick={(event) => {
         event.stopPropagation();
@@ -76,8 +48,8 @@ export function renderSubtaskExtra(
 ) {
   return (
     <>
-      {renderSubtaskRepeatBadge(subtask, () => onEditRepeat({ type: 'subtask', subtask }))}
-      {renderSubtaskDueBadge(subtask, () => onEditDue({ type: 'subtask', subtask }))}
+      {renderRepeatBadge(subtask, () => onEditRepeat({ type: 'subtask', subtask }))}
+      {renderDueBadge(subtask, () => onEditDue({ type: 'subtask', subtask }))}
     </>
   );
 }

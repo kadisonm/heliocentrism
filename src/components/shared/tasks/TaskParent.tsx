@@ -60,6 +60,7 @@ export function subtaskProps(subtask: Subtask, stages: TaskStageDef[]) {
   const stageDef = stages[subtask.stage];
   return {
     variant: 'subtask' as const,
+    rowId: subtask.id,
     title: subtask.title,
     description: subtask.description,
     isDone: isTaskDone({ stage: subtask.stage, stages }),
@@ -185,6 +186,7 @@ export default function TaskParent<T extends Task>({
   return (
     <TaskRow
       variant="task"
+      rowId={task.id}
       title={task.title}
       description={task.description}
       isDone={isTaskDone(task)}

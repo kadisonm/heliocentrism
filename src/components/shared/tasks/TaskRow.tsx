@@ -3,11 +3,11 @@ import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { getTaskStageIcon } from '../../../lib/tasks/taskStageIcons';
 import type { TaskStageDef } from '../../../lib/types';
-import Badge from '../../common/Badge';
 import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import { toContextMenuPosition } from './contextMenuPosition';
 import InlineEditableField from './InlineEditableField';
-import { isBlankStage, stageAriaLabel } from './taskStageDisplay';
+import { isBlankStage } from './taskStageDisplay';
+import TaskStageBadge from './TaskStageBadge';
 
 // One row, shared by both a task and its subtasks — the only real
 // differences are the outer class prefix and that a subtask never shows a
@@ -19,6 +19,8 @@ type TaskRowProps = {
   // needs to hand it the ref (see useTaskSortable.ts).
   dragRef?: (element: Element | null) => void;
   variant: 'task' | 'subtask';
+  // The task/subtask id, exposed as data-row-id so other widgets can find and highlight the row.
+  rowId?: string;
   title: string;
   description?: string;
   isDone: boolean;
@@ -49,6 +51,7 @@ type TaskRowProps = {
 
 export default function TaskRow({
   variant,
+  rowId,
   title,
   description,
   isDone,
@@ -82,6 +85,7 @@ export default function TaskRow({
   return (
     <div
       ref={dragRef}
+      data-row-id={rowId}
       data-no-widget-drag
       className={`${rootClass} ${isActive ? `${rootClass}--active` : ''} ${isEditingRow ? `${rootClass}--editing` : ''} ${dragPhase ? `${rootClass}--${dragPhase}` : ''}`}
       // Clicking the row background enters edit mode; interactive children
@@ -131,12 +135,10 @@ export default function TaskRow({
 
         {(extra || showStageBadgeNow || editExtra) && (
           <div className="task-item__footer">
-            {showStageBadgeNow && (
-              <Badge
-                icon={StageIcon}
-                title={stageDef.name || undefined}
-                ariaLabel={`Stage: ${stageAriaLabel(stageDef, stageIndex)}`}
-                color={stageDef.color}
+            {showStageBadge && (
+              <TaskStageBadge
+                stageDef={stageDef}
+                stageIndex={stageIndex}
                 onClick={(event) => {
                   event.stopPropagation();
                   onStageBadgeClick?.();

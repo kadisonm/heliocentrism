@@ -1,32 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { DEFAULT_CLOCK_FORMAT } from '../../../lib/clock/clockPresets';
 import { formatDateTime, formatShowsSeconds } from '../../../lib/clock/dateTimeFormat';
 import { useWidgetContext } from '../../grid/widgetContext';
+import { useNow } from '../../shared/hooks/useNow';
 
 export default function ClockWidget() {
   const { widget } = useWidgetContext();
   const format = widget.clock?.format || DEFAULT_CLOCK_FORMAT;
-  const tickMs = formatShowsSeconds(format) ? 1000 : 60_000;
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    // Re-schedules against the next second/minute boundary rather than a
-    // plain setInterval, which drifts from the real clock over time.
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const scheduleNextTick = () => {
-      timeoutId = setTimeout(() => {
-        setNow(new Date());
-        scheduleNextTick();
-      }, tickMs - (Date.now() % tickMs));
-    };
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- catch up immediately when the format changes */
-    setNow(new Date());
-    scheduleNextTick();
-    return () => clearTimeout(timeoutId);
-  }, [tickMs]);
-
+  const now = useNow(formatShowsSeconds(format) ? 1000 : 60_000);
   const lines = formatDateTime(now, format).split('\n');
 
   return (

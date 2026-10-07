@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import ClockWidget from '../../components/widgets/clock';
 import ClockSettingsModal from '../../components/widgets/clock/ClockSettingsModal';
+import DueTasksWidget from '../../components/widgets/due-tasks';
+import DueTasksSettingsModal from '../../components/widgets/due-tasks/DueTasksSettingsModal';
 import GoalCardWidget from '../../components/widgets/goal-card';
 import GoalChartWidget from '../../components/widgets/goal-chart';
 import GoalMilestonesWidget from '../../components/widgets/goal-milestones';
@@ -19,6 +21,7 @@ import TaskListWidget from '../../components/widgets/task-list';
 
 export type WidgetType =
   | 'task-list'
+  | 'due-tasks'
   | 'orbit'
   | 'pomodoro-timer'
   | 'photo'
@@ -62,6 +65,16 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 2, h: 3 },
     component: TaskListWidget,
+    supportsAutoExpand: true,
+  },
+  {
+    type: 'due-tasks',
+    name: 'Due Tasks',
+    description: 'Overdue and upcoming tasks from your lists, soonest first.',
+    defaultSize: { w: 4, h: 6 },
+    minSize: { w: 2, h: 3 },
+    component: DueTasksWidget,
+    settingsComponent: DueTasksSettingsModal,
     supportsAutoExpand: true,
   },
   {

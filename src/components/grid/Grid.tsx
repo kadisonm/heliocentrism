@@ -22,6 +22,8 @@ import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } f
 import { areGesturesLocked, lockGestures, unlockGestures } from '../../lib/gestureLock';
 import { clampPageIndex, virtualPageSignature } from '../../lib/grid/pageNavigation';
 import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
+import { blinkTaskRow, onTaskFocusRequest } from '../../lib/grid/taskFocus';
+import { useAppSelector } from '../../lib/store/hooks';
 import { waitForTransitionEnd } from '../../lib/grid/transitionSettle';
 import { getEventPoint, isPointInRect, type Point } from '../../lib/grid/pointerEvents';
 import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
@@ -708,6 +710,36 @@ function Grid(
       pageSlide.requestPage(target);
     },
     [pageSlide.resolveDeltaTarget, pageSlide.requestPage]
+  );
+
+  // Jump-to-task requests (e.g. from the Due Tasks widget): go to the page whose Task List widget
+  // shows the task's list — preferring the current page — then blink the row. If no widget shows
+  // that list, the nearest Task List widget is switched to it; the task itself is never touched.
+  const taskLists = useAppSelector((state) => state.taskLists.taskLists);
+  useEffect(
+    () =>
+      onTaskFocusRequest(({ taskId, listId }) => {
+        const shownList = (widget: DashboardWidget) =>
+          widget.selectedListId && taskLists.some((list) => list.id === widget.selectedListId)
+            ? widget.selectedListId
+            : taskLists[0]?.id;
+        const isTaskList = (widget: DashboardWidget) => widget.type === 'task-list';
+        // Pages ordered by distance from the current one, so the nearest match wins.
+        const byDistance = pages
+          .map((page, index) => ({ page, index }))
+          .sort((a, b) => Math.abs(a.index - committedIndex) - Math.abs(b.index - committedIndex));
+
+        let target = byDistance.find(({ page }) => page.widgets.some((w) => isTaskList(w) && shownList(w) === listId));
+        if (!target) {
+          target = byDistance.find(({ page }) => page.widgets.some(isTaskList));
+          const widget = target?.page.widgets.find(isTaskList);
+          if (!target || !widget) return;
+          onUpdateWidget(widget.id, effectiveBreakpoint, target.page.id, { selectedListId: listId });
+        }
+        if (target.index !== committedIndex) pageSlide.requestPage(target.index);
+        blinkTaskRow(taskId);
+      }),
+    [pages, committedIndex, taskLists, onUpdateWidget, effectiveBreakpoint, pageSlide]
   );
 
   // Once a widget has been handed off to a neighboring page mid-drag (see
