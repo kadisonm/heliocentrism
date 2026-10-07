@@ -11,6 +11,7 @@ export type HabitViewProps = {
   habit: Habit;
   today: string;
   setTodayValue: (value: number) => void;
+  setDayValue: (date: string, value: number) => void; // any past day, e.g. back-filling from the heatmap
 };
 
 type HabitWidgetFrameProps = {
@@ -48,7 +49,14 @@ export default function HabitWidgetFrame({ className, children }: HabitWidgetFra
         />
       )}
     >
-      {(habit) => children({ habit, today, setTodayValue: (value) => setHabitValue(habit.id, today, value) })}
+      {(habit) =>
+        children({
+          habit,
+          today,
+          setTodayValue: (value) => setHabitValue(habit.id, today, value),
+          setDayValue: (date, value) => setHabitValue(habit.id, date, value),
+        })
+      }
     </CollectionWidgetFrame>
   );
 }

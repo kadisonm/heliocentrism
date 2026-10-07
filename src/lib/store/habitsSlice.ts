@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { DEFAULT_HABITS } from '../data';
 import { readHabits } from '../firebase/firebaseSync';
-import { nextHabitDay } from '../habits/habitGoal';
+import { habitStartKey, nextHabitDay } from '../habits/habitGoal';
 import { nextOrder } from '../tasks/reorder';
 import type { Habit, HabitDraft } from '../types';
 import type { AppDispatch } from './store';
@@ -74,6 +74,11 @@ const habitsSlice = createSlice({
       const { habitId, date, value } = action.payload;
       const habit = state.habits.find((h) => h.id === habitId);
       if (!habit) return;
+      // Clearing an abstain day before tracking began means "clean since then" — move the start back instead.
+      if (habit.goal.type === 'abstain' && value === 0 && date < habitStartKey(habit)) {
+        habit.startDate = date;
+        return;
+      }
       logValue(habit, date, sanitizeValue(habit, value), new Date().toISOString());
     },
   },

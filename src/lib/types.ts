@@ -102,6 +102,8 @@ export type Habit = {
   source: HabitSource;
   order: number;
   createdAt: string; // ISO 8601
+  // Abstain only — back-dated start ("clean since"), since clean days are never logged. Other types start at their first entry.
+  startDate?: string; // 'YYYY-MM-DD'
   // Keyed by local 'YYYY-MM-DD'. Days without activity are omitted to keep the synced doc small.
   log: Record<string, HabitDay>;
 };

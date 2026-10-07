@@ -1,4 +1,4 @@
-import { dayProgress, isDayComplete, nextHabitDay } from '../../lib/habits/habitGoal';
+import { dayProgress, habitStartKey, isDayComplete, nextHabitDay } from '../../lib/habits/habitGoal';
 import { completionRate, currentStreak, longestStreak } from '../../lib/habits/habitStats';
 import type { Habit, HabitGoal } from '../../lib/types';
 
@@ -73,5 +73,20 @@ describe('streaks and rates', () => {
   it('ignores an unfinished today and days before creation in the rate', () => {
     // Jan 1–6 tracked (today Jan 7 unfinished): 5 of 6 complete.
     expect(completionRate(habit, '2026-01-07', 30)).toBeCloseTo(5 / 6);
+  });
+});
+
+describe('habitStartKey', () => {
+  it('starts at the earliest logged entry when it predates creation', () => {
+    const habit = makeHabit({ type: 'check' }, { '2025-12-20': done() });
+    expect(habitStartKey(habit)).toBe('2025-12-20');
+    // Days between the first entry and creation now count as missed rather than untracked.
+    expect(isDayComplete(habit, '2025-12-25')).toBe(false);
+  });
+
+  it('honours a back-dated abstain start', () => {
+    const habit = { ...makeHabit({ type: 'abstain' }), startDate: '2025-11-01' };
+    expect(habitStartKey(habit)).toBe('2025-11-01');
+    expect(isDayComplete(habit, '2025-11-15')).toBe(true);
   });
 });

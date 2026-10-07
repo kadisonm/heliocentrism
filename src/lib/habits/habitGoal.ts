@@ -23,9 +23,12 @@ export function toggledValue(goal: HabitGoal, complete: boolean): number {
   return complete ? 0 : goalTarget(goal);
 }
 
-// First day the habit is tracked from (its creation day).
+// First tracked day: creation, a back-dated abstain start, or the earliest logged entry — whichever is first.
 export function habitStartKey(habit: Habit): string {
-  return toDateKey(new Date(habit.createdAt));
+  let start = toDateKey(new Date(habit.createdAt));
+  if (habit.startDate && habit.startDate < start) start = habit.startDate;
+  for (const key in habit.log) if (key < start) start = key;
+  return start;
 }
 
 export function dayValue(habit: Habit, key: string): number {

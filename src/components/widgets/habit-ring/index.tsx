@@ -8,7 +8,7 @@ import HabitStatsLine from '../../shared/habits/HabitStatsLine';
 import HabitTodayControl from '../../shared/habits/HabitTodayControl';
 import HabitWidgetFrame, { type HabitViewProps } from '../../shared/habits/HabitWidgetFrame';
 
-function RingLabel({ habit, today }: Omit<HabitViewProps, 'setTodayValue'>) {
+function RingLabel({ habit, today }: Pick<HabitViewProps, 'habit' | 'today'>) {
   if (habit.goal.type === 'quantity') {
     return (
       <>

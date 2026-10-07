@@ -45,6 +45,7 @@ Make it so that adding a new task just adds a blank task to the bottom of the li
 - Investigate tablet mode and turning the tablet to portrait
    
 ### Widget Ideas
+- Allow duplicating widgets
 - Daily counter
 
 - Date time and weather (includes weather warnings)

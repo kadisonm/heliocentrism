@@ -7,22 +7,19 @@
   gap: 0.75rem;
 }
 
-// flex-end + overflow:hidden pins the newest week to the right and clips older weeks off the left.
+// Measured by the component to work out how many week columns fit.
 .habit-heatmap__viewport {
   flex: 1;
   align-self: stretch;
   min-width: 0;
   display: flex;
-  justify-content: flex-end;
   overflow: hidden;
-  // Room for today's outline (1px + 1px offset), which overflow:hidden would otherwise clip.
+  // Room for the cells' hover/today outlines (1px + 1px offset), which overflow:hidden would otherwise clip.
   padding: 2px;
-  container-type: size;
 }
 
-// Cell and gap scale together from the available height so all 7 rows always fit (7 × 0.82 + 6 × 0.18 < 7).
+// --pitch (one cell + one gap) is set inline from the measured height; the 0.82/0.18 split matches GAP_RATIO.
 .habit-heatmap__grid {
-  --pitch: min(calc(100cqh / 7), 19px);
   --cell: calc(var(--pitch) * 0.82);
   --gap: calc(var(--pitch) * 0.18);
   flex-shrink: 0;
@@ -32,12 +29,13 @@
   grid-auto-flow: column;
   gap: var(--gap);
   align-self: center;
-  // Auto margins centre the grid when it fits; when it overflows they drop to 0 and flex-end takes over.
   margin-inline: auto;
 }
 
 // Shades of --item-color (set by HabitWidgetFrame) blended toward the empty-cell fill.
 .habit-heatmap__cell {
+  padding: 0;
+  border: none;
   border-radius: 2px;
   background: var(--background-modifier-hover);
 }
@@ -63,7 +61,53 @@
   box-shadow: inset 0 0 0 1px var(--background-modifier-hover);
 }
 
+.habit-heatmap__cell--clickable {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    outline: 1px solid var(--item-color);
+    outline-offset: 1px;
+  }
+}
+
+// Missed days keep the solid grey base; days before tracking began are just an outline.
 .habit-heatmap__cell--today {
   outline: 1px solid var(--text-muted);
   outline-offset: 1px;
+}
+
+.habit-heatmap__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.habit-heatmap__range {
+  color: var(--text-faint);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.habit-heatmap__nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
 }
