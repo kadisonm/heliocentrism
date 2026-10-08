@@ -1,0 +1,19 @@
+.page-thumbnail {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: 4.5rem;
+  aspect-ratio: 3 / 4;
+  border-radius: 0.4rem;
+  background: var(--background-primary);
+  overflow: hidden;
+}
+
+// Inset by a hair so neighbouring widgets read as separate boxes, like the real grid's margins.
+.page-thumbnail__widget {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--background-primary);
+  border-radius: 0.2rem;
+  background: var(--background-modifier-accent-soft);
+}

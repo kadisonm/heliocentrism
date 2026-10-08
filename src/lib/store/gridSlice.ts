@@ -208,6 +208,39 @@ const gridSlice = createSlice({
       prepare: (breakpoint: DashboardBreakpoint) => ({ payload: { breakpoint, id: crypto.randomUUID() } }),
     },
 
+    // Puts one breakpoint's pages in the given order. Ignored unless pageIds is exactly that breakpoint's pages,
+    // so a stale request can never drop or duplicate a page.
+    reorderPages: (state, action: PayloadAction<{ breakpoint: DashboardBreakpoint; pageIds: string[] }>) => {
+      const { breakpoint, pageIds } = action.payload;
+      const tier = state.breakpoints[breakpoint];
+      const byId = new Map(tier.pages.map((page) => [page.id, page]));
+      if (pageIds.length !== tier.pages.length || new Set(pageIds).size !== pageIds.length) return;
+      if (!pageIds.every((id) => byId.has(id))) return;
+      tier.pages = pageIds.map((id) => byId.get(id)!);
+    },
+
+    // Adds a blank page at `index` (0 = before the first page). The id comes back synchronously from `prepare`.
+    insertPage: {
+      reducer: (state, action: PayloadAction<{ breakpoint: DashboardBreakpoint; index: number; id: string }>) => {
+        const { breakpoint, index, id } = action.payload;
+        const tier = state.breakpoints[breakpoint];
+        if (tier.pages.length >= MAX_PAGES_PER_BREAKPOINT) return;
+        tier.pages.splice(Math.min(Math.max(index, 0), tier.pages.length), 0, { id, widgets: [], layout: [] });
+      },
+      prepare: (breakpoint: DashboardBreakpoint, index: number) => ({
+        payload: { breakpoint, index, id: crypto.randomUUID() },
+      }),
+    },
+
+    // Removes a page and its widgets. A layout always keeps at least one page, so deleting the last leaves a blank one.
+    deletePage: (state, action: PayloadAction<{ breakpoint: DashboardBreakpoint; pageId: string }>) => {
+      const { breakpoint, pageId } = action.payload;
+      const tier = state.breakpoints[breakpoint];
+      const remaining = tier.pages.filter((page) => page.id !== pageId);
+      if (remaining.length === tier.pages.length) return;
+      tier.pages = remaining.length > 0 ? remaining : [{ id: crypto.randomUUID(), widgets: [], layout: [] }];
+    },
+
     moveWidgetToPage: (
       state,
       action: PayloadAction<{ id: string; breakpoint: DashboardBreakpoint; fromPageId: string; toPageId: string }>
@@ -252,6 +285,6 @@ const gridSlice = createSlice({
   },
 });
 
-export const { addWidget, removeWidget, updateWidget, setLayout, setWidgetHeights, createPage, moveWidgetToPage } =
+export const { addWidget, removeWidget, updateWidget, setLayout, setWidgetHeights, createPage, moveWidgetToPage, reorderPages, insertPage, deletePage } =
   gridSlice.actions;
 export default gridSlice.reducer;

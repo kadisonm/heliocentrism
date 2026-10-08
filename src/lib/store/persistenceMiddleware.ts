@@ -18,6 +18,9 @@ import {
   createPage,
   loadGridState,
   moveWidgetToPage,
+  reorderPages,
+  insertPage,
+  deletePage,
   removeWidget,
   setLayout,
   setWidgetHeights,
@@ -80,7 +83,19 @@ if (typeof window !== 'undefined') {
 }
 
 persistenceMiddleware.startListening({
-  matcher: isAnyOf(addWidget, removeWidget, updateWidget, setLayout, setWidgetHeights, createPage, moveWidgetToPage, loadGridState.fulfilled),
+  matcher: isAnyOf(
+    addWidget,
+    removeWidget,
+    updateWidget,
+    setLayout,
+    setWidgetHeights,
+    createPage,
+    moveWidgetToPage,
+    reorderPages,
+    insertPage,
+    deletePage,
+    loadGridState.fulfilled
+  ),
   effect: (_, listenerApi) => {
     const { isLoading, breakpoints } = (listenerApi.getState() as RootState).grid;
     const hasAnyWidgets = ALL_BREAKPOINTS.some((breakpoint) =>

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Check, Monitor, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, Check, Monitor, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import ContextMenu, { type ContextMenuPosition } from '../common/context-menu/ContextMenu';
 import MenuItem from '../common/context-menu/MenuItem';
@@ -18,6 +18,7 @@ type CanvasContextMenuProps = {
   position: ContextMenuPosition | null;
   onClose: () => void;
   onAddWidget: () => void;
+  onReorderPages: () => void;
   previewBreakpoint: DashboardBreakpoint | null;
   allowedBreakpoints: DashboardBreakpoint[];
   onPreviewBreakpointChange: (breakpoint: DashboardBreakpoint | null) => void;
@@ -33,6 +34,7 @@ export default function CanvasContextMenu({
   position,
   onClose,
   onAddWidget,
+  onReorderPages,
   previewBreakpoint,
   allowedBreakpoints,
   onPreviewBreakpointChange,
@@ -62,6 +64,14 @@ export default function CanvasContextMenu({
             label="Add widget"
             onClick={() => {
               onAddWidget();
+              onClose();
+            }}
+          />
+          <MenuItem
+            icon={ArrowUpDown}
+            label="Reorder pages"
+            onClick={() => {
+              onReorderPages();
               onClose();
             }}
           />

@@ -1,0 +1,107 @@
+.page-reorder-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page-reorder-modal__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  background: var(--background-secondary);
+}
+
+.page-reorder-modal__details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.page-reorder-modal__title {
+  color: var(--text-normal);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.page-reorder-modal__summary {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-reorder-modal__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 1.6rem;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--background-secondary-modifier-hover);
+      color: var(--text-normal);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+}
+
+// A slim "+ Insert page" divider between rows; quiet until hovered.
+.page-reorder-modal__insert button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  border: 1px dashed var(--background-modifier-hover);
+  border-radius: 0.6rem;
+  padding: 0.3rem;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-accent);
+    background: var(--background-modifier-accent-soft);
+    color: var(--color-accent);
+  }
+}
+
+.page-reorder-modal__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--background-modifier-error);
+    color: var(--text-error);
+  }
+}

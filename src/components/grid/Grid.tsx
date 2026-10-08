@@ -34,6 +34,7 @@ import BlankPagePane from './BlankPagePane';
 import CanvasContextMenu from './CanvasContextMenu';
 import GridPage from './GridPage';
 import PageEdgeNav from './PageEdgeNav';
+import PageReorderModal from './PageReorderModal';
 import RemoveDropZone from './RemoveDropZone';
 import { useCloseMenuOnOutsideClick } from './useCloseMenuOnOutsideClick';
 import { useLongPress, WIDGET_GESTURE_SKIP_SELECTOR } from './useLongPress';
@@ -105,6 +106,9 @@ type GridProps = {
   ) => void;
   onCreatePage: (breakpoint: DashboardBreakpoint) => string;
   onMoveWidgetToPage: (id: string, breakpoint: DashboardBreakpoint, fromPageId: string, toPageId: string) => void;
+  onReorderPages: (breakpoint: DashboardBreakpoint, pageIds: string[]) => void;
+  onInsertPage: (breakpoint: DashboardBreakpoint, index: number) => string;
+  onDeletePage: (breakpoint: DashboardBreakpoint, pageId: string) => void;
 };
 
 // Exposed so page.tsx's PageDots (a direct, single-shot click just like
@@ -133,6 +137,9 @@ function Grid(
     onWidgetHeightsChange,
     onCreatePage,
     onMoveWidgetToPage,
+    onReorderPages,
+    onInsertPage,
+    onDeletePage,
   }: GridProps,
   ref: Ref<GridHandle>
 ) {
@@ -1605,9 +1612,54 @@ function Grid(
   // "Add widget" opens AddWidgetModal (reused unmodified from the old
   // toolbar); "Preview as" is CanvasContextMenu's own submenu.
   const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
+  const [isReorderPagesOpen, setIsReorderPagesOpen] = useState(false);
   const [canvasMenuPosition, setCanvasMenuPosition] = useState<Point | null>(null);
   const closeCanvasMenu = useCallback(() => setCanvasMenuPosition(null), []);
   useCloseMenuOnOutsideClick(!!canvasMenuPosition, closeCanvasMenu);
+
+  // Applies a page-list change (`apply` returns the resulting page ids), then keeps showing the page you were on —
+  // wherever it moved to, or its neighbour if it was deleted. Only the layout on screen needs this.
+  const changePagesKeepingPlace = useCallback(
+    (breakpoint: DashboardBreakpoint, apply: () => string[]) => {
+      const currentPageId = breakpoint === effectiveBreakpoint ? pages[committedIndex]?.id : undefined;
+      const nextIds = apply();
+      if (!currentPageId) return;
+      const kept = nextIds.indexOf(currentPageId);
+      const target = kept >= 0 ? kept : Math.min(committedIndex, nextIds.length - 1);
+      if (target >= 0 && target !== committedIndex) forceGoToIndex(target);
+    },
+    [effectiveBreakpoint, pages, committedIndex, forceGoToIndex]
+  );
+  const pageIdsOf = useCallback(
+    (breakpoint: DashboardBreakpoint) => breakpoints[breakpoint].pages.map((page) => page.id),
+    [breakpoints]
+  );
+
+  const handleReorderPages = useCallback(
+    (breakpoint: DashboardBreakpoint, pageIds: string[]) =>
+      changePagesKeepingPlace(breakpoint, () => {
+        onReorderPages(breakpoint, pageIds);
+        return pageIds;
+      }),
+    [changePagesKeepingPlace, onReorderPages]
+  );
+  const handleInsertPage = useCallback(
+    (breakpoint: DashboardBreakpoint, index: number) =>
+      changePagesKeepingPlace(breakpoint, () => {
+        const ids = pageIdsOf(breakpoint);
+        ids.splice(index, 0, onInsertPage(breakpoint, index));
+        return ids;
+      }),
+    [changePagesKeepingPlace, pageIdsOf, onInsertPage]
+  );
+  const handleDeletePage = useCallback(
+    (breakpoint: DashboardBreakpoint, pageId: string) =>
+      changePagesKeepingPlace(breakpoint, () => {
+        onDeletePage(breakpoint, pageId);
+        return pageIdsOf(breakpoint).filter((id) => id !== pageId);
+      }),
+    [changePagesKeepingPlace, pageIdsOf, onDeletePage]
+  );
 
   const handleAddWidgetSelect = useCallback(
     (type: string) => {
@@ -1851,6 +1903,7 @@ function Grid(
         position={canvasMenuPosition}
         onClose={closeCanvasMenu}
         onAddWidget={() => setIsAddWidgetModalOpen(true)}
+        onReorderPages={() => setIsReorderPagesOpen(true)}
         previewBreakpoint={previewBreakpoint}
         allowedBreakpoints={allowedBreakpoints}
         onPreviewBreakpointChange={onPreviewBreakpointChange}
@@ -1860,6 +1913,18 @@ function Grid(
         isOpen={isAddWidgetModalOpen}
         onClose={() => setIsAddWidgetModalOpen(false)}
         onSelect={handleAddWidgetSelect}
+      />
+
+      <PageReorderModal
+        key={isReorderPagesOpen ? `reorder-${effectiveBreakpoint}` : 'reorder-closed'}
+        isOpen={isReorderPagesOpen}
+        onClose={() => setIsReorderPagesOpen(false)}
+        breakpoints={breakpoints}
+        allowedBreakpoints={allowedBreakpoints}
+        initialBreakpoint={effectiveBreakpoint}
+        onReorder={handleReorderPages}
+        onInsert={handleInsertPage}
+        onDelete={handleDeletePage}
       />
     </div>
   );

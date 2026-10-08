@@ -1,18 +1,10 @@
 'use client';
 
 import { ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { moveItem } from '../../../lib/moveInArray';
 import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';
 import { useSettings } from '../settings/useSettings';
 import { useNavItems } from './useNavItems';
-
-function moveId(order: string[], id: string, direction: -1 | 1): string[] {
-  const index = order.indexOf(id);
-  const swapIndex = index + direction;
-  if (index < 0 || swapIndex < 0 || swapIndex >= order.length) return order;
-  const next = [...order];
-  [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  return next;
-}
 
 function toggleHiddenId(hidden: string[], id: string): string[] {
   return hidden.includes(id) ? hidden.filter((hiddenId) => hiddenId !== id) : [...hidden, id];
@@ -49,7 +41,7 @@ export default function NavOrderMenu({ position, onClose }: NavOrderMenuProps) {
                 <button
                   type="button"
                   disabled={index === 0}
-                  onClick={() => setNavBar({ order: moveId(order, item.id, -1) })}
+                  onClick={() => setNavBar({ order: moveItem(order, index, -1) })}
                   aria-label={`Move ${item.label} up`}
                 >
                   <ChevronUp size={14} />
@@ -57,7 +49,7 @@ export default function NavOrderMenu({ position, onClose }: NavOrderMenuProps) {
                 <button
                   type="button"
                   disabled={index === orderedItems.length - 1}
-                  onClick={() => setNavBar({ order: moveId(order, item.id, 1) })}
+                  onClick={() => setNavBar({ order: moveItem(order, index, 1) })}
                   aria-label={`Move ${item.label} down`}
                 >
                   <ChevronDown size={14} />

@@ -8,6 +8,9 @@ import {
   addWidget as addWidgetAction,
   createPage as createPageAction,
   moveWidgetToPage as moveWidgetToPageAction,
+  reorderPages as reorderPagesAction,
+  insertPage as insertPageAction,
+  deletePage as deletePageAction,
   removeWidget as removeWidgetAction,
   setLayout as setLayoutAction,
   setWidgetHeights as setWidgetHeightsAction,
@@ -80,6 +83,26 @@ export function useGridState() {
     [dispatch]
   );
 
+  const reorderPages = useCallback(
+    (breakpoint: DashboardBreakpoint, pageIds: string[]) => {
+      dispatch(reorderPagesAction({ breakpoint, pageIds }));
+    },
+    [dispatch]
+  );
+
+  // Returns the new page's id (generated in the action's `prepare`).
+  const insertPage = useCallback(
+    (breakpoint: DashboardBreakpoint, index: number): string => dispatch(insertPageAction(breakpoint, index)).payload.id,
+    [dispatch]
+  );
+
+  const deletePage = useCallback(
+    (breakpoint: DashboardBreakpoint, pageId: string) => {
+      dispatch(deletePageAction({ breakpoint, pageId }));
+    },
+    [dispatch]
+  );
+
   return {
     breakpoints,
     isLoading,
@@ -90,5 +113,8 @@ export function useGridState() {
     setWidgetHeights,
     createPage,
     moveWidgetToPage,
+    reorderPages,
+    insertPage,
+    deletePage,
   };
 }

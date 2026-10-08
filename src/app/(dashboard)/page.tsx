@@ -91,6 +91,9 @@ export default function DashboardPage() {
               onWidgetHeightsChange={dashboard.setWidgetHeights}
               onCreatePage={dashboard.createPage}
               onMoveWidgetToPage={dashboard.moveWidgetToPage}
+              onReorderPages={dashboard.reorderPages}
+              onInsertPage={dashboard.insertPage}
+              onDeletePage={dashboard.deletePage}
             />
           </TaskDragProvider>
         )}
