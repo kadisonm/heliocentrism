@@ -18,6 +18,8 @@ import PhotoSettingsModal from '../../components/widgets/photo/PhotoSettingsModa
 import PomodoroTimerWidget from '../../components/widgets/pomodoro-timer';
 import PomodoroSettingsModal from '../../components/widgets/pomodoro-timer/PomodoroSettingsModal';
 import TaskListWidget from '../../components/widgets/task-list';
+import WeatherWidget from '../../components/widgets/weather';
+import WeatherSettingsModal from '../../components/widgets/weather/WeatherSettingsModal';
 
 export type WidgetType =
   | 'task-list'
@@ -26,6 +28,7 @@ export type WidgetType =
   | 'pomodoro-timer'
   | 'photo'
   | 'clock'
+  | 'weather'
   | 'habit-check'
   | 'habit-ring'
   | 'habit-heatmap'
@@ -112,6 +115,16 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minSize: { w: 1, h: 1 },
     component: ClockWidget,
     settingsComponent: ClockSettingsModal,
+    supportsAutoExpand: true,
+  },
+  {
+    type: 'weather',
+    name: 'Weather',
+    description: "Today's weather for a city, with UV and rain chance.",
+    defaultSize: { w: 3, h: 5 },
+    minSize: { w: 2, h: 3 },
+    component: WeatherWidget,
+    settingsComponent: WeatherSettingsModal,
     supportsAutoExpand: true,
   },
   {

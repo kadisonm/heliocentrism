@@ -29,6 +29,7 @@
 @use 'common/color-dot';
 @use 'common/progress-bar';
 @use 'common/checkbox-list';
+@use 'common/widget-placeholder';
 
 @use 'shared/nav/index' as nav;
 @use 'shared/nav/desktop-nav';
@@ -67,6 +68,8 @@
 @use 'widgets/photo/photo-settings-modal';
 @use 'widgets/clock/index' as clock;
 @use 'widgets/clock/clock-settings-modal';
+@use 'widgets/weather/index' as weather;
+@use 'widgets/weather/weather-settings-modal';
 @use 'widgets/orbit/index' as orbit;
 @use 'widgets/habit-ring/index' as habit-ring;
 @use 'widgets/habit-heatmap/index' as habit-heatmap;

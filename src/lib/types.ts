@@ -199,6 +199,20 @@ export type PhotoWidgetConfig = {
   fit?: 'cover' | 'contain';
 };
 
+export type TemperatureUnit = 'celsius' | 'fahrenheit';
+
+export type WeatherLocation = {
+  name: string; // "Sydney"
+  label: string; // "Sydney, New South Wales, Australia"
+  latitude: number;
+  longitude: number;
+};
+
+export type WeatherWidgetConfig = {
+  location: WeatherLocation | null;
+  unit: TemperatureUnit;
+};
+
 export type ClockWidgetConfig = {
   format: string; // token string, see src/lib/clock/dateTimeFormat.ts; newlines become line breaks
 };
@@ -212,6 +226,8 @@ export type DashboardWidget = {
   autoExpand?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
+  // Weather widget only, set via WeatherSettingsModal.
+  weather?: WeatherWidgetConfig;
   // Clock widget only, set via ClockSettingsModal.
   clock?: ClockWidgetConfig;
   // Task List widget only — whether completed tasks are shown.

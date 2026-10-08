@@ -1,0 +1,31 @@
+.weather-settings__current {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.weather-settings__results {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weather-settings__result {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--background-secondary-modifier-hover);
+  }
+}

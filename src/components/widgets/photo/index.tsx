@@ -1,6 +1,7 @@
 'use client';
 
 import { ImageOff } from 'lucide-react';
+import WidgetPlaceholder from '../../common/WidgetPlaceholder';
 import { useWidgetContext } from '../../grid/widgetContext';
 
 export default function PhotoWidget() {
@@ -8,12 +9,7 @@ export default function PhotoWidget() {
   const photo = widget.photo;
 
   if (!photo?.url) {
-    return (
-      <div className="photo-widget-empty">
-        <ImageOff size={28} />
-        <p>Add an image URL via widget settings.</p>
-      </div>
-    );
+    return <WidgetPlaceholder icon={ImageOff} message="Add an image URL via widget settings." />;
   }
 
   return (
