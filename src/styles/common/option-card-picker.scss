@@ -1,0 +1,42 @@
+.option-card-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.option-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-radius: 0.75rem;
+  padding: 0.4rem;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--background-secondary-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+// Same selection ring as SwatchPicker.
+.option-card--selected {
+  color: var(--text-normal);
+  box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 4px var(--color-accent);
+}
+
+.option-card__preview {
+  display: block;
+  aspect-ratio: 16 / 10;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.option-card__label {
+  padding: 0 0.15rem 0.1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}

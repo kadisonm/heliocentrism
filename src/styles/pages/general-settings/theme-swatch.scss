@@ -1,0 +1,63 @@
+// Every colour here resolves against the palette set by its own data-theme-preview attribute (see base.scss).
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 0.45rem;
+  background: var(--background-primary);
+}
+
+.theme-swatch__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-radius: 0.35rem;
+  padding: 0.35rem;
+  background: var(--background-secondary);
+}
+
+.theme-swatch__line {
+  display: block;
+  width: 70%;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+.theme-swatch__line--title {
+  width: 50%;
+  background: var(--text-normal);
+}
+
+.theme-swatch__pill {
+  display: block;
+  width: 35%;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.theme-swatch__dots {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.theme-swatch__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.theme-swatch__dot--primary {
+  background: var(--color-primary);
+}
+
+.theme-swatch__dot--secondary {
+  background: var(--color-secondary);
+}
+
+.theme-swatch__dot--accent {
+  background: var(--color-accent);
+}

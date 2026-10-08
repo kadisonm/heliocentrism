@@ -30,6 +30,7 @@
 @use 'common/progress-bar';
 @use 'common/checkbox-list';
 @use 'common/widget-placeholder';
+@use 'common/option-card-picker';
 
 @use 'shared/nav/index' as nav;
 @use 'shared/nav/desktop-nav';
@@ -63,6 +64,9 @@
 @use 'pages/dashboard';
 @use 'pages/onboarding-gate/index' as onboarding-gate;
 @use 'pages/sync-config/connection-status';
+@use 'pages/general-settings/theme-swatch';
+@use 'pages/general-settings/background-swatch';
+@use 'pages/general-settings/system-mode-swatch';
 
 @use 'widgets/widget-content-shell';
 @use 'widgets/pomodoro-timer/index' as pomodoro-timer;

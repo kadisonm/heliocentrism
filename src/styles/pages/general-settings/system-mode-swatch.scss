@@ -1,0 +1,13 @@
+.system-mode-swatch {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// The dark preview sits on top, clipped to the lower-right half.
+.system-mode-swatch__dark {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}

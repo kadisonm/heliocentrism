@@ -21,6 +21,15 @@ $space-depth: 1600; // px scrolled before a layer's own loop point (see below)
   @return $shadows;
 }
 
+// The deep-space backdrop: a faint primary-tinted glow rising from the bottom. Also used by its settings swatch.
+@mixin space-gradient {
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    color-mix(in srgb, var(--color-primary) 14%, var(--color-black) 86%) 0%,
+    var(--color-black) 65%
+  );
+}
+
 $space-stars-small: space-stars(500, $space-depth);
 $space-stars-medium: space-stars(150, $space-depth);
 $space-stars-large: space-stars(60, $space-depth);
@@ -29,11 +38,7 @@ $space-stars-large: space-stars(60, $space-depth);
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: radial-gradient(
-    ellipse at 50% 100%,
-    color-mix(in srgb, var(--color-primary) 14%, var(--color-black) 86%) 0%,
-    var(--color-black) 65%
-  );
+  @include space-gradient;
   // Its size already comes purely from `inset: 0` (the viewport), never
   // from its own content, so `strict` (size + layout + style + paint) is
   // safe here — tells the browser this subtree can never affect, and is

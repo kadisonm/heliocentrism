@@ -1,22 +1,20 @@
 'use client';
 
-import type { NavBarPosition, ThemeMode } from '../../../lib/types';
+import type { BackgroundVariant, NavBarPosition, ThemeMode, ThemePalette } from '../../../lib/types';
 import { BACKGROUND_VARIANTS } from '../../../lib/background';
-import { THEME_PALETTES } from '../../../lib/theme';
+import { resolveMode, THEME_PALETTES } from '../../../lib/theme';
 import Modal from '../../common/Modal';
+import OptionCardPicker, { type OptionCard } from '../../common/OptionCardPicker';
 import SettingsField from '../../common/SettingsField';
 import { useSettings } from '../../shared/settings/useSettings';
+import BackgroundSwatch from './BackgroundSwatch';
+import SystemModeSwatch from './SystemModeSwatch';
+import ThemeSwatch from './ThemeSwatch';
 
 type GeneralSettingsPanelProps = {
   isOpen: boolean;
   onClose: () => void;
 };
-
-const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-];
 
 const NAV_POSITION_OPTIONS: { value: NavBarPosition; label: string }[] = [
   { value: 'top', label: 'Top' },
@@ -25,14 +23,10 @@ const NAV_POSITION_OPTIONS: { value: NavBarPosition; label: string }[] = [
   { value: 'bottom', label: 'Bottom' },
 ];
 
-const PALETTE_OPTIONS = THEME_PALETTES.map((palette) => ({
-  value: palette.id,
-  label: palette.label,
-}));
-
 const BACKGROUND_OPTIONS = BACKGROUND_VARIANTS.map((background) => ({
   value: background.id,
   label: background.label,
+  preview: <BackgroundSwatch variant={background.id} />,
 }));
 
 export default function GeneralSettingsPanel({
@@ -40,46 +34,53 @@ export default function GeneralSettingsPanel({
   onClose,
 }: GeneralSettingsPanelProps) {
   const { settings, updateSettings } = useSettings();
+  // Palette swatches preview in whichever light/dark mode is currently showing.
+  const previewMode = resolveMode(settings.theme.mode);
+  const paletteOptions = THEME_PALETTES.map((palette) => ({
+    value: palette.id,
+    label: palette.label,
+    preview: <ThemeSwatch palette={palette.id} mode={previewMode} />,
+  }));
+  // Appearance swatches preview in the current palette.
+  const { palette } = settings.theme;
+  const modeOptions: OptionCard<ThemeMode>[] = [
+    { value: 'system', label: 'System', preview: <SystemModeSwatch palette={palette} /> },
+    { value: 'light', label: 'Light', preview: <ThemeSwatch palette={palette} mode="light" /> },
+    { value: 'dark', label: 'Dark', preview: <ThemeSwatch palette={palette} mode="dark" /> },
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings">
       <div className="settings-section">
-        <SettingsField
-          label="Palette"
-          type="select"
-          value={settings.theme.palette}
-          options={PALETTE_OPTIONS}
-          onChange={(value) =>
-            updateSettings({
-              ...settings,
-              theme: { ...settings.theme, palette: value as typeof settings.theme.palette },
-            })
-          }
-        />
-        <SettingsField
-          label="Appearance"
-          type="select"
-          value={settings.theme.mode}
-          options={MODE_OPTIONS}
-          onChange={(value) =>
-            updateSettings({
-              ...settings,
-              theme: { ...settings.theme, mode: value as ThemeMode },
-            })
-          }
-        />
-        <SettingsField
-          label="Background"
-          type="select"
-          value={settings.background.variant}
-          options={BACKGROUND_OPTIONS}
-          onChange={(value) =>
-            updateSettings({
-              ...settings,
-              background: { ...settings.background, variant: value as typeof settings.background.variant },
-            })
-          }
-        />
+        <div className="settings-field">
+          <label>Palette</label>
+          <OptionCardPicker
+            options={paletteOptions}
+            value={settings.theme.palette}
+            onChange={(palette: ThemePalette) => updateSettings({ ...settings, theme: { ...settings.theme, palette } })}
+            ariaLabel="Palette"
+          />
+        </div>
+        <div className="settings-field">
+          <label>Appearance</label>
+          <OptionCardPicker
+            options={modeOptions}
+            value={settings.theme.mode}
+            onChange={(mode: ThemeMode) => updateSettings({ ...settings, theme: { ...settings.theme, mode } })}
+            ariaLabel="Appearance"
+          />
+        </div>
+        <div className="settings-field">
+          <label>Background</label>
+          <OptionCardPicker
+            options={BACKGROUND_OPTIONS}
+            value={settings.background.variant}
+            onChange={(variant: BackgroundVariant) =>
+              updateSettings({ ...settings, background: { ...settings.background, variant } })
+            }
+            ariaLabel="Background"
+          />
+        </div>
         <SettingsField
           label="Navigation bar position (desktop)"
           type="select"

@@ -17,9 +17,11 @@
 // Concrete overrides for every palette x mode combination. JS always
 // resolves 'system' to a concrete light/dark value before writing
 // data-theme, so these selectors never need to handle 'system' themselves.
+// [data-theme-preview] scopes the same tokens to one element, e.g. a settings swatch previewing another palette.
 @each $palette, $modes in $themes {
   @each $mode, $tokens in $modes {
-    html[data-palette='#{$palette}'][data-theme='#{$mode}'] {
+    html[data-palette='#{$palette}'][data-theme='#{$mode}'],
+    [data-theme-preview='#{$palette}-#{$mode}'] {
       @include theme-variables($palette, $mode);
     }
   }
