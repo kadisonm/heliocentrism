@@ -1,28 +1,16 @@
 'use client';
 
-import { ChevronDown, ChevronUp, Eye, EyeOff, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { NAV_VISIBLE_COUNT, resolveNavOrder, type NavItem } from '../../../lib/nav/navItems';
-import { useSettings } from '../settings/useSettings';
+import { NAV_VISIBLE_COUNT, type NavItem } from '../../../lib/nav/navItems';
 import { useDeviceTier } from '../../grid/useDeviceTier';
 import { useLongPress } from '../../grid/useLongPress';
 import { useCloseMenuOnOutsideClick } from '../../grid/useCloseMenuOnOutsideClick';
-import ContextMenu, { type ContextMenuPosition } from '../../common/context-menu/ContextMenu';
-
-function moveId(order: string[], id: string, direction: -1 | 1): string[] {
-  const index = order.indexOf(id);
-  const swapIndex = index + direction;
-  if (index < 0 || swapIndex < 0 || swapIndex >= order.length) return order;
-  const next = [...order];
-  [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  return next;
-}
-
-function toggleHiddenId(hidden: string[], id: string): string[] {
-  return hidden.includes(id) ? hidden.filter((hiddenId) => hiddenId !== id) : [...hidden, id];
-}
+import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
+import NavOrderMenu from './NavOrderMenu';
+import { useNavItems } from './useNavItems';
 
 // Floating pill nav for mobile/tablet (see nav/index.tsx). Its icon set is
 // user-reorderable/toggleable (long-press or right-click the pill background
@@ -31,13 +19,11 @@ function toggleHiddenId(hidden: string[], id: string): string[] {
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const tier = useDeviceTier();
-  const { settings, updateSettings } = useSettings();
+  const { shownItems } = useNavItems();
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const [quickSettingsPosition, setQuickSettingsPosition] = useState<ContextMenuPosition | null>(null);
 
-  const orderedItems = resolveNavOrder(settings.navBar.order);
   const visibleCount = NAV_VISIBLE_COUNT[tier === 'tablet' ? 'tablet' : 'mobile'];
-  const shownItems = orderedItems.filter((item) => !settings.navBar.hidden.includes(item.id));
   const visibleItems = shownItems.slice(0, visibleCount);
   const overflowItems = shownItems.slice(visibleCount);
 
@@ -46,10 +32,6 @@ export default function MobileBottomNav() {
   });
 
   useCloseMenuOnOutsideClick(!!quickSettingsPosition, () => setQuickSettingsPosition(null));
-
-  const setNavBar = (patch: Partial<{ order: string[]; hidden: string[] }>) => {
-    updateSettings({ ...settings, navBar: { ...settings.navBar, ...patch } });
-  };
 
   const itemClassName = (item: NavItem) =>
     pathname === item.href ? 'mobile-bottom-nav-item mobile-bottom-nav-item--active' : 'mobile-bottom-nav-item';
@@ -114,46 +96,7 @@ export default function MobileBottomNav() {
       )}
 
       {quickSettingsPosition && (
-        <ContextMenu position={quickSettingsPosition} onClose={() => setQuickSettingsPosition(null)}>
-          <div className="nav-order-menu">
-            {orderedItems.map((item, index) => {
-              const isHidden = settings.navBar.hidden.includes(item.id);
-              return (
-                <div key={item.id} className="nav-order-row">
-                  <span className="nav-order-row-label">
-                    <item.icon size={14} />
-                    {item.label}
-                  </span>
-                  <div className="nav-order-row-controls">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={() => setNavBar({ order: moveId(settings.navBar.order, item.id, -1) })}
-                      aria-label={`Move ${item.label} up`}
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === orderedItems.length - 1}
-                      onClick={() => setNavBar({ order: moveId(settings.navBar.order, item.id, 1) })}
-                      aria-label={`Move ${item.label} down`}
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNavBar({ hidden: toggleHiddenId(settings.navBar.hidden, item.id) })}
-                      aria-label={isHidden ? `Show ${item.label}` : `Hide ${item.label}`}
-                    >
-                      {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </ContextMenu>
+        <NavOrderMenu position={quickSettingsPosition} onClose={() => setQuickSettingsPosition(null)} />
       )}
     </>
   );

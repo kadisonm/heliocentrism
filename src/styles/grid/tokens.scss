@@ -22,7 +22,9 @@ $grid-container-padding-x: 10px;
 // placeholder) should be tall enough to reach PageDots floating near the
 // bottom of the viewport, so it never ends with the dots floating over
 // empty space below a short page.
-$page-min-height: calc(100vh - #{$page-top-offset} - #{$page-dots-bottom-offset} - #{$page-dots-height});
+$page-min-height: calc(
+  100vh - #{$page-top-offset} - #{$page-dots-bottom-offset} - #{$page-dots-height} - var(--app-nav-inset-bottom, 0px)
+);
 
 // How far .grid-page-viewport shrinks while dragging a widget (see
 // grid.scss's .grid-page-viewport--drag-shrink) — scaled from the TOP, so

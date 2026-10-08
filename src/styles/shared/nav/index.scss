@@ -1,5 +1,4 @@
-// Shared between DesktopNav and MobileBottomNav's overflow-menu close
-// button — see desktop-nav.scss / mobile-bottom-nav.scss for the rest.
+// Generic square icon button (e.g. MobileBottomNav's overflow-menu close button).
 .icon-button {
   background: none;
   color: var(--text-normal);

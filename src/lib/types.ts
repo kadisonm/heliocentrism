@@ -188,9 +188,13 @@ export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
 // `order` is every NAV_ITEMS id (see lib/nav/navItems.ts) in user-chosen
 // order; `hidden` ids are suppressed from the bottom nav and its overflow.
+// Which screen edge the desktop nav bar docks to (tablet/mobile always use the header + bottom pill).
+export type NavBarPosition = 'top' | 'left' | 'right' | 'bottom';
+
 export type NavBarSettings = {
   order: string[];
   hidden: string[];
+  position: NavBarPosition;
 };
 
 export type PhotoWidgetConfig = {

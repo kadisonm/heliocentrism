@@ -8,8 +8,9 @@
 // relative normally would.
 .page-dots {
   position: fixed;
-  left: 50%;
-  bottom: $page-dots-bottom-offset;
+  // Centred over the content and lifted above a docked desktop nav bar (insets from desktop-nav.scss).
+  left: calc(50% + (var(--app-nav-inset-left, 0px) - var(--app-nav-inset-right, 0px)) / 2);
+  bottom: calc(#{$page-dots-bottom-offset} + var(--app-nav-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 500;
   display: flex;

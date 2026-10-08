@@ -1,17 +1,87 @@
-.app-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.5rem;
-  background: var(--background-primary);
-  position: relative;
+@use 'tokens' as *;
+
+// How much of each screen edge the docked bar takes, for layout outside the nav to read:
+// the dashboard's padding, the page dots and the page-edge arrows.
+:root:has(.app-nav--left) {
+  --app-nav-inset-left: #{$app-nav-rail-width};
 }
 
-.app-nav-start {
+:root:has(.app-nav--right) {
+  --app-nav-inset-right: #{$app-nav-rail-width};
+}
+
+:root:has(.app-nav--bottom) {
+  --app-nav-inset-bottom: #{$app-nav-bar-height};
+}
+
+// Fixed rails sit outside the page flow, so the page makes room beside them (the grid re-measures its width).
+body:has(.app-nav--left) {
+  padding-left: var(--app-nav-inset-left);
+}
+
+body:has(.app-nav--right) {
+  padding-right: var(--app-nav-inset-right);
+}
+
+// Same frosted surface as the mobile pill. Above the page (500) but below modals and the drag ghost.
+.app-nav {
+  z-index: 600;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  min-width: 0;
+  gap: 1rem;
+  background: var(--background-modifier-glass);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 12px var(--shadow-modifier);
+}
+
+// --- Horizontal bar (top / bottom) ---
+// Equal 1fr side columns keep the items centred on the screen, whatever the logo/avatar widths.
+.app-nav--top,
+.app-nav--bottom {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  height: $app-nav-bar-height;
+  padding: 0 1.25rem;
+
+  .app-nav-logo {
+    justify-self: start;
+  }
+
+  .app-nav-account {
+    justify-self: end;
+  }
+}
+
+// Sticky (not static) also lifts it above Background's fixed starfield in paint order.
+.app-nav--top {
+  position: sticky;
+  top: 0;
+}
+
+.app-nav--bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+// --- Vertical rail (left / right) ---
+.app-nav--left,
+.app-nav--right {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: $app-nav-rail-width;
+  flex-direction: column;
+  padding: 1rem 0.5rem;
+}
+
+.app-nav--left {
+  left: 0;
+}
+
+.app-nav--right {
+  right: 0;
 }
 
 .app-nav-logo {
@@ -21,37 +91,80 @@
 
   img {
     display: block;
-    height: 1.75rem;
+    height: 1.6rem;
     width: auto;
+  }
+
+  .app-nav--left &,
+  .app-nav--right & {
+    img {
+      height: 2rem;
+    }
   }
 }
 
-.app-nav-links {
+// In a rail it takes the free space, pushing the account avatar to the bottom.
+.app-nav-items {
   display: flex;
+  justify-content: center;
   gap: 0.25rem;
+
+  .app-nav--left &,
+  .app-nav--right & {
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-self: stretch;
+    overflow-y: auto;
+  }
 }
 
-.app-nav-actions {
+.app-nav-item {
   display: flex;
-  gap: 0.5rem;
-}
-
-.app-nav-link {
-  padding: 0.4rem 0.85rem;
-  border-radius: 0.65rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.7rem;
   color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
   text-decoration: none;
-  transition: all 0.2s ease;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
 
   &:hover {
     color: var(--text-normal);
     background: var(--background-modifier-hover);
   }
+
+  // Rails stack the label under the icon, like an app sidebar.
+  .app-nav--left &,
+  .app-nav--right & {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.55rem 0.25rem;
+  }
 }
 
-.app-nav-link--active {
-  color: var(--text-normal);
+// Same accent pill as the mobile nav's active item.
+.app-nav-item--active,
+.app-nav-item--active:hover {
+  color: var(--color-accent);
   background: var(--background-modifier-accent-soft);
+}
+
+.app-nav-item__label {
+  .app-nav--left &,
+  .app-nav--right & {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.68rem;
+  }
+}
+
+.app-nav-account {
+  display: flex;
+  flex-shrink: 0;
 }

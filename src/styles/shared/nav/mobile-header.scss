@@ -30,38 +30,6 @@
   box-shadow: 0 1px 12px var(--shadow-modifier);
 }
 
-.mobile-header-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--background-secondary);
-  color: var(--text-normal);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
-}
-
-.mobile-header-avatar-initials {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 .mobile-header-title {
   margin: 0;
   font-size: 1.35rem;

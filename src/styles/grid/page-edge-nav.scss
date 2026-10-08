@@ -56,8 +56,9 @@
 .page-edge-nav--left {
   left: 0;
 
+  // Clear of a left-docked desktop nav rail (see desktop-nav.scss).
   .page-edge-nav__arrow {
-    left: 0;
+    left: var(--app-nav-inset-left, 0px);
   }
 
   &::before {
@@ -69,7 +70,7 @@
   right: 0;
 
   .page-edge-nav__arrow {
-    right: 0;
+    right: var(--app-nav-inset-right, 0px);
   }
 
   &::before {

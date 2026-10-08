@@ -1,6 +1,6 @@
 'use client';
 
-import type { ThemeMode } from '../../../lib/types';
+import type { NavBarPosition, ThemeMode } from '../../../lib/types';
 import { BACKGROUND_VARIANTS } from '../../../lib/background';
 import { THEME_PALETTES } from '../../../lib/theme';
 import Modal from '../../common/Modal';
@@ -16,6 +16,13 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+];
+
+const NAV_POSITION_OPTIONS: { value: NavBarPosition; label: string }[] = [
+  { value: 'top', label: 'Top' },
+  { value: 'left', label: 'Left (sidebar)' },
+  { value: 'right', label: 'Right (sidebar)' },
+  { value: 'bottom', label: 'Bottom' },
 ];
 
 const PALETTE_OPTIONS = THEME_PALETTES.map((palette) => ({
@@ -70,6 +77,18 @@ export default function GeneralSettingsPanel({
             updateSettings({
               ...settings,
               background: { ...settings.background, variant: value as typeof settings.background.variant },
+            })
+          }
+        />
+        <SettingsField
+          label="Navigation bar position (desktop)"
+          type="select"
+          value={settings.navBar.position}
+          options={NAV_POSITION_OPTIONS}
+          onChange={(value) =>
+            updateSettings({
+              ...settings,
+              navBar: { ...settings.navBar, position: value as NavBarPosition },
             })
           }
         />

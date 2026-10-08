@@ -39,7 +39,8 @@ html:not([data-background='none']) {
   // Clears PageDots' full fixed footprint (offset + height, see
   // grid/tokens.scss) plus a gap, so scrolling to the bottom moves the
   // page's own content out from under the dots instead of behind them.
-  padding-bottom: calc(#{$page-dots-bottom-offset} + #{$page-dots-height} + 1rem);
+  // Plus room for a bottom-docked desktop nav bar, when there is one (see desktop-nav.scss).
+  padding-bottom: calc(#{$page-dots-bottom-offset} + #{$page-dots-height} + 1rem + var(--app-nav-inset-bottom, 0px));
 
   // Below this, PageDots itself moves up to clear MobileBottomNav (see
   // grid/page-dots.scss) — reserve space for that whole stacked footprint

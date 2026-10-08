@@ -35,6 +35,8 @@
 @use 'shared/nav/desktop-nav';
 @use 'shared/nav/mobile-header';
 @use 'shared/nav/mobile-bottom-nav';
+@use 'shared/nav/account-menu';
+@use 'shared/nav/nav-order-menu';
 @use 'shared/orbit-animation/index' as orbit-animation;
 @use 'shared/background/space-background';
 @use 'shared/editor/editor-modal';

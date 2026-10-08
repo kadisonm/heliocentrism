@@ -1,14 +1,29 @@
 'use client';
 
-import { RefreshCw, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS } from '../../../lib/nav/navItems';
+import { useState } from 'react';
+import type { NavBarPosition } from '../../../lib/types';
+import type { ContextMenuPosition } from '../../common/context-menu/ContextMenu';
+import { useCloseMenuOnOutsideClick } from '../../grid/useCloseMenuOnOutsideClick';
+import { useLongPress } from '../../grid/useLongPress';
+import { useSettings } from '../settings/useSettings';
+import AccountMenu, { type AccountMenuPlacement } from './AccountMenu';
+import NavOrderMenu from './NavOrderMenu';
+import { useNavItems } from './useNavItems';
 
 // GitHub Pages serves this app from /<repo>/, not the domain root — plain
 // <img src="/..."> paths aren't rewritten by Next's basePath automatically,
 // so this (mirroring next.config.ts's basePath) has to be prepended by hand.
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
+// The account menu opens away from whichever screen edge the bar is docked to.
+const ACCOUNT_MENU_PLACEMENT: Record<NavBarPosition, AccountMenuPlacement> = {
+  top: 'below',
+  bottom: 'above',
+  left: 'right',
+  right: 'left',
+};
 
 type DesktopNavProps = {
   onOpenSyncConfig: () => void;
@@ -16,50 +31,57 @@ type DesktopNavProps = {
 };
 
 // >=1200px only (see useDeviceTier) — mobile/tablet render MobileHeader +
-// MobileBottomNav instead, so this never needs to collapse itself.
+// MobileBottomNav instead. Docks to the edge chosen in settings: a bar along the
+// top/bottom, or a rail down the left/right (see desktop-nav.scss for the layout offsets).
 export default function DesktopNav({ onOpenSyncConfig, onOpenSettings }: DesktopNavProps) {
   const pathname = usePathname();
+  const { settings } = useSettings();
+  const { shownItems } = useNavItems();
+  const [orderMenuPosition, setOrderMenuPosition] = useState<ContextMenuPosition | null>(null);
+  const position = settings.navBar.position;
+  const isRail = position === 'left' || position === 'right';
 
-  const linkClassName = (href: string) =>
-    pathname === href ? 'app-nav-link app-nav-link--active' : 'app-nav-link';
+  const longPressHandlers = useLongPress({ onLongPress: (point) => setOrderMenuPosition(point) });
+  useCloseMenuOnOutsideClick(!!orderMenuPosition, () => setOrderMenuPosition(null));
 
   return (
-    <nav className="app-nav">
-      <div className="app-nav-start">
-        <Link href="/" className="app-nav-logo">
-          <img src={`${BASE_PATH}/wordmark.svg`} alt="Heliocentrism" />
+    <>
+      <nav
+        className={`app-nav app-nav--${position}`}
+        {...longPressHandlers}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setOrderMenuPosition({ x: event.clientX, y: event.clientY });
+        }}
+      >
+        <Link href="/" className="app-nav-logo" aria-label="Heliocentrism home">
+          <img src={`${BASE_PATH}/${isRail ? 'logo.svg' : 'wordmark.svg'}`} alt="Heliocentrism" />
         </Link>
 
-        <div className="app-nav-links">
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className={linkClassName(item.href)}>
-              {item.label}
+        <div className="app-nav-items">
+          {shownItems.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={pathname === item.href ? 'app-nav-item app-nav-item--active' : 'app-nav-item'}
+              title={item.label}
+            >
+              <item.icon size={isRail ? 20 : 18} />
+              <span className="app-nav-item__label">{item.label}</span>
             </Link>
           ))}
         </div>
-      </div>
 
-      <div className="app-nav-actions">
-        <button
-          type="button"
-          className="icon-button"
-          onClick={onOpenSyncConfig}
-          title="Sync Configuration"
-          aria-label="Sync Configuration"
-        >
-          <RefreshCw size={18} />
-        </button>
+        <div className="app-nav-account">
+          <AccountMenu
+            placement={ACCOUNT_MENU_PLACEMENT[position]}
+            onOpenSyncConfig={onOpenSyncConfig}
+            onOpenSettings={onOpenSettings}
+          />
+        </div>
+      </nav>
 
-        <button
-          type="button"
-          className="icon-button"
-          onClick={onOpenSettings}
-          title="Settings"
-          aria-label="Settings"
-        >
-          <Settings size={18} />
-        </button>
-      </div>
-    </nav>
+      {orderMenuPosition && <NavOrderMenu position={orderMenuPosition} onClose={() => setOrderMenuPosition(null)} />}
+    </>
   );
 }

@@ -3,3 +3,7 @@
 // way it already does for PageDots (see grid/tokens.scss).
 $mobile-nav-bottom-offset: 1rem;
 $mobile-nav-height: 3.5rem;
+
+// The desktop nav's footprint when docked: rail width for left/right, bar height for top/bottom.
+$app-nav-rail-width: 5.5rem;
+$app-nav-bar-height: 3.75rem;

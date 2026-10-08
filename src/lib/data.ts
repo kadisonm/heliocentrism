@@ -53,6 +53,7 @@ export const DEFAULT_BACKGROUND_SETTINGS: BackgroundSettings = {
 export const DEFAULT_NAV_BAR_SETTINGS: NavBarSettings = {
   order: NAV_ITEMS.map((item) => item.id),
   hidden: [],
+  position: 'top',
 };
 
 // User-saved stage presets start empty — the built-in Normal/Kanban presets

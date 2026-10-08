@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import {
   DEFAULT_BACKGROUND_SETTINGS,
+  DEFAULT_NAV_BAR_SETTINGS,
   DEFAULT_POMODORO_SETTINGS,
   DEFAULT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
@@ -33,6 +34,7 @@ export const loadSettings = createAsyncThunk('settings/load', async () => {
         pomodoro: { ...DEFAULT_POMODORO_SETTINGS, ...syncedSettings.pomodoro },
         theme: { ...DEFAULT_THEME_SETTINGS, ...syncedSettings.theme },
         background: { ...DEFAULT_BACKGROUND_SETTINGS, ...syncedSettings.background },
+        navBar: { ...DEFAULT_NAV_BAR_SETTINGS, ...syncedSettings.navBar },
       }
     : DEFAULT_SETTINGS;
 });
