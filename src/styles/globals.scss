@@ -31,6 +31,7 @@
 @use 'common/checkbox-list';
 @use 'common/widget-placeholder';
 @use 'common/option-card-picker';
+@use 'common/range-field';
 
 @use 'shared/nav/index' as nav;
 @use 'shared/nav/desktop-nav';
@@ -40,6 +41,20 @@
 @use 'shared/nav/nav-order-menu';
 @use 'shared/orbit-animation/index' as orbit-animation;
 @use 'shared/background/space-background';
+@use 'shared/background/background-frame';
+@use 'shared/background/orbits-scene';
+@use 'shared/background/orbits-background';
+@use 'shared/background/nebula-background';
+@use 'shared/background/image-background';
+@use 'shared/background/lava-lamp-background';
+@use 'shared/background/waves-background';
+@use 'shared/background/bokeh-background';
+@use 'shared/background/dot-grid-background';
+@use 'shared/background/graph-paper-background';
+@use 'shared/background/topographic-background';
+@use 'shared/background/synthwave-background';
+@use 'shared/background/pixel-sky-background';
+@use 'shared/background/matrix-background';
 @use 'shared/editor/editor-modal';
 @use 'shared/editor/editor-field';
 @use 'shared/editor/editor-repeat-fields';
@@ -67,6 +82,7 @@
 @use 'pages/general-settings/theme-swatch';
 @use 'pages/general-settings/background-swatch';
 @use 'pages/general-settings/system-mode-swatch';
+@use 'pages/general-settings/background-picker-modal';
 
 @use 'widgets/widget-content-shell';
 @use 'widgets/pomodoro-timer/index' as pomodoro-timer;

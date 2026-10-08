@@ -1,0 +1,6 @@
+// Drafting-table dots on the page colour — static and quiet for focus.
+.dot-grid-background {
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--text-faint) 45%, transparent) 1.2px, transparent 1.7px) 0 0 / 24px 24px,
+    var(--background-primary);
+}

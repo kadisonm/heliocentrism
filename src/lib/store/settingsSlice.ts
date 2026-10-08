@@ -7,6 +7,7 @@ import {
   DEFAULT_THEME_SETTINGS,
   type AppSettings,
 } from '../data';
+import { BACKGROUND_VARIANTS } from '../background';
 import { readAppSettings } from '../firebase/firebaseSync';
 import type { AppDispatch } from './store';
 
@@ -33,7 +34,15 @@ export const loadSettings = createAsyncThunk('settings/load', async () => {
         ...syncedSettings,
         pomodoro: { ...DEFAULT_POMODORO_SETTINGS, ...syncedSettings.pomodoro },
         theme: { ...DEFAULT_THEME_SETTINGS, ...syncedSettings.theme },
-        background: { ...DEFAULT_BACKGROUND_SETTINGS, ...syncedSettings.background },
+        background: {
+          ...DEFAULT_BACKGROUND_SETTINGS,
+          ...syncedSettings.background,
+          image: { ...DEFAULT_BACKGROUND_SETTINGS.image, ...syncedSettings.background?.image },
+          // A background that's since been removed falls back to the default rather than a blank page.
+          variant: BACKGROUND_VARIANTS.some((option) => option.id === syncedSettings.background?.variant)
+            ? syncedSettings.background.variant
+            : DEFAULT_BACKGROUND_SETTINGS.variant,
+        },
         navBar: { ...DEFAULT_NAV_BAR_SETTINGS, ...syncedSettings.navBar },
       }
     : DEFAULT_SETTINGS;

@@ -1,0 +1,11 @@
+// Fine 24px grid with a stronger line every 5 squares, like engineering paper.
+.graph-paper-background {
+  --minor: color-mix(in srgb, var(--text-faint) 12%, transparent);
+  --major: color-mix(in srgb, var(--text-faint) 25%, transparent);
+  background:
+    linear-gradient(var(--major) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(90deg, var(--major) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(var(--minor) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, var(--minor) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--background-primary);
+}

@@ -1,0 +1,49 @@
+// Overlapping soft glows of the palette's primary, accent and secondary colours over a deep base.
+@mixin nebula-clouds {
+  background:
+    radial-gradient(ellipse 45% 35% at 28% 32%, color-mix(in srgb, var(--color-primary) 38%, transparent), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 72% 62%, color-mix(in srgb, var(--color-accent) 32%, transparent), transparent 70%),
+    radial-gradient(ellipse 30% 25% at 58% 22%, color-mix(in srgb, var(--color-secondary) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 35% 30% at 20% 78%, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 70%),
+    var(--color-black);
+}
+
+.nebula-background {
+  background: var(--color-black);
+}
+
+// Oversized so its drift never exposes an edge.
+.nebula-background__clouds {
+  position: absolute;
+  inset: -30%;
+  @include nebula-clouds;
+  animation: nebula-drift 40s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+// A flipped, fainter copy drifting the other way, so the clouds shift through each other.
+.nebula-background__clouds--counter {
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  animation: nebula-drift-counter 55s ease-in-out infinite alternate;
+}
+
+@keyframes nebula-drift {
+  from {
+    transform: translate(-10%, -6%) rotate(-8deg) scale(1);
+  }
+
+  to {
+    transform: translate(10%, 7%) rotate(8deg) scale(1.15);
+  }
+}
+
+@keyframes nebula-drift-counter {
+  from {
+    transform: rotate(180deg) translate(-8%, 6%) scale(1.1);
+  }
+
+  to {
+    transform: rotate(160deg) translate(9%, -7%) scale(0.95);
+  }
+}

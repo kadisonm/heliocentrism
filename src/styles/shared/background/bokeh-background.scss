@@ -1,0 +1,42 @@
+.bokeh-background {
+  background: linear-gradient(160deg, var(--color-black), color-mix(in srgb, var(--color-primary) 22%, var(--color-black)));
+}
+
+// A soft-edged disc with a slightly brighter rim, like a real out-of-focus highlight.
+.bokeh-background__light {
+  --tone: var(--color-primary);
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--tone) 35%, transparent) 55%,
+    color-mix(in srgb, var(--tone) 55%, transparent) 68%,
+    transparent 72%
+  );
+  filter: blur(0.4cqmin);
+  animation: bokeh-float ease-in-out infinite alternate;
+}
+
+.bokeh-background__light--accent {
+  --tone: var(--color-accent);
+}
+
+.bokeh-background__light--secondary {
+  --tone: var(--color-secondary);
+}
+
+@keyframes bokeh-float {
+  from {
+    transform: translate(-2cqw, 3cqh);
+    opacity: 0.45;
+  }
+
+  to {
+    transform: translate(2cqw, -4cqh);
+    opacity: 0.9;
+  }
+}

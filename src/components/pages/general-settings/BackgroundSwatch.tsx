@@ -1,6 +1,12 @@
 import type { BackgroundVariant } from '../../../lib/types';
+import { BACKGROUND_VIEWS } from '../../shared/background/backgroundViews';
 
-// A still thumbnail of each page background, drawn in the current theme.
+// A still thumbnail of a page background: the real background, contained in the swatch and paused.
 export default function BackgroundSwatch({ variant }: { variant: BackgroundVariant }) {
-  return <span className={`background-swatch background-swatch--${variant}`} />;
+  const View = BACKGROUND_VIEWS[variant];
+  return (
+    <span className={`background-swatch background-swatch--${variant}`}>
+      {View && <View contained paused />}
+    </span>
+  );
 }

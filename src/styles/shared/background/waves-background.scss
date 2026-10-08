@@ -1,0 +1,30 @@
+.waves-background {
+  background: var(--background-primary);
+}
+
+.waves-background__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.waves-background__line {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.3;
+  animation: waves-slide linear infinite;
+}
+
+.waves-background__line--primary {
+  stroke: var(--color-primary);
+}
+
+.waves-background__line--accent {
+  stroke: var(--color-accent);
+}
+
+// One wavelength (WAVELENGTH in WavesBackground.tsx), in the SVG's own units.
+@keyframes waves-slide {
+  to {
+    transform: translateX(300px);
+  }
+}

@@ -178,10 +178,32 @@ export type ThemeSettings = {
 };
 
 // Extend as new backgrounds are added (see src/lib/background.ts).
-export type BackgroundVariant = 'none' | 'space';
+export type BackgroundVariant =
+  | 'none'
+  | 'space'
+  | 'orbits'
+  | 'nebula'
+  | 'image'
+  | 'lava-lamp'
+  | 'waves'
+  | 'bokeh'
+  | 'dot-grid'
+  | 'graph-paper'
+  | 'topographic'
+  | 'synthwave'
+  | 'pixel-sky'
+  | 'matrix';
+
+// The 'image' background's own options.
+export type BackgroundImageSettings = {
+  url: string; // '' = no image yet
+  blur: number; // px, 0–20
+  dim: number; // %, 0–80 — how strongly the page colour washes over the image
+};
 
 export type BackgroundSettings = {
   variant: BackgroundVariant;
+  image: BackgroundImageSettings;
 };
 
 export type DashboardBreakpoint = 'desktop' | 'tablet' | 'mobile';

@@ -1,0 +1,5 @@
+@use 'space-background' as space;
+
+.orbits-background {
+  @include space.space-gradient;
+}

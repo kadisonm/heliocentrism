@@ -48,6 +48,7 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
 
 export const DEFAULT_BACKGROUND_SETTINGS: BackgroundSettings = {
   variant: 'space',
+  image: { url: '', blur: 0, dim: 30 },
 };
 
 export const DEFAULT_NAV_BAR_SETTINGS: NavBarSettings = {

@@ -1,0 +1,60 @@
+$horizon: 58%; // how far down the sky meets the floor
+
+.synthwave-background {
+  background: linear-gradient(
+    to bottom,
+    var(--color-black) 0%,
+    color-mix(in srgb, var(--color-primary) 35%, var(--color-black)) 40%,
+    color-mix(in srgb, var(--color-pink) 45%, var(--color-black)) $horizon,
+    var(--color-black) $horizon
+  );
+}
+
+// A gradient disc cut into thickening horizontal bands toward its base.
+.synthwave-background__sun {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - #{$horizon});
+  width: 42cqmin;
+  height: 42cqmin;
+  margin-left: -21cqmin;
+  margin-bottom: -21cqmin;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, var(--color-yellow), var(--color-orange) 45%, var(--color-pink));
+  mask-image: linear-gradient(
+    to bottom,
+    #000 50%,
+    transparent 50%, transparent 54%, #000 54%,
+    #000 60%, transparent 60%, transparent 65%, #000 65%,
+    #000 71%, transparent 71%, transparent 77%, #000 77%,
+    #000 83%, transparent 83%, transparent 90%, #000 90%
+  );
+  box-shadow: 0 0 8cqmin color-mix(in srgb, var(--color-pink) 45%, transparent);
+}
+
+.synthwave-background__floor {
+  position: absolute;
+  inset: $horizon 0 0;
+  overflow: hidden;
+  perspective: 30cqh;
+  perspective-origin: 50% 0;
+}
+
+// A flat grid tilted away from the viewer; scrolling its background makes the lines rush toward you.
+.synthwave-background__grid {
+  position: absolute;
+  inset: 0 -50% -100%;
+  transform-origin: 50% 0;
+  transform: rotateX(70deg);
+  --line: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  background:
+    linear-gradient(var(--line) 2px, transparent 2px) 0 0 / 6cqh 6cqh,
+    linear-gradient(90deg, var(--line) 2px, transparent 2px) 0 0 / 6cqh 6cqh;
+  animation: synthwave-scroll 1.2s linear infinite;
+}
+
+@keyframes synthwave-scroll {
+  to {
+    background-position: 0 6cqh, 0 6cqh;
+  }
+}

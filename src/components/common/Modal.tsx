@@ -1,7 +1,7 @@
 'use client';
 
 import { Layers, Square, X } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 type ModalScope = 'instance' | 'shared';
@@ -17,6 +17,9 @@ type ModalProps = {
   scopeLabel?: string;
   children: ReactNode;
 };
+
+// Open modals, oldest first — Escape only closes the topmost one when modals are stacked.
+const openModals: symbol[] = [];
 
 const SCOPE_ICONS: Record<ModalScope, typeof Square> = {
   instance: Square,
@@ -37,14 +40,25 @@ export default function Modal({ isOpen, onClose, title, scope, scopeLabel, child
     setMounted(true);
   }, []);
 
+  // A ref so a new onClose identity each render doesn't re-run the effect below (which would reorder the stack).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!isOpen) return;
+    const token = Symbol('modal');
+    openModals.push(token);
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && openModals.at(-1) === token) onCloseRef.current();
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      openModals.splice(openModals.indexOf(token), 1);
+    };
+  }, [isOpen]);
 
   if (!isOpen || !mounted) return null;
 

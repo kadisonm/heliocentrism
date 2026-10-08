@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSettings } from '../settings/useSettings';
+import { BACKGROUND_VIEWS } from './backgroundViews';
 import SpaceBackground from './SpaceBackground';
 
 // Renders the user's chosen page background (see general-settings) behind
@@ -19,10 +20,8 @@ export default function Background() {
 
   if (isLoading) return null;
 
-  switch (settings.background.variant) {
-    case 'space':
-      return <SpaceBackground />;
-    case 'none':
-      return null;
-  }
+  const { variant } = settings.background;
+  if (variant === 'space') return <SpaceBackground />;
+  const View = BACKGROUND_VIEWS[variant];
+  return View ? <View /> : null;
 }

@@ -1,0 +1,54 @@
+// Kept faint on purpose — it sits behind every widget.
+.orbits-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.orbits-scene__glow-core {
+  stop-color: var(--color-secondary);
+  stop-opacity: 0.35;
+}
+
+.orbits-scene__glow-edge {
+  stop-color: var(--color-secondary);
+  stop-opacity: 0;
+}
+
+.orbits-scene__sun {
+  fill: var(--color-secondary);
+  opacity: 0.85;
+}
+
+.orbits-scene__ring {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.22;
+}
+
+.orbits-scene__planet {
+  offset-rotate: 0deg;
+  animation-name: orbits-scene-orbit;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.orbits-scene__orbit--primary {
+  stroke: var(--color-primary);
+  fill: var(--color-primary);
+}
+
+.orbits-scene__orbit--accent {
+  stroke: var(--color-accent);
+  fill: var(--color-accent);
+}
+
+@keyframes orbits-scene-orbit {
+  from {
+    offset-distance: 0%;
+  }
+
+  to {
+    offset-distance: 100%;
+  }
+}

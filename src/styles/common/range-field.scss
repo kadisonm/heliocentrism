@@ -1,0 +1,18 @@
+.range-field__header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.range-field__value {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.range-field__input {
+  width: 100%;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}

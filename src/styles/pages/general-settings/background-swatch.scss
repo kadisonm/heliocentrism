@@ -1,6 +1,7 @@
 @use '../../shared/background/space-background' as space;
 
 .background-swatch {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
@@ -13,7 +14,6 @@
 // A handful of fixed stars over the real space gradient — a still of the animated starfield.
 .background-swatch--space {
   @include space.space-gradient;
-  position: relative;
 
   &::before {
     content: '';

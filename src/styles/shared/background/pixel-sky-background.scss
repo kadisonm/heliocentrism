@@ -1,0 +1,72 @@
+$pixel: 1.6cqmin; // one art pixel
+
+// Hard colour stops instead of a smooth gradient — retro banding.
+.pixel-sky-background {
+  background: linear-gradient(
+    to bottom,
+    var(--color-black) 0 30%,
+    color-mix(in srgb, var(--color-primary) 12%, var(--color-black)) 30% 52%,
+    color-mix(in srgb, var(--color-primary) 24%, var(--color-black)) 52% 70%,
+    color-mix(in srgb, var(--color-primary) 38%, var(--color-black)) 70% 86%,
+    color-mix(in srgb, var(--color-accent) 40%, var(--color-black)) 86% 100%
+  );
+}
+
+.pixel-sky-background__star {
+  position: absolute;
+  width: calc(#{$pixel} * 0.6);
+  height: calc(#{$pixel} * 0.6);
+  background: var(--color-white);
+  animation: pixel-sky-twinkle 3s steps(1) infinite;
+}
+
+.pixel-sky-background__shape {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), #{$pixel});
+  grid-auto-rows: $pixel;
+}
+
+.pixel-sky-background__moon {
+  top: 10%;
+  right: 14%;
+
+  .pixel-sky-background__pixel {
+    background: var(--color-yellow);
+  }
+}
+
+// Clouds step across in whole-pixel jumps (steps timing) for a choppy, game-like drift.
+.pixel-sky-background__cloud {
+  left: 0;
+  scale: var(--scale);
+  transform-origin: 0 0;
+  animation: pixel-sky-drift linear infinite;
+  animation-timing-function: steps(120);
+
+  .pixel-sky-background__pixel {
+    background: color-mix(in srgb, var(--color-white) 22%, transparent);
+  }
+}
+
+@keyframes pixel-sky-twinkle {
+  0%,
+  70% {
+    opacity: 1;
+  }
+
+  71%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes pixel-sky-drift {
+  from {
+    transform: translateX(-30cqw);
+  }
+
+  to {
+    transform: translateX(110cqw);
+  }
+}

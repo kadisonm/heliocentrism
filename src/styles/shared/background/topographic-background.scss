@@ -1,0 +1,16 @@
+.topographic-background {
+  background: var(--background-primary);
+}
+
+.topographic-background__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.topographic-background__line {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  opacity: 0.28;
+}

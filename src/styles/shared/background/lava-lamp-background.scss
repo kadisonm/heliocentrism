@@ -1,0 +1,47 @@
+.lava-lamp-background {
+  background: linear-gradient(to bottom, var(--color-black), color-mix(in srgb, var(--color-primary) 25%, var(--color-black)));
+}
+
+// Blurred discs; where two overlap the blur blends them into one shape.
+.lava-lamp-background__blob {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  border-radius: 50%;
+  filter: blur(3cqmin);
+  opacity: 0.75;
+  animation-name: lava-lamp-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform;
+}
+
+.lava-lamp-background__blob--primary {
+  background: var(--color-primary);
+}
+
+.lava-lamp-background__blob--accent {
+  background: var(--color-accent);
+}
+
+.lava-lamp-background__blob--secondary {
+  background: var(--color-secondary);
+}
+
+@keyframes lava-lamp-float {
+  0% {
+    transform: translate(0, 20cqh) scale(0.85, 1.1);
+  }
+
+  50% {
+    transform: translate(6cqw, -5cqh) scale(1.15, 0.9);
+  }
+
+  100% {
+    transform: translate(-4cqw, -25cqh) scale(0.95, 1.05);
+  }
+}

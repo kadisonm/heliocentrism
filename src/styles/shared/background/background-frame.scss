@@ -1,0 +1,34 @@
+// Every page background fills the screen behind the app, or (contained) a settings swatch.
+// container-type lets each design size itself in cq units, so the swatch is a true scaled-down copy.
+.page-background {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  // Its size never depends on content, so isolate it from layout/paint elsewhere on the page.
+  contain: strict;
+}
+
+.page-background--contained {
+  position: absolute;
+}
+
+.page-background--paused {
+  &,
+  *,
+  *::before,
+  *::after {
+    animation-play-state: paused !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-background {
+    &,
+    *,
+    *::before,
+    *::after {
+      animation-play-state: paused !important;
+    }
+  }
+}
