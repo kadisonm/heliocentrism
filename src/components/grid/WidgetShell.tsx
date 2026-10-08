@@ -165,7 +165,9 @@ function WidgetShell({
 
   return (
     <div
-      className={overlay ? 'grid-widget grid-widget--menu-open' : 'grid-widget'}
+      className={['grid-widget', overlay && 'grid-widget--menu-open', widget.hideBackground && 'grid-widget--no-background']
+        .filter(Boolean)
+        .join(' ')}
       onMouseDown={longPress.onMouseDown}
       onTouchStart={longPress.onTouchStart}
       onContextMenu={(event) => {

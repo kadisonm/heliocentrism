@@ -27,6 +27,11 @@
   }
 }
 
+// Per-widget "hide background" option — the menu-open outline below still shows where the widget is.
+.grid-widget--no-background {
+  background: transparent;
+}
+
 // Long-press (or right-click) reveals this widget's own overlay — either the
 // context menu (Settings/Resize/Delete) or, once "Resize" is chosen from it,
 // the corner/edge resize handles instead (see WidgetShell's `overlay` state,

@@ -10,6 +10,7 @@ import GoalRingWidget from '../../components/widgets/goal-ring';
 import HabitCheckWidget from '../../components/widgets/habit-check';
 import HabitHeatmapWidget from '../../components/widgets/habit-heatmap';
 import HabitRingWidget from '../../components/widgets/habit-ring';
+import NotepadSettingsModal from '../../components/shared/notepad/NotepadSettingsModal';
 import MarkdownNotepadWidget from '../../components/widgets/markdown-notepad';
 import NotepadWidget from '../../components/widgets/notepad';
 import OrbitWidget from '../../components/widgets/orbit';
@@ -111,8 +112,8 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     type: 'clock',
     name: 'Clock',
     description: 'The current time and date, in a format you choose.',
-    defaultSize: { w: 2, h: 1 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 2, h: 2 },
+    minSize: { w: 1, h: 2 },
     component: ClockWidget,
     settingsComponent: ClockSettingsModal,
     supportsAutoExpand: true,
@@ -121,8 +122,8 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     type: 'weather',
     name: 'Weather',
     description: "Today's weather for a city, with UV and rain chance.",
-    defaultSize: { w: 3, h: 5 },
-    minSize: { w: 2, h: 3 },
+    defaultSize: { w: 3, h: 4 },
+    minSize: { w: 2, h: 4 },
     component: WeatherWidget,
     settingsComponent: WeatherSettingsModal,
     supportsAutoExpand: true,
@@ -157,16 +158,20 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     name: 'Notepad',
     description: 'A quick plain-text note.',
     defaultSize: { w: 3, h: 4 },
-    minSize: { w: 2, h: 2 },
+    minSize: { w: 2, h: 1 },
     component: NotepadWidget,
+    settingsComponent: NotepadSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'markdown-notepad',
     name: 'Markdown Notepad',
     description: 'A note written in markdown, with an edit / preview toggle.',
     defaultSize: { w: 4, h: 5 },
-    minSize: { w: 2, h: 2 },
+    minSize: { w: 2, h: 1 },
     component: MarkdownNotepadWidget,
+    settingsComponent: NotepadSettingsModal,
+    supportsAutoExpand: true,
   },
   {
     type: 'goal-card',

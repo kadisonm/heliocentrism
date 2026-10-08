@@ -224,6 +224,8 @@ export type DashboardWidget = {
   // size instead of being manually resizable — see WidgetShell's
   // ResizeObserver-based measurement.
   autoExpand?: boolean;
+  // Drops the widget's card background so its content sits straight on the dashboard (notepads offer this).
+  hideBackground?: boolean;
   // Photo widget only, set via PhotoSettingsModal.
   photo?: PhotoWidgetConfig;
   // Weather widget only, set via WeatherSettingsModal.
