@@ -1,6 +1,6 @@
 'use client';
 
-import { calcGridItemPosition, calcWH, calcXY, cloneLayout, getLayoutItem, moveElement, useContainerWidth, verticalCompactor } from 'react-grid-layout';
+import { calcGridItemPosition, calcWH, calcXY, cloneLayout, getLayoutItem, useContainerWidth } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import type { Ref } from 'react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
@@ -22,6 +22,7 @@ import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget } f
 import { areGesturesLocked, lockGestures, unlockGestures } from '../../lib/gestureLock';
 import { clampPageIndex, virtualPageSignature } from '../../lib/grid/pageNavigation';
 import { tryClaimPageChange } from '../../lib/grid/pageChangeCooldown';
+import { pushDownOverlaps } from '../../lib/grid/layoutPush';
 import { blinkTaskRow, onTaskFocusRequest } from '../../lib/grid/taskFocus';
 import { useAppSelector } from '../../lib/store/hooks';
 import { waitForTransitionEnd } from '../../lib/grid/transitionSettle';
@@ -938,10 +939,10 @@ function Grid(
       liveH
     );
 
-    // Everything from here down — moveElement, compact, the placeholder's
+    // Everything from here down — the push-down resolve, the placeholder's
     // resolved position — is a LOCAL, in-memory preview computed fresh off
     // whatever's currently committed (targetPage.layout via a defensive
-    // clone; moveElement mutates whatever it's given). It is NOT written
+    // clone, since the item's x/y are set on it directly). It is NOT written
     // back to React state until the gesture actually ends (isDropping): see
     // the early return below. Every earlier attempt at fixing this
     // relocation's "Maximum update depth exceeded" — a mutation-safety fix,
@@ -974,8 +975,10 @@ function Grid(
     const item = getLayoutItem(clonedLayout, state.widgetId);
     if (!item) return;
 
-    const moved = moveElement(clonedLayout, item, x, y, true, false, verticalCompactor.type, cols, false);
-    const nextLayout = verticalCompactor.compact(moved, cols);
+    // No gravity: the dragged widget lands exactly here and anything it overlaps is pushed down.
+    item.x = x;
+    item.y = y;
+    const nextLayout = pushDownOverlaps(clonedLayout, [state.widgetId]);
     const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
 
     const placeholderEl = ensurePlaceholder(gridEl);
@@ -1279,7 +1282,7 @@ function Grid(
     item.x = x;
     item.w = w;
     item.h = h;
-    const nextLayout = verticalCompactor.compact(clonedLayout, cols);
+    const nextLayout = pushDownOverlaps(clonedLayout, [state.widgetId]);
     const resolvedItem = nextLayout.find((it) => it.i === state.widgetId) ?? item;
 
     const widgetEl = gridEl.querySelector<HTMLElement>(`[data-widget-id="${state.widgetId}"]`);
@@ -1403,11 +1406,6 @@ function Grid(
     (pageId: string, patches: Array<{ id: string; h: number }>) =>
       onWidgetHeightsChange(effectiveBreakpoint, pageId, patches),
     [onWidgetHeightsChange, effectiveBreakpoint]
-  );
-
-  const handleLayoutChange = useCallback(
-    (pageId: string, layout: Layout) => onLayoutChange(effectiveBreakpoint, pageId, layout),
-    [effectiveBreakpoint, onLayoutChange]
   );
 
   // --- Swipe / wheel / keyboard paging ---
@@ -1779,7 +1777,6 @@ function Grid(
                     isSimulating={isSimulating}
                     gridWidth={pageWidth}
                     softLimitRows={softLimitRows}
-                    onLayoutChange={handleLayoutChange}
                     onUpdateWidget={handleUpdateWidget}
                     onRemoveWidget={handleRemove}
                     onWidgetHeightsChange={handleWidgetHeightsChange}

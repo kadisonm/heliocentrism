@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { verticalCompactor, type Layout } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
 import { DEFAULT_DASHBOARD } from '../data';
+import { layoutBottom } from '../grid/layoutPush';
 import { GRID_COLS, MAX_PAGES_PER_BREAKPOINT } from '../grid/gridConfig';
 import { migrateDashboardState } from '../grid/gridMigration';
 import { readDashboardState } from '../firebase/firebaseSync';
@@ -97,7 +98,7 @@ const gridSlice = createSlice({
         const page = state.breakpoints[breakpoint].pages.find((p) => p.id === pageId);
         if (!page) return;
         page.widgets.push({ id, type });
-        page.layout.push({ i: id, x: 0, y: Infinity, w, h: size.h });
+        page.layout.push({ i: id, x: 0, y: layoutBottom(page.layout), w, h: size.h });
       },
       prepare: (type: string, breakpoint: DashboardBreakpoint, pageId: string, size: { w: number; h: number }) => ({
         payload: { id: crypto.randomUUID(), type, breakpoint, pageId, size },
@@ -190,7 +191,9 @@ const gridSlice = createSlice({
       });
       if (!changed) return;
 
-      page.layout = [...verticalCompactor.compact(resized, GRID_COLS[breakpoint])];
+      // Height only — GridPage pushes anything the taller widget now overlaps down for display, and
+      // since that push is never saved, those widgets return to their own spot when it shrinks.
+      page.layout = resized;
     },
 
     createPage: {
@@ -218,8 +221,7 @@ const gridSlice = createSlice({
       const layoutItem = fromPage?.layout.find((item) => item.i === id);
       if (!fromPage || !toPage || !widget || !layoutItem) return;
 
-      const cols = GRID_COLS[breakpoint];
-      const toLayout = [...verticalCompactor.compact([...toPage.layout, { ...layoutItem, x: 0, y: Infinity }], cols)];
+      const toLayout = [...toPage.layout, { ...layoutItem, x: 0, y: layoutBottom(toPage.layout) }];
 
       const updatedFrom = {
         ...fromPage,

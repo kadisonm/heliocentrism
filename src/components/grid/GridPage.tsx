@@ -1,7 +1,6 @@
 'use client';
 
-import { GridLayout, verticalCompactor } from 'react-grid-layout';
-import type { Layout } from 'react-grid-layout';
+import { GridLayout, noCompactor } from 'react-grid-layout';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   GRID_COLS,
@@ -11,6 +10,7 @@ import {
   DEFAULT_WIDGET_MIN_SIZE,
 } from '../../lib/grid/gridConfig';
 import type { DashboardBreakpoint, DashboardPage, DashboardWidget } from '../../lib/types';
+import { pushDownOverlaps } from '../../lib/grid/layoutPush';
 import { findWidgetDefinition } from '../../lib/grid/widgetRegistry';
 import type { Point } from '../../lib/grid/pointerEvents';
 import type { ResizeCorner } from './ResizeHandle';
@@ -62,7 +62,6 @@ type GridPageProps = {
   // every render, and re-observing an element always fires its callback
   // once, which updates state, which re-renders, forever ("Maximum update
   // depth").
-  onLayoutChange?: (pageId: string, layout: Layout) => void;
   onUpdateWidget?: (id: string, pageId: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => void;
   onRemoveWidget?: (id: string, pageId: string) => void;
   onWidgetHeightsChange?: (pageId: string, patches: Array<{ id: string; h: number }>) => void;
@@ -106,7 +105,6 @@ function GridPage({
   isSimulating,
   gridWidth,
   softLimitRows,
-  onLayoutChange,
   onUpdateWidget,
   onRemoveWidget,
   onWidgetHeightsChange,
@@ -119,7 +117,6 @@ function GridPage({
   // full remount via Grid.tsx's `key` — so as long as the callback props
   // above are themselves stable, these stay stable across every re-render
   // of this same mounted instance.
-  const handleLayoutChange = useCallback((layout: Layout) => onLayoutChange?.(page.id, layout), [onLayoutChange, page.id]);
   const handleUpdateWidget = useCallback(
     (id: string, patch: Partial<Omit<DashboardWidget, 'id'>>) => onUpdateWidget?.(id, page.id, patch),
     [onUpdateWidget, page.id]
@@ -167,9 +164,9 @@ function GridPage({
   );
 
   // minSize is injected per widget's current type (not persisted) and floors
-  // h; stale layout entries for removed widgets are dropped. Explicit
-  // compaction here is needed since WidgetShell's auto-expand only patches
-  // the one item it measures, so this pushes items below it down to fit.
+  // h; stale layout entries for removed widgets are dropped. page.layout holds
+  // each widget's chosen "home"; overlaps (e.g. an auto-expanded widget growing
+  // into others) are pushed down here for display only, so they undo on shrink.
   const layout = useMemo(() => {
     const cols = GRID_COLS[effectiveBreakpoint];
     const widgetById = new Map(page.widgets.map((widget) => [widget.id, widget]));
@@ -192,7 +189,7 @@ function GridPage({
         };
       });
 
-    return verticalCompactor.compact(withSizing, cols);
+    return pushDownOverlaps(withSizing);
   }, [page, effectiveBreakpoint]);
 
   // A width change (e.g. isDragActive reserving peek-sliver room, or a
@@ -243,7 +240,9 @@ function GridPage({
         width={gridWidth}
         dragConfig={DRAG_DISABLED}
         resizeConfig={RESIZE_DISABLED}
-        onLayoutChange={handleLayoutChange}
+        // No gravity: widgets stay where placed. Its onLayoutChange echo is deliberately not saved —
+        // it would overwrite homes with pushed positions; Grid.tsx commits drags/resizes itself.
+        compactor={noCompactor}
       >
         {page.widgets.map((widget) => (
           // data-widget-id: react-grid-layout clones this div into the

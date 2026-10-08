@@ -1,6 +1,6 @@
-import { verticalCompactor, type Layout } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
+import { layoutBottom, pushDownOverlaps } from './layoutPush';
 import { DEFAULT_DASHBOARD } from '../data';
-import { GRID_COLS } from './gridConfig';
 import type { DashboardBreakpoint, DashboardBreakpointState, DashboardWidget, DashboardPage } from '../types';
 
 function toPage(widgets: DashboardWidget[], layout: Layout): DashboardPage {
@@ -28,18 +28,18 @@ function isValidLayout(layout: unknown): layout is Layout {
   );
 }
 
-// Replaces any non-finite coordinate with a safe fallback (unresolved `y`
-// goes to Infinity, matching addWidget's own "place at the bottom"
-// convention) and re-compacts so nothing overlaps.
-function sanitizeLayout(layout: Layout, cols: number): Layout {
+// Replaces any non-finite coordinate with a safe fallback (an unresolved `y`
+// goes below everything, like a newly added widget) and pushes apart overlaps.
+function sanitizeLayout(layout: Layout): Layout {
+  const bottom = layoutBottom(layout);
   const fixed = layout.map((item) => ({
     ...item,
     x: isFiniteNumber(item.x) ? item.x : 0,
-    y: isFiniteNumber(item.y) ? item.y : Infinity,
+    y: isFiniteNumber(item.y) ? item.y : bottom,
     w: isFiniteNumber(item.w) ? item.w : 1,
     h: isFiniteNumber(item.h) ? item.h : 1,
   }));
-  return verticalCompactor.compact(fixed, cols);
+  return pushDownOverlaps(fixed);
 }
 
 function sameWidgetIds(a: DashboardWidget[], b: DashboardWidget[]): boolean {
@@ -58,18 +58,17 @@ function sameWidgetIds(a: DashboardWidget[], b: DashboardWidget[]): boolean {
 // page is the one the old shape was wrapped forward from, so recover its
 // layout from there. Any other invalid page (no matching sibling) is
 // sanitized in place rather than dropped, so no page is ever silently lost.
-function migrateBreakpointState(raw: unknown, breakpoint: DashboardBreakpoint): DashboardBreakpointState {
+function migrateBreakpointState(raw: unknown): DashboardBreakpointState {
   if (!raw || typeof raw !== 'object') return { pages: [toPage([], [])] };
   const r = raw as { pages?: DashboardPage[]; widgets?: DashboardWidget[]; layout?: Layout };
 
   if (Array.isArray(r.pages) && r.pages.length > 0) {
-    const cols = GRID_COLS[breakpoint];
     const pages = r.pages.map((page) => {
       if (isValidLayout(page.layout)) return page;
       if (r.layout && isValidLayout(r.layout) && r.widgets && sameWidgetIds(page.widgets, r.widgets)) {
         return { ...page, layout: r.layout };
       }
-      return { ...page, layout: sanitizeLayout(page.layout as Layout, cols) };
+      return { ...page, layout: sanitizeLayout(page.layout as Layout) };
     });
     return { pages };
   }
@@ -90,9 +89,9 @@ export function migrateDashboardState(synced: unknown): Record<DashboardBreakpoi
 
   if (data.breakpoints) {
     return {
-      desktop: migrateBreakpointState(data.breakpoints.desktop, 'desktop'),
-      tablet: migrateBreakpointState(data.breakpoints.tablet, 'tablet'),
-      mobile: migrateBreakpointState(data.breakpoints.mobile, 'mobile'),
+      desktop: migrateBreakpointState(data.breakpoints.desktop),
+      tablet: migrateBreakpointState(data.breakpoints.tablet),
+      mobile: migrateBreakpointState(data.breakpoints.mobile),
     };
   }
 
